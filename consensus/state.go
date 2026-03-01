@@ -71,8 +71,9 @@ type State struct {
 	service.BaseService
 
 	// config details
-	config        *cfg.ConsensusConfig
-	privValidator types.PrivValidator // for signing votes
+	config            *cfg.ConsensusConfig
+	privValidator     types.PrivValidator // for signing votes
+	proposeDelaySched *proposeDelayController
 
 	// store blocks and commits
 	blockStore sm.BlockStore
@@ -193,6 +194,7 @@ func NewState(
 	// NOTE: we do not call scheduleRound0 yet, we do that upon Start()
 
 	cs.BaseService = *service.NewBaseService(nil, "State", cs)
+	cs.proposeDelaySched = newProposeDelayControllerFromEnv(cs.Logger)
 
 	return cs
 }
@@ -201,6 +203,9 @@ func NewState(
 func (cs *State) SetLogger(l log.Logger) {
 	cs.Logger = l
 	cs.timeoutTicker.SetLogger(l)
+	if cs.proposeDelaySched != nil {
+		cs.proposeDelaySched.setLogger(l)
+	}
 }
 
 // SetEventBus sets event bus.
@@ -1219,6 +1224,15 @@ func (cs *State) enterPropose(height int64, round int32) {
 
 	if cs.isProposer(address) {
 		logger.Debug("propose step; our turn to propose", "proposer", address)
+		delay := time.Duration(0)
+		if cs.proposeDelaySched != nil {
+			delay = cs.proposeDelaySched.currentDelay()
+		}
+		if delay > 0 {
+			logger.Info("propose-delay: delaying proposal", "delay", delay)
+			go cs.delayedDecideProposal(height, round, delay)
+			return
+		}
 		cs.decideProposal(height, round)
 	} else {
 		logger.Debug("propose step; not our turn to propose", "proposer", cs.Validators.GetProposer().Address)
@@ -1227,6 +1241,23 @@ func (cs *State) enterPropose(height int64, round int32) {
 
 func (cs *State) isProposer(address []byte) bool {
 	return bytes.Equal(cs.Validators.GetProposer().Address, address)
+}
+
+func (cs *State) delayedDecideProposal(height int64, round int32, delay time.Duration) {
+	time.Sleep(delay)
+
+	cs.mtx.Lock()
+	defer cs.mtx.Unlock()
+
+	// Proposal can only be decided while we are still in the same propose step.
+	if cs.Height != height || cs.Round != round || cs.Step != cstypes.RoundStepPropose {
+		return
+	}
+
+	cs.decideProposal(height, round)
+	if cs.isProposalComplete() {
+		cs.enterPrevote(height, cs.Round)
+	}
 }
 
 func (cs *State) defaultDecideProposal(height int64, round int32) {

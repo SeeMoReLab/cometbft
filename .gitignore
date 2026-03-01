@@ -58,3 +58,7 @@ proto/spec/**/*.pb.go
 # Python virtual environments
 .venv
 go.work.sum
+
+# Local testnet data
+mytestnet/
+output/
