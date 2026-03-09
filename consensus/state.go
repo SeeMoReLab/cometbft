@@ -136,6 +136,9 @@ type State struct {
 
 	// offline state sync height indicating to which height the node synced offline
 	offlineStateSyncHeight int64
+
+	// epochTracker manages the adaptive timer feedback loop.
+	epochTracker *EpochTracker
 }
 
 // StateOption sets an optional parameter on the State.
@@ -170,6 +173,19 @@ func NewState(
 	for _, option := range options {
 		option(cs)
 	}
+
+	// Initialize the adaptive timer epoch tracker (no-op if AdaptiveTimerAddr is empty).
+	et, err := NewEpochTracker(config, log.NewNopLogger())
+	if err != nil {
+		et, _ = NewEpochTracker(&cfg.ConsensusConfig{
+			AdaptiveTimerAddr:      "",
+			AdaptiveTimerEpochSize: 1000,
+			TimeoutPropose:         config.TimeoutPropose,
+			TimeoutPrevote:         config.TimeoutPrevote,
+			TimeoutPrecommit:       config.TimeoutPrecommit,
+		}, log.NewNopLogger())
+	}
+	cs.epochTracker = et
 	// set function defaults (may be overwritten before calling Start)
 	cs.decideProposal = cs.defaultDecideProposal
 	cs.doPrevote = cs.defaultDoPrevote
@@ -205,6 +221,9 @@ func (cs *State) SetLogger(l log.Logger) {
 	cs.timeoutTicker.SetLogger(l)
 	if cs.proposeDelaySched != nil {
 		cs.proposeDelaySched.setLogger(l)
+	}
+	if cs.epochTracker != nil {
+		cs.epochTracker.SetLogger(l.With("module", "epoch_tracker"))
 	}
 }
 
@@ -433,6 +452,10 @@ func (cs *State) loadWalFile() error {
 
 // OnStop implements service.Service.
 func (cs *State) OnStop() {
+	if cs.epochTracker != nil {
+		cs.epochTracker.Close()
+	}
+
 	if err := cs.evsw.Stop(); err != nil {
 		cs.Logger.Error("failed trying to stop eventSwitch", "error", err)
 	}
@@ -1105,6 +1128,12 @@ func (cs *State) enterNewRound(height int64, round int32) {
 
 	prevHeight, prevRound, prevStep := cs.Height, cs.Round, cs.Step
 
+	if round == 0 {
+		if cs.epochTracker != nil {
+			cs.epochTracker.ApplyPendingTimeout(cs.config)
+		}
+	}
+
 	// increment validators if necessary
 	validators := cs.Validators
 	if cs.Round < round {
@@ -1191,6 +1220,12 @@ func (cs *State) enterPropose(height int64, round int32) {
 	}
 
 	logger.Debug("entering propose step", "current", log.NewLazySprintf("%v/%v/%v", cs.Height, cs.Round, cs.Step))
+
+	if round == 0 {
+		if cs.epochTracker != nil {
+			cs.epochTracker.RecordProposeStart(height)
+		}
+	}
 
 	defer func() {
 		// Done enterPropose:
@@ -1856,6 +1891,9 @@ func (cs *State) finalizeCommit(height int64) {
 
 	// must be called before we update state
 	cs.recordMetrics(height, block)
+	if cs.epochTracker != nil {
+		cs.epochTracker.OnBlockCommitted(height, len(block.Data.Txs), cs.CommitRound)
+	}
 
 	// NewHeightStep!
 	cs.updateToState(stateCopy)

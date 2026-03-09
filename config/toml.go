@@ -591,6 +591,17 @@ timeout_commit = "{{ .Consensus.TimeoutCommit }}"
 # So, validators should stop the state machine, wait for some blocks, and then restart the state machine to avoid panic.
 double_sign_check_height = {{ .Consensus.DoubleSignCheckHeight }}
 
+# gRPC address of this node's dedicated LearningAgent service (e.g. "127.0.0.1:50051").
+# Leave empty to disable the adaptive timer feedback loop.
+adaptive_timer_addr = "{{ .Consensus.AdaptiveTimerAddr }}"
+
+# Number of committed transactions per learning epoch.
+# A report is sent at epoch_size/2 txs; the reward window is epoch_size/2 to epoch_size.
+adaptive_timer_epoch_size = {{ .Consensus.AdaptiveTimerEpochSize }}
+
+# Integer node ID sent in LearningAgent reports. Must be unique per node (0, 1, 2, ...).
+adaptive_timer_node_index = {{ .Consensus.AdaptiveTimerNodeIndex }}
+
 # Make progress as soon as we have all the precommits (as if TimeoutCommit = 0)
 skip_timeout_commit = {{ .Consensus.SkipTimeoutCommit }}
 
