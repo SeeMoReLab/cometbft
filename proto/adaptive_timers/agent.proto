@@ -1,0 +1,296 @@
+syntax = "proto3";
+
+option go_package = "github.com/cometbft/cometbft/proto/adaptive_timers;adaptivetimers";
+
+import "google/protobuf/empty.proto";
+
+enum Protocol {
+    PROTOCOL_UNSPECIFIED = 0;
+    PROTOCOL_PBFT = 1;
+    PROTOCOL_TWO_PC_OVER_PBFT = 2;
+    PROTOCOL_SBFT = 3;
+    PROTOCOL_TENDERMINT = 4;
+}
+
+// PBFT-specific state report.
+message PbftReport {
+    // Workload size in the learning window.
+    uint32 total_transactions = 1;
+    uint32 total_consensus_instances = 2;
+
+    // End-to-end PBFT consensus latency summaries (milliseconds).
+    float avg_consensus_latency_ms = 3;
+    float p95_consensus_latency_ms = 4;
+    float p99_consensus_latency_ms = 5;
+
+    // Throughput and core rates.
+    float throughput_tps = 6;
+    float timeout_violation_rate = 7;
+
+    // Batch characteristics.
+    float avg_batch_size = 8;
+    float p95_batch_size = 9;
+
+    // Leadership dynamics.
+    uint32 leader_change_count = 10;
+    uint32 regency_change_count = 11;
+
+    // Phase delays (milliseconds).
+    float phase_propose_avg_delay_ms = 12;
+    float phase_propose_p95_delay_ms = 13;
+    float phase_write_avg_delay_ms = 14;
+    float phase_write_p95_delay_ms = 15;
+    float phase_accept_avg_delay_ms = 16;
+    float phase_accept_p95_delay_ms = 17;
+    float phase_post_decision_avg_delay_ms = 18;
+    float phase_post_decision_p95_delay_ms = 19;
+}
+
+// 2PC-over-PBFT specific state report.
+// Includes workload composition, outcome counters, reason counters, and latency summaries.
+message TwoPcOverPbftReport {
+    // Base PBFT metrics for the same learning window.
+    PbftReport pbft = 1;
+
+    // Workload composition for the learning window.
+    uint32 total_transactions = 2;
+    uint32 single_shard_transactions = 3;
+    uint32 cross_shard_transactions = 4;
+
+    // 2PC outcome counters.
+    uint32 prepare_ok_count = 5;
+    uint32 prepare_fail_count = 6;
+    uint32 commit_ok_count = 7;
+    uint32 abort_count = 8;
+    uint32 in_doubt_count = 9;
+
+    // Timeout/unknown-outcome counters.
+    uint32 prepare_timeout_count = 10;
+    uint32 commit_timeout_unknown_outcome_count = 11;
+    uint32 abort_best_effort_timeout_count = 12;
+
+    // Additional operational counters.
+    uint32 lock_contention_count = 13;
+
+    // Rate summaries.
+    float prepare_timeout_rate = 14;
+    float abort_rate = 15;
+    float commit_rate = 16;
+    float lock_contention_rate = 17;
+
+    // End-to-end and phase latency summaries in milliseconds.
+    float avg_end_to_end_latency_ms = 18;
+    float p95_end_to_end_latency_ms = 19;
+    float p99_end_to_end_latency_ms = 20;
+    float avg_prepare_latency_ms = 21;
+    float p95_prepare_latency_ms = 22;
+    float avg_commit_latency_ms = 23;
+    float p95_commit_latency_ms = 24;
+    float avg_lock_wait_ms = 25;
+    float p95_lock_wait_ms = 26;
+    float avg_lock_hold_ms = 27;
+    float p95_lock_hold_ms = 28;
+
+    // Standardized failure reason counters.
+    uint32 reason_prepare_lock_busy_count = 29;
+    uint32 reason_prepare_validation_fail_count = 30;
+    uint32 reason_prepare_timeout_count = 31;
+    uint32 reason_prepare_other_count = 32;
+    uint32 reason_commit_timeout_unknown_outcome_count = 33;
+    uint32 reason_abort_best_effort_timeout_count = 34;
+    uint32 reason_other_count = 35;
+}
+
+// SBFT-specific state report.
+// For now this mirrors PBFT metrics up to leadership dynamics.
+message SbftReport {
+    // Workload size in the learning window.
+    uint32 total_transactions = 1;
+    uint32 total_consensus_instances = 2;
+
+    // End-to-end SBFT consensus latency summaries (milliseconds).
+    float avg_consensus_latency_ms = 3;
+    float p95_consensus_latency_ms = 4;
+    float p99_consensus_latency_ms = 5;
+
+    // Throughput and core rates.
+    float throughput_tps = 6;
+    float timeout_violation_rate = 7;
+
+    // Batch characteristics.
+    float avg_batch_size = 8;
+    float p95_batch_size = 9;
+
+    // Leadership dynamics.
+    uint32 leader_change_count = 10;
+    uint32 regency_change_count = 11;
+}
+
+message TendermintReport {
+    // Workload size in the learning window.
+    uint32 total_transactions = 1;
+    uint32 total_consensus_instances = 2;
+
+    // End-to-end SBFT consensus latency summaries (milliseconds).
+    float avg_consensus_latency_ms = 3;
+    float p95_consensus_latency_ms = 4;
+    float p99_consensus_latency_ms = 5;
+
+    // Throughput and core rates.
+    float throughput_tps = 6;
+    float timeout_violation_rate = 7;
+
+    // Batch characteristics.
+    float avg_batch_size = 8;
+    float p95_batch_size = 9;
+
+    // Leadership dynamics.
+    uint32 leader_change_count = 10;
+    uint32 regency_change_count = 11;
+
+    // Phase-wise latency
+    float propose_latency_ms = 12;
+    float prevote_latency_ms = 13;
+    float precommit_latency_ms = 14;
+}
+
+// One report from a local node for one episode.
+message ReportLocal {
+    uint32 node_id = 1;
+    uint32 episode = 2;
+    Protocol protocol = 3;
+    // Window start consensus tick used to build this report.
+    uint32 start_tick = 6;
+    // Window end consensus tick (exclusive) used to build this report.
+    uint32 report_seq = 7;
+    oneof state {
+        PbftReport pbft_state = 10;
+        TwoPcOverPbftReport two_pc_over_pbft_state = 11;
+        SbftReport sbft_state = 12;
+        TendermintReport tendermint_state = 13;
+    }
+    optional Reward reward = 4;
+    bytes signature = 5;
+}
+
+// PBFT action/reward feedback.
+message PbftReward {
+    uint32 episode = 1;
+    PbftReport report = 2;
+    PbftTimeout timeout_used = 3;
+}
+
+// 2PC-over-PBFT action/reward feedback.
+message TwoPcOverPbftReward {
+    uint32 episode = 1;
+    TwoPcOverPbftReport report = 2;
+    TwoPcOverPbftTimeout timeout_used = 3;
+}
+
+// SBFT action/reward feedback.
+message SbftReward {
+    uint32 episode = 1;
+    SbftReport report = 2;
+    SbftTimeout timeout_used = 3;
+}
+
+// Tendermint action/reward feedback.
+message TendermintReward {
+    uint32 episode = 1;
+    TendermintReport report = 2;
+    TendermintTimeout timeout_used = 3;
+}
+
+// Reward for a prior episode, sent alongside the next report.
+message Reward {
+    oneof value {
+        PbftReward pbft = 1;
+        TwoPcOverPbftReward two_pc_over_pbft = 2;
+        SbftReward sbft = 3;
+        TendermintReward tendermint = 4;
+    }
+}
+
+// Batch of signed reports submitted for consensus
+message ReportBatch {
+    uint32 episode = 1;
+    Protocol protocol = 2;
+    repeated ReportLocal reports = 3;
+}
+
+message PbftTimeout {
+    uint32 election_timeout_milliseconds = 1;
+}
+
+message TwoPcOverPbftTimeout {
+    uint32 election_timeout_milliseconds = 1;
+    uint32 prepare_timeout_milliseconds = 2;
+}
+
+message SbftTimeout {
+    uint32 election_timeout_milliseconds = 1;
+    uint32 slow_path_timeout_milliseconds = 2;
+    uint32 batch_timeout_milliseconds = 3;
+}
+
+message TendermintTimeout {
+    uint32 propose_timeout_milliseconds = 1;
+    uint32 prevote_timeout_milliseconds = 2;
+    uint32 precommit_timeout_milliseconds = 3;
+}
+
+// Timeout recommendation.
+message Timeout {
+    oneof value {
+        PbftTimeout pbft = 1;
+        TwoPcOverPbftTimeout two_pc_over_pbft = 2;
+        SbftTimeout sbft = 3;
+        TendermintTimeout tendermint = 4;
+    }
+}
+
+// Request a timeout decision for a previously accepted report.
+message TimeoutRequest {
+    uint32 episode = 1;
+    Protocol protocol = 2;
+}
+
+// Status wrapper for async timeout computation
+message TimeoutStatus {
+    enum Status {
+        STATUS_UNSPECIFIED = 0;
+        NOT_RECEIVED = 1;
+        PENDING = 2;
+        READY = 3;
+    }
+    uint32 episode = 1;
+    Status status = 2;
+    optional Timeout timeout = 3;
+    // Echoes the report window selected for this episode.
+    uint32 start_tick = 4;
+    uint32 report_seq = 5;
+}
+
+// Consensus service
+service Consensus {
+    // Submit a batch of signed reports for consensus
+    rpc SubmitReportBatch(ReportBatch) returns (google.protobuf.Empty);
+}
+
+// Learning agent service
+service LearningAgent {
+    // Send a report to the agent (status via gRPC error codes if rejected)
+    rpc SendReport(ReportLocal) returns (google.protobuf.Empty);
+
+    // Poll for timeout recommendation for a previously accepted report
+    rpc GetTimeout(TimeoutRequest) returns (TimeoutStatus);
+
+    // Share a report with other agents
+    rpc ShareReport(ReportLocal) returns (google.protobuf.Empty);
+
+    // Receive the final agreed reports from consensus
+    rpc DeliverConsensus(ReportBatch) returns (google.protobuf.Empty);
+
+    // Reset the agent's internal state/model
+    rpc Reset(google.protobuf.Empty) returns (google.protobuf.Empty);
+}

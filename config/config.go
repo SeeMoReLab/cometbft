@@ -1235,6 +1235,17 @@ type ConsensusConfig struct {
 
 	// BlockTimeTolerance is the maximum allowed difference between the proposed block time and wall-clock time.
 	BlockTimeTolerance time.Duration `mapstructure:"block_time_tolerance"`
+	// AdaptiveTimerAddr is the gRPC address (host:port) of the per-node LearningAgent service.
+	// If empty, the adaptive timer feedback loop is disabled.
+	AdaptiveTimerAddr string `mapstructure:"adaptive_timer_addr"`
+
+	// AdaptiveTimerEpochSize is the number of committed transactions per learning epoch.
+	// A report is sent at epoch_size/2 transactions; the reward window covers epoch_size/2 to epoch_size.
+	AdaptiveTimerEpochSize int64 `mapstructure:"adaptive_timer_epoch_size"`
+
+	// AdaptiveTimerNodeIndex is the integer node ID included in ReportLocal.node_id.
+	// Must be unique per node (0, 1, 2, ...).
+	AdaptiveTimerNodeIndex uint32 `mapstructure:"adaptive_timer_node_index"`
 }
 
 // DefaultConsensusConfig returns a default configuration for the consensus service
@@ -1255,6 +1266,9 @@ func DefaultConsensusConfig() *ConsensusConfig {
 		PeerQueryMaj23SleepDuration: 2000 * time.Millisecond,
 		DoubleSignCheckHeight:       int64(0),
 		BlockTimeTolerance:          60 * time.Second,
+		AdaptiveTimerAddr:           "",
+		AdaptiveTimerEpochSize:      1000,
+		AdaptiveTimerNodeIndex:      0,
 	}
 }
 
