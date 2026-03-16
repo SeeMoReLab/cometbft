@@ -17,14 +17,17 @@ import (
 
 // windowData accumulates per-block statistics for one half-epoch window.
 type windowData struct {
-	startHeight int64
-	endHeight   int64
-	totalTxs    uint32
-	heightCount uint32
-	latenciesMs []float64 // propose(round=0) → finalizeCommit per height
-	batchSizes  []float64 // txs per committed block
-	roundsGt0   uint32    // heights where commitRound > 0 (timeout violations / leader changes)
-	windowStart time.Time
+	startHeight          int64
+	endHeight            int64
+	totalTxs             uint32
+	heightCount          uint32
+	latenciesMs          []float64 // propose(round=0) → finalizeCommit per height
+	proposeLatenciesMs   []float64 // enterPropose(round=0) → enterPrevote(round=0)
+	prevoteLatenciesMs   []float64 // enterPrevote(round=0) → enterPrecommit(round=0)
+	precommitLatenciesMs []float64 // enterPrecommit(round=0) → finalizeCommit
+	batchSizes           []float64 // txs per committed block
+	roundsGt0            uint32    // heights where commitRound > 0 (timeout violations / leader changes)
+	windowStart          time.Time
 }
 
 type pendingReward struct {
@@ -57,8 +60,12 @@ type EpochTracker struct {
 	// txCounterB counts txs committed in phase B (after n/2 trigger fires).
 	txCounterB int64
 
-	// proposeTime maps height → time.Now() at enterPropose(round=0).
+	// proposeTime maps height -> time.Now() at enterPropose(round=0).
 	proposeTime map[int64]time.Time
+	// prevoteTime maps height -> time.Now() at enterPrevote(round=0).
+	prevoteTime map[int64]time.Time
+	// precommitTime maps height -> time.Now() at enterPrecommit(round=0).
+	precommitTime map[int64]time.Time
 
 	pendingReward  *pendingReward
 	currentTimeout *adaptivetimers.TendermintTimeout
@@ -79,6 +86,8 @@ func NewEpochTracker(config *cfg.ConsensusConfig, logger log.Logger) (*EpochTrac
 		nodeID:          config.AdaptiveTimerNodeIndex,
 		epochSize:       config.AdaptiveTimerEpochSize,
 		proposeTime:     make(map[int64]time.Time),
+		prevoteTime:     make(map[int64]time.Time),
+		precommitTime:   make(map[int64]time.Time),
 		windowA:         windowData{windowStart: now},
 		windowB:         windowData{windowStart: now},
 		timeoutResultCh: make(chan *adaptivetimers.TendermintTimeout, 1),
@@ -140,6 +149,22 @@ func (et *EpochTracker) RecordProposeStart(height int64) {
 	et.proposeTime[height] = time.Now()
 }
 
+// RecordPrevoteStart records the wall-clock time of enterPrevote for round 0.
+func (et *EpochTracker) RecordPrevoteStart(height int64) {
+	if et.client == nil {
+		return
+	}
+	et.prevoteTime[height] = time.Now()
+}
+
+// RecordPrecommitStart records the wall-clock time of enterPrecommit for round 0.
+func (et *EpochTracker) RecordPrecommitStart(height int64) {
+	if et.client == nil {
+		return
+	}
+	et.precommitTime[height] = time.Now()
+}
+
 // OnBlockCommitted is called from finalizeCommit after recordMetrics.
 // height is the committed height, txCount is len(block.Data.Txs),
 // commitRound is cs.CommitRound.
@@ -148,11 +173,30 @@ func (et *EpochTracker) OnBlockCommitted(height int64, txCount int, commitRound 
 		return
 	}
 
-	// Compute consensus latency for this height.
-	var latencyMs float64
-	if t, ok := et.proposeTime[height]; ok {
-		latencyMs = float64(time.Since(t).Milliseconds())
+	// Compute end-to-end and phase latencies for this height.
+	now := time.Now()
+	var latencyMs, proposeLatencyMs, prevoteLatencyMs, precommitLatencyMs float64
+	proposeT, hasProposeT := et.proposeTime[height]
+	prevoteT, hasPrevoteT := et.prevoteTime[height]
+	precommitT, hasPrecommitT := et.precommitTime[height]
+	if hasProposeT {
+		latencyMs = float64(now.Sub(proposeT).Milliseconds())
 		delete(et.proposeTime, height)
+	}
+	if hasProposeT && hasPrevoteT {
+		proposeLatencyMs = float64(prevoteT.Sub(proposeT).Milliseconds())
+	}
+	if hasPrevoteT && hasPrecommitT {
+		prevoteLatencyMs = float64(precommitT.Sub(prevoteT).Milliseconds())
+	}
+	if hasPrecommitT {
+		precommitLatencyMs = float64(now.Sub(precommitT).Milliseconds())
+	}
+	if hasPrevoteT {
+		delete(et.prevoteTime, height)
+	}
+	if hasPrecommitT {
+		delete(et.precommitTime, height)
 	}
 
 	wasViolation := commitRound > 0
@@ -160,7 +204,7 @@ func (et *EpochTracker) OnBlockCommitted(height int64, txCount int, commitRound 
 
 	// Phase A: accumulate until n/2 transactions.
 	if et.txCounterA < et.epochSize/2 {
-		accumulateHeight(&et.windowA, height, float64(txCount), latencyMs, wasViolation)
+		accumulateHeight(&et.windowA, height, float64(txCount), latencyMs, proposeLatencyMs, prevoteLatencyMs, precommitLatencyMs, wasViolation)
 		et.txCounterA += txInt
 		if et.txCounterA >= et.epochSize/2 {
 			et.sendReportAndStartPolling()
@@ -169,7 +213,7 @@ func (et *EpochTracker) OnBlockCommitted(height int64, txCount int, commitRound 
 	}
 
 	// Phase B: accumulate from n/2 toward n.
-	accumulateHeight(&et.windowB, height, float64(txCount), latencyMs, wasViolation)
+	accumulateHeight(&et.windowB, height, float64(txCount), latencyMs, proposeLatencyMs, prevoteLatencyMs, precommitLatencyMs, wasViolation)
 	et.txCounterB += txInt
 
 	// At 0.8n total (= 0.3n into phase B): stop polling and apply timeout.
@@ -234,6 +278,9 @@ func (et *EpochTracker) sendReportAndStartPolling() {
 		"timeout_violation_rate", report.TimeoutViolationRate,
 		"avg_batch_size", report.AvgBatchSize,
 		"leader_change_count", report.LeaderChangeCount,
+		"propose_latency_ms", report.ProposeLatencyMs,
+		"prevote_latency_ms", report.PrevoteLatencyMs,
+		"precommit_latency_ms", report.PrecommitLatencyMs,
 	)
 
 	// Build reward for the prior episode, if any.
@@ -398,7 +445,7 @@ func (et *EpochTracker) snapshotBAndReset() {
 	}
 }
 
-func accumulateHeight(w *windowData, height int64, txCount, latencyMs float64, violation bool) {
+func accumulateHeight(w *windowData, height int64, txCount, latencyMs, proposeLatencyMs, prevoteLatencyMs, precommitLatencyMs float64, violation bool) {
 	if w.heightCount == 0 {
 		w.startHeight = height
 	}
@@ -407,6 +454,15 @@ func accumulateHeight(w *windowData, height int64, txCount, latencyMs float64, v
 	w.heightCount++
 	if latencyMs > 0 {
 		w.latenciesMs = append(w.latenciesMs, latencyMs)
+	}
+	if proposeLatencyMs > 0 {
+		w.proposeLatenciesMs = append(w.proposeLatenciesMs, proposeLatencyMs)
+	}
+	if prevoteLatencyMs > 0 {
+		w.prevoteLatenciesMs = append(w.prevoteLatenciesMs, prevoteLatencyMs)
+	}
+	if precommitLatencyMs > 0 {
+		w.precommitLatenciesMs = append(w.precommitLatenciesMs, precommitLatencyMs)
 	}
 	if txCount > 0 {
 		w.batchSizes = append(w.batchSizes, txCount)
@@ -440,6 +496,9 @@ func buildReport(w *windowData) *adaptivetimers.TendermintReport {
 		P95BatchSize:            windowPercentile(w.batchSizes, 95),
 		LeaderChangeCount:       w.roundsGt0,
 		RegencyChangeCount:      w.roundsGt0,
+		ProposeLatencyMs:        windowAvg(w.proposeLatenciesMs),
+		PrevoteLatencyMs:        windowAvg(w.prevoteLatenciesMs),
+		PrecommitLatencyMs:      windowAvg(w.precommitLatenciesMs),
 	}
 }
 
