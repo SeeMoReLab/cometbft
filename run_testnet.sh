@@ -8,23 +8,51 @@ ABCI_CLI="$REPO_DIR/build/abci-cli"
 LOAD_BIN="$REPO_DIR/build/load"
 REPORT_BIN="$REPO_DIR/build/report"
 DELAY_SCHEDULE="$REPO_DIR/delay_schedule.json"
-LOAD_DURATION=15
+LOAD_DURATION=30
 LOAD_RATE=200
-LOAD_CONNECTIONS=1
+LOAD_CONNECTIONS=5
 LOAD_SIZE=500
 EPOCH_SIZE=1000
+POST_PEER_CONNECT_DELAY=5
+LOG_DIR="$REPO_DIR/logs"
+SERVER_LOG_DIR="$LOG_DIR/server"
+CLIENT_LOG_FILE="$LOG_DIR/tendermint_client.log"
+CLOSE_WINDOWS=0
+INITIAL_TERMINAL_WINDOW_IDS=()
 
 # Parse arguments.
 usage() {
-  echo "Usage: $0 <n> <f>"
+  echo "Usage: $0 [--close-windows|-w] <n> <f>"
   echo "  n  total number of nodes"
   echo "  f  compatibility arg from old maverick flow (ignored in CometBFT-only mode)"
+  echo "  --close-windows, -w  close Terminal windows opened by this script on exit"
   exit 1
 }
 
-[ "$#" -eq 2 ] || usage
-N="$1"
-F="$2"
+POSITIONAL_ARGS=()
+while [ "$#" -gt 0 ]; do
+  case "$1" in
+    --close-windows|-w)
+      CLOSE_WINDOWS=1
+      shift
+      ;;
+    -h|--help)
+      usage
+      ;;
+    -*)
+      echo "Error: unknown option $1"
+      usage
+      ;;
+    *)
+      POSITIONAL_ARGS+=("$1")
+      shift
+      ;;
+  esac
+done
+
+[ "${#POSITIONAL_ARGS[@]}" -eq 2 ] || usage
+N="${POSITIONAL_ARGS[0]}"
+F="${POSITIONAL_ARGS[1]}"
 [[ "$N" =~ ^[0-9]+$ ]] && [[ "$F" =~ ^[0-9]+$ ]] || { echo "Error: n and f must be non-negative integers"; usage; }
 [ "$N" -gt 0 ] || { echo "Error: n must be greater than 0"; exit 1; }
 
@@ -33,7 +61,11 @@ if [ "$F" -ne 0 ]; then
 fi
 
 echo "==> n=$N total cometbft nodes"
-
+mkdir -p "$LOG_DIR" "$SERVER_LOG_DIR"
+rm -f "$SERVER_LOG_DIR"/*.log
+: > "$CLIENT_LOG_FILE"
+echo "==> Server logs dir: $SERVER_LOG_DIR"
+echo "==> Client logs file: $CLIENT_LOG_FILE"
 # Port layout (per node i):
 # p2p   = 26656 + i*3
 # rpc   = 26657 + i*3
@@ -44,11 +76,68 @@ rpc_port()   { echo $(( 26657 + $1 * 3 )); }
 abci_port()  { echo $(( 26658 + $1 * 3 )); }
 agent_port() { echo $(( 50000 + $1 )); }
 
+run_and_log() {
+  local log_file="$1"
+  shift
+  "$@" 2>&1 | tee -a "$log_file"
+  return "${PIPESTATUS[0]}"
+}
+
+terminal_window_ids() {
+  osascript <<'OSA' 2>/dev/null || true
+  tell application "Terminal"
+    set idList to id of windows
+    set AppleScript's text item delimiters to linefeed
+    return idList as text
+  end tell
+OSA
+}
+
+capture_initial_windows() {
+  INITIAL_TERMINAL_WINDOW_IDS=()
+  while IFS= read -r wid; do
+    [ -n "$wid" ] && INITIAL_TERMINAL_WINDOW_IDS+=("$wid")
+  done < <(terminal_window_ids)
+}
+
+close_new_windows() {
+  local current_ids=()
+  local wid
+  local existed
+
+  while IFS= read -r wid; do
+    [ -n "$wid" ] && current_ids+=("$wid")
+  done < <(terminal_window_ids)
+
+  for wid in "${current_ids[@]}"; do
+    existed=0
+    for existing in "${INITIAL_TERMINAL_WINDOW_IDS[@]}"; do
+      if [ "$existing" = "$wid" ]; then
+        existed=1
+        break
+      fi
+    done
+    if [ "$existed" -eq 0 ]; then
+      osascript \
+        -e "set targetId to ${wid}" \
+        -e 'tell application "Terminal"' \
+        -e 'try' \
+        -e 'if exists window id targetId then close (window id targetId)' \
+        -e 'end try' \
+        -e 'end tell' >/dev/null 2>&1 || true
+    fi
+  done
+}
+
 cleanup() {
   echo ""
   echo "==> Stopping all nodes and kvstore processes..."
   pkill -f "cometbft node" 2>/dev/null || true
   pkill -f "abci-cli kvstore" 2>/dev/null || true
+  if [ "$CLOSE_WINDOWS" -eq 1 ]; then
+    echo "==> Closing spawned Terminal windows..."
+    close_new_windows
+  fi
   echo "==> Done."
 }
 trap cleanup EXIT INT TERM
@@ -97,20 +186,24 @@ echo "    adaptive timer ports: 50000..$(( 50000 + N - 1 ))"
 
 # Step 4: Start kvstore + cometbft in Terminal windows.
 echo "==> Starting kvstore and cometbft nodes in new Terminal windows..."
+if [ "$CLOSE_WINDOWS" -eq 1 ]; then
+  capture_initial_windows
+fi
 for (( i=0; i<N; i++ )); do
   ABCI_PORT=$(abci_port "$i")
   P2P_PORT=$(p2p_port "$i")
   RPC_PORT=$(rpc_port "$i")
   NODE_HOME="$TESTNET_DIR/node$i"
+  KVSTORE_LOG_FILE="$SERVER_LOG_DIR/kvstore_${i}.log"
 
   osascript \
     -e "tell application \"Terminal\"" \
-    -e "  do script \"echo '=== kvstore node$i ===' && $ABCI_CLI kvstore --address tcp://127.0.0.1:$ABCI_PORT\"" \
+    -e "  do script \"echo '=== kvstore node$i ===' | tee -a \\\"$KVSTORE_LOG_FILE\\\" && $ABCI_CLI kvstore --address tcp://127.0.0.1:$ABCI_PORT 2>&1 | tee -a \\\"$KVSTORE_LOG_FILE\\\"\"" \
     -e "end tell"
-
+  NODE_LOG_FILE="$SERVER_LOG_DIR/cometbft_${i}.log"
   osascript \
     -e "tell application \"Terminal\"" \
-    -e "  do script \"echo '=== cometbft node$i ===' && COMETBFT_NODE_INDEX=$i COMETBFT_PROPOSE_DELAY_SCHEDULE=\\\"$DELAY_SCHEDULE\\\" $TENDERMINT node --home $NODE_HOME --proxy_app tcp://127.0.0.1:$ABCI_PORT --p2p.laddr tcp://0.0.0.0:$P2P_PORT --rpc.laddr tcp://0.0.0.0:$RPC_PORT\"" \
+    -e "  do script \"echo '=== cometbft node$i ===' | tee -a \\\"$NODE_LOG_FILE\\\" && COMETBFT_NODE_INDEX=$i COMETBFT_PROPOSE_DELAY_SCHEDULE=\\\"$DELAY_SCHEDULE\\\" $TENDERMINT node --home $NODE_HOME --proxy_app tcp://127.0.0.1:$ABCI_PORT --p2p.laddr tcp://0.0.0.0:$P2P_PORT --rpc.laddr tcp://0.0.0.0:$RPC_PORT 2>&1 | tee -a \\\"$NODE_LOG_FILE\\\"\"" \
     -e "end tell"
 done
 
@@ -149,8 +242,15 @@ done
 
 # Step 7: Run load test.
 echo ""
+if [ "$POST_PEER_CONNECT_DELAY" -gt 0 ]; then
+  echo "==> Waiting ${POST_PEER_CONNECT_DELAY}s for cluster stabilization before load..."
+  sleep "$POST_PEER_CONNECT_DELAY"
+fi
+
+echo ""
 echo "==> Running load test: rate=$LOAD_RATE tx/s, duration=${LOAD_DURATION}s, connections=$LOAD_CONNECTIONS, size=${LOAD_SIZE}B"
-"$LOAD_BIN" \
+run_and_log "$CLIENT_LOG_FILE" \
+  "$LOAD_BIN" \
   --endpoints "ws://localhost:$RPC0/websocket" \
   --broadcast-tx-method async \
   --connections "$LOAD_CONNECTIONS" \
@@ -166,14 +266,16 @@ sleep 2
 
 # Step 9: Generate report.
 echo "==> Generating latency report..."
-"$REPORT_BIN" \
+run_and_log "$CLIENT_LOG_FILE" \
+  "$REPORT_BIN" \
   --data-dir "$TESTNET_DIR/node0/data" \
   --database-type goleveldb \
   --csv "$REPO_DIR/results.csv"
 
 echo ""
 echo "==> Latency report:"
-"$REPORT_BIN" \
+run_and_log "$CLIENT_LOG_FILE" \
+  "$REPORT_BIN" \
   --data-dir "$TESTNET_DIR/node0/data" \
   --database-type goleveldb
 
@@ -191,7 +293,9 @@ awk -F',' '
     else
       print "    Not enough data"
   }
-' "$REPO_DIR/results.csv"
+' "$REPO_DIR/results.csv" | tee -a "$CLIENT_LOG_FILE"
 
 echo ""
 echo "==> Raw CSV saved to: $REPO_DIR/results.csv"
+echo "==> Server logs saved to: $SERVER_LOG_DIR"
+echo "==> Client logs saved to: $CLIENT_LOG_FILE"
