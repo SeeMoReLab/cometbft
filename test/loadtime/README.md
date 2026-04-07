@@ -36,6 +36,9 @@ on `localhost:25567`
     --endpoints ws://localhost:26657/websocket
 ```
 
+`--send-period` accepts Go duration strings, including sub-second values
+(e.g. `200ms`, `500ms`, `1.5s`). A plain integer is treated as seconds.
+
 ## `report`
 
 The `report` binary is built when `make build` is invoked. The `report` tool

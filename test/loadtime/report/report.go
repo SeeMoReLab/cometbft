@@ -61,6 +61,14 @@ type Reports struct {
 	// transaction data. Parsing errors may occur if a transaction not generated
 	// by the payload package is submitted to the chain.
 	errorCount int
+
+	// timeSource describes which timestamp source was used for latency:
+	// "chain_block_time" (default) or "commit_log_time" when commitTimes are provided.
+	timeSource string
+
+	// missingCommitTimes counts block heights where commit log time was requested
+	// but unavailable, so we fell back to chain block time for that height.
+	missingCommitTimes int
 }
 
 func (rs *Reports) List() []Report {
@@ -69,6 +77,17 @@ func (rs *Reports) List() []Report {
 
 func (rs *Reports) ErrorCount() int {
 	return rs.errorCount
+}
+
+func (rs *Reports) TimeSource() string {
+	if rs.timeSource == "" {
+		return "chain_block_time"
+	}
+	return rs.timeSource
+}
+
+func (rs *Reports) MissingCommitTimes() int {
+	return rs.missingCommitTimes
 }
 
 func (rs *Reports) addDataPoint(id uuid.UUID, l time.Duration, bt time.Time, hash []byte, conns, rate, size uint64) {
@@ -128,6 +147,14 @@ func (rs *Reports) addError() {
 // GenerateFromBlockStore creates a Report using the data in the provided
 // BlockStore.
 func GenerateFromBlockStore(s BlockStore) (*Reports, error) {
+	return GenerateFromBlockStoreWithCommitTimes(s, nil)
+}
+
+// GenerateFromBlockStoreWithCommitTimes creates a Report using the data in the
+// provided BlockStore. If commitTimes is non-empty, latency uses commit log
+// wall-clock time for each block height when available, and falls back to chain
+// block time otherwise.
+func GenerateFromBlockStoreWithCommitTimes(s BlockStore, commitTimes map[int64]time.Time) (*Reports, error) {
 	type payloadData struct {
 		id                      uuid.UUID
 		l                       time.Duration
@@ -141,7 +168,12 @@ func GenerateFromBlockStore(s BlockStore) (*Reports, error) {
 		bt time.Time
 	}
 	reports := &Reports{
-		s: make(map[uuid.UUID]Report),
+		s:          make(map[uuid.UUID]Report),
+		timeSource: "chain_block_time",
+	}
+	useCommitTimes := len(commitTimes) > 0
+	if useCommitTimes {
+		reports.timeSource = "commit_log_time"
 	}
 
 	// Deserializing to proto can be slow but does not depend on other data
@@ -186,6 +218,7 @@ func GenerateFromBlockStore(s BlockStore) (*Reports, error) {
 	}()
 
 	go func() {
+		missingCommitTimes := 0
 		base, height := s.Base(), s.Height()
 		prev := s.LoadBlock(base)
 		for i := base + 1; i < height; i++ {
@@ -201,11 +234,25 @@ func GenerateFromBlockStore(s BlockStore) (*Reports, error) {
 			// be used in the latency calculations because the last block whose
 			// transactions are used in the block one before the last.
 			cur := s.LoadBlock(i)
-			for _, tx := range prev.Txs {
-				txc <- txData{tx: tx, bt: cur.Time}
+			if prev == nil || cur == nil {
+				prev = cur
+				continue
+			}
+			prevHeight := i - 1
+			latencyTime := cur.Time
+			if useCommitTimes {
+				if t, ok := commitTimes[prevHeight]; ok {
+					latencyTime = t
+				} else {
+					missingCommitTimes++
+				}
+			}
+			for _, tx := range prev.Data.Txs {
+				txc <- txData{tx: tx, bt: latencyTime}
 			}
 			prev = cur
 		}
+		reports.missingCommitTimes = missingCommitTimes
 		close(txc)
 	}()
 	for pd := range pdc {

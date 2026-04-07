@@ -7,24 +7,37 @@ TENDERMINT="$REPO_DIR/build/cometbft"
 ABCI_CLI="$REPO_DIR/build/abci-cli"
 LOAD_BIN="$REPO_DIR/build/load"
 REPORT_BIN="$REPO_DIR/build/report"
-DELAY_SCHEDULE="$REPO_DIR/delay_schedule.json"
+FAILURE_SPEC="$REPO_DIR/failure_spec.xml"
+LEARNING_AGENT_DIR="$REPO_DIR/../learning_agent"
+LEARNING_AGENT_MAIN="$LEARNING_AGENT_DIR/main.py"
+SCHEDULE_TENDERMINT="$LEARNING_AGENT_DIR/config/schedule_tendermint.csv"
+
 LOAD_DURATION=30
-LOAD_RATE=200
-LOAD_CONNECTIONS=5
+LOAD_CONNECTIONS=500
+LOAD_RATE=1000
+LOAD_SEND_PERIOD="1s"
 LOAD_SIZE=500
 EPOCH_SIZE=1000
 POST_PEER_CONNECT_DELAY=5
+START_ALIGN_DELAY_MS=15000
+
 LOG_DIR="$REPO_DIR/logs"
 SERVER_LOG_DIR="$LOG_DIR/server"
 CLIENT_LOG_FILE="$LOG_DIR/tendermint_client.log"
-CLOSE_WINDOWS=0
-INITIAL_TERMINAL_WINDOW_IDS=()
 
-# Parse arguments.
+CLOSE_WINDOWS=0
+MODE="normal"
+INITIAL_TERMINAL_WINDOW_IDS=()
+START_UNIX_MS=0
+AGENT_HOSTS_CONFIG="$LOG_DIR/agent_hosts.config"
+PYTHON_BIN="${PYTHON_BIN:-python3}"
+AGENT_PIDS=()
+
 usage() {
-  echo "Usage: $0 [--close-windows|-w] <n> <f>"
-  echo "  n  total number of nodes"
-  echo "  f  compatibility arg from old maverick flow (ignored in CometBFT-only mode)"
+  echo "Usage: $0 [--close-windows|-w] <n> <f> [normal|scheduled]"
+  echo "  n     total number of nodes"
+  echo "  f     number of delay-injected nodes (first f nodes: 0..f-1)"
+  echo "  mode  normal (default) or scheduled"
   echo "  --close-windows, -w  close Terminal windows opened by this script on exit"
   exit 1
 }
@@ -50,27 +63,66 @@ while [ "$#" -gt 0 ]; do
   esac
 done
 
-[ "${#POSITIONAL_ARGS[@]}" -eq 2 ] || usage
+[ "${#POSITIONAL_ARGS[@]}" -ge 2 ] && [ "${#POSITIONAL_ARGS[@]}" -le 3 ] || usage
 N="${POSITIONAL_ARGS[0]}"
 F="${POSITIONAL_ARGS[1]}"
-[[ "$N" =~ ^[0-9]+$ ]] && [[ "$F" =~ ^[0-9]+$ ]] || { echo "Error: n and f must be non-negative integers"; usage; }
+[[ "$N" =~ ^[0-9]+$ ]] && [[ "$F" =~ ^[0-9]+$ ]] || {
+  echo "Error: n and f must be non-negative integers"
+  usage
+}
 [ "$N" -gt 0 ] || { echo "Error: n must be greater than 0"; exit 1; }
+[ "$F" -le "$N" ] || { echo "Error: f ($F) cannot exceed n ($N)"; exit 1; }
 
-if [ "$F" -ne 0 ]; then
-  echo "==> Note: maverick nodes are not used in CometBFT mode; ignoring f=$F"
+if [ "${#POSITIONAL_ARGS[@]}" -eq 3 ]; then
+  MODE="${POSITIONAL_ARGS[2]}"
+fi
+case "$MODE" in
+  normal|scheduled) ;;
+  *)
+    echo "Error: unsupported mode '$MODE'. Supported: normal, scheduled"
+    usage
+    ;;
+esac
+
+DERIVED_F=$(( (N - 1) / 3 ))
+if [ "$F" -ne "$DERIVED_F" ]; then
+  echo "==> Note: provided f=$F differs from (n-1)/3=$DERIVED_F for n=$N"
 fi
 
-echo "==> n=$N total cometbft nodes"
+echo "==> mode=$MODE, n=$N total nodes, delay-injected nodes=$F (0..$(( F - 1 )))"
+
+if [ "$F" -gt 0 ] && [ ! -f "$FAILURE_SPEC" ]; then
+  echo "Error: failure spec not found: $FAILURE_SPEC"
+  exit 1
+fi
+
+if [ "$MODE" = "scheduled" ]; then
+  if [ ! -f "$LEARNING_AGENT_MAIN" ]; then
+    echo "Error: learning agent not found: $LEARNING_AGENT_MAIN"
+    exit 1
+  fi
+  if [ ! -f "$SCHEDULE_TENDERMINT" ]; then
+    echo "Error: schedule file not found: $SCHEDULE_TENDERMINT"
+    exit 1
+  fi
+fi
+
+NOW_UNIX_MS=$($PYTHON_BIN -c 'import time; print(int(time.time() * 1000))')
+START_UNIX_MS=$(( NOW_UNIX_MS + START_ALIGN_DELAY_MS ))
+echo "==> Synced start time (ms): $START_UNIX_MS (delay ${START_ALIGN_DELAY_MS}ms from now)"
+
 mkdir -p "$LOG_DIR" "$SERVER_LOG_DIR"
 rm -f "$SERVER_LOG_DIR"/*.log
 : > "$CLIENT_LOG_FILE"
+
 echo "==> Server logs dir: $SERVER_LOG_DIR"
 echo "==> Client logs file: $CLIENT_LOG_FILE"
+
 # Port layout (per node i):
 # p2p   = 26656 + i*3
 # rpc   = 26657 + i*3
 # abci  = 26658 + i*3
-# agent = 50000 + i  (adaptive timer gRPC)
+# agent = 50000 + i
 p2p_port()   { echo $(( 26656 + $1 * 3 )); }
 rpc_port()   { echo $(( 26657 + $1 * 3 )); }
 abci_port()  { echo $(( 26658 + $1 * 3 )); }
@@ -81,6 +133,51 @@ run_and_log() {
   shift
   "$@" 2>&1 | tee -a "$log_file"
   return "${PIPESTATUS[0]}"
+}
+
+write_agent_hosts_config() {
+  : > "$AGENT_HOSTS_CONFIG"
+  for (( i=0; i<N; i++ )); do
+    echo "$i 127.0.0.1 0 0 $(agent_port "$i") $(rpc_port "$i")" >> "$AGENT_HOSTS_CONFIG"
+  done
+}
+
+start_learning_agents_if_enabled() {
+  if [ "$MODE" != "scheduled" ]; then
+    return
+  fi
+
+  if ! "$PYTHON_BIN" -c "import grpc, torch, sklearn, cryptography" >/dev/null 2>&1; then
+    echo "Error: scheduled mode requires grpc/torch/sklearn/cryptography in $PYTHON_BIN"
+    echo "Install learning_agent/requirements.txt and/or set PYTHON_BIN."
+    exit 1
+  fi
+
+  write_agent_hosts_config
+  AGENT_PIDS=()
+  echo "==> Starting learning-agent replicas (scheduled mode)..."
+  for (( i=0; i<N; i++ )); do
+    local agent_log_file="$SERVER_LOG_DIR/agent_${i}.log"
+    : > "$agent_log_file"
+    "$PYTHON_BIN" "$LEARNING_AGENT_MAIN" \
+      --node-id "$i" \
+      --protocol tendermint \
+      --hosts-config "$AGENT_HOSTS_CONFIG" \
+      --model-type scheduled \
+      --schedule-file "$SCHEDULE_TENDERMINT" \
+      --injection-start-unix-ms "$START_UNIX_MS" \
+      >"$agent_log_file" 2>&1 &
+    AGENT_PIDS+=("$!")
+  done
+
+  sleep 1
+  for (( i=0; i<N; i++ )); do
+    if ! kill -0 "${AGENT_PIDS[$i]}" 2>/dev/null; then
+      echo "Learning-agent process exited early for node$i. Last log lines:"
+      tail -n 60 "$SERVER_LOG_DIR/agent_${i}.log" || true
+      exit 1
+    fi
+  done
 }
 
 terminal_window_ids() {
@@ -131,9 +228,13 @@ close_new_windows() {
 
 cleanup() {
   echo ""
-  echo "==> Stopping all nodes and kvstore processes..."
+  echo "==> Stopping all nodes, kvstore, and learning-agent processes..."
   pkill -f "cometbft node" 2>/dev/null || true
   pkill -f "abci-cli kvstore" 2>/dev/null || true
+  for pid in "${AGENT_PIDS[@]}"; do
+    kill "$pid" 2>/dev/null || true
+  done
+  pkill -f "learning_agent/main.py.*--protocol tendermint" 2>/dev/null || true
   if [ "$CLOSE_WINDOWS" -eq 1 ]; then
     echo "==> Closing spawned Terminal windows..."
     close_new_windows
@@ -169,12 +270,10 @@ echo "==> Patching config files..."
 for (( i=0; i<N; i++ )); do
   CONFIG_FILE="$TESTNET_DIR/node$i/config/config.toml"
 
-  # Remap generated sequential loopback IP peers to 127.0.0.1 with per-node p2p ports.
   for (( j=1; j<N; j++ )); do
     sed -i '' "s|@127.0.0.$(( j + 1 )):26656|@127.0.0.1:$(p2p_port "$j")|g" "$CONFIG_FILE"
   done
 
-  # Adaptive timer settings.
   AGENT_PORT=$(agent_port "$i")
   sed -i '' "s|adaptive_timer_addr = \".*\"|adaptive_timer_addr = \"127.0.0.1:$AGENT_PORT\"|" "$CONFIG_FILE"
   sed -i '' "s|adaptive_timer_node_index = .*|adaptive_timer_node_index = $i|" "$CONFIG_FILE"
@@ -184,30 +283,35 @@ done
 echo "    persistent_peers remapped to 127.0.0.1:PORT for all $N nodes"
 echo "    adaptive timer ports: 50000..$(( 50000 + N - 1 ))"
 
-# Step 4: Start kvstore + cometbft in Terminal windows.
+# Step 4: Start learning agents if needed.
+start_learning_agents_if_enabled
+
+# Step 5: Start kvstore + cometbft in separate Terminal windows.
 echo "==> Starting kvstore and cometbft nodes in new Terminal windows..."
 if [ "$CLOSE_WINDOWS" -eq 1 ]; then
   capture_initial_windows
 fi
+
 for (( i=0; i<N; i++ )); do
   ABCI_PORT=$(abci_port "$i")
   P2P_PORT=$(p2p_port "$i")
   RPC_PORT=$(rpc_port "$i")
   NODE_HOME="$TESTNET_DIR/node$i"
-  KVSTORE_LOG_FILE="$SERVER_LOG_DIR/kvstore_${i}.log"
 
+  KVSTORE_LOG_FILE="$SERVER_LOG_DIR/kvstore_${i}.log"
   osascript \
     -e "tell application \"Terminal\"" \
     -e "  do script \"echo '=== kvstore node$i ===' | tee -a \\\"$KVSTORE_LOG_FILE\\\" && $ABCI_CLI kvstore --address tcp://127.0.0.1:$ABCI_PORT 2>&1 | tee -a \\\"$KVSTORE_LOG_FILE\\\"\"" \
     -e "end tell"
+
   NODE_LOG_FILE="$SERVER_LOG_DIR/cometbft_${i}.log"
   osascript \
     -e "tell application \"Terminal\"" \
-    -e "  do script \"echo '=== cometbft node$i ===' | tee -a \\\"$NODE_LOG_FILE\\\" && COMETBFT_NODE_INDEX=$i COMETBFT_PROPOSE_DELAY_SCHEDULE=\\\"$DELAY_SCHEDULE\\\" $TENDERMINT node --home $NODE_HOME --proxy_app tcp://127.0.0.1:$ABCI_PORT --p2p.laddr tcp://0.0.0.0:$P2P_PORT --rpc.laddr tcp://0.0.0.0:$RPC_PORT 2>&1 | tee -a \\\"$NODE_LOG_FILE\\\"\"" \
+    -e "  do script \"echo '=== cometbft node$i ===' | tee -a \\\"$NODE_LOG_FILE\\\" && COMETBFT_NODE_INDEX=$i COMETBFT_PROPOSE_DELAY_FAILURE_SPEC=\\\"$FAILURE_SPEC\\\" COMETBFT_PROPOSE_DELAY_FAULTY_NODES=$F COMETBFT_PROPOSE_DELAY_START_UNIX_MS=$START_UNIX_MS $TENDERMINT node --home $NODE_HOME --proxy_app tcp://127.0.0.1:$ABCI_PORT --p2p.laddr tcp://0.0.0.0:$P2P_PORT --rpc.laddr tcp://0.0.0.0:$RPC_PORT 2>&1 | tee -a \\\"$NODE_LOG_FILE\\\"\"" \
     -e "end tell"
 done
 
-# Step 5: Wait for all nodes to be ready.
+# Step 6: Wait for all nodes to be ready.
 echo "==> Waiting for nodes to be ready..."
 for (( i=0; i<N; i++ )); do
   RPC_PORT=$(rpc_port "$i")
@@ -226,7 +330,7 @@ for (( i=0; i<N; i++ )); do
   done
 done
 
-# Step 6: Wait for peers to connect.
+# Step 7: Wait for peers to connect.
 EXPECTED_PEERS=$(( N - 1 ))
 RPC0=$(rpc_port 0)
 echo "==> Waiting for peers to connect (expecting $EXPECTED_PEERS peers on node0)..."
@@ -240,36 +344,51 @@ for attempt in $(seq 1 20); do
   sleep 2
 done
 
-# Step 7: Run load test.
-echo ""
+# Step 8: Run load test.
 if [ "$POST_PEER_CONNECT_DELAY" -gt 0 ]; then
   echo "==> Waiting ${POST_PEER_CONNECT_DELAY}s for cluster stabilization before load..."
   sleep "$POST_PEER_CONNECT_DELAY"
 fi
 
 echo ""
-echo "==> Running load test: rate=$LOAD_RATE tx/s, duration=${LOAD_DURATION}s, connections=$LOAD_CONNECTIONS, size=${LOAD_SIZE}B"
+echo "==> Mode: $MODE"
+echo "==> Running load: duration=${LOAD_DURATION}s, connections=$LOAD_CONNECTIONS, rate=$LOAD_RATE, send-period=${LOAD_SEND_PERIOD}, size=${LOAD_SIZE}B"
+echo "==> Load start-unix-ms: $START_UNIX_MS"
 run_and_log "$CLIENT_LOG_FILE" \
   "$LOAD_BIN" \
   --endpoints "ws://localhost:$RPC0/websocket" \
-  --broadcast-tx-method async \
+  --start-unix-ms "$START_UNIX_MS" \
   --connections "$LOAD_CONNECTIONS" \
   --rate "$LOAD_RATE" \
+  --send-period "$LOAD_SEND_PERIOD" \
   --time "$LOAD_DURATION" \
   --size "$LOAD_SIZE"
 
-# Step 8: Stop nodes before reading blockstore.
+# Step 9: Stop nodes before reading blockstore.
 echo ""
-echo "==> Stopping cometbft nodes to release blockstore lock..."
+echo "==> Stopping nodes to release blockstore lock..."
 pkill -f "cometbft node" 2>/dev/null || true
+for pid in "${AGENT_PIDS[@]}"; do
+  kill "$pid" 2>/dev/null || true
+done
 sleep 2
 
-# Step 9: Generate report.
+# Step 10: Generate report.
+REPORT_STATE_LOG="$SERVER_LOG_DIR/cometbft_0.log"
+REPORT_STATE_ARGS=()
+if [ -f "$REPORT_STATE_LOG" ]; then
+  REPORT_STATE_ARGS+=(--state-log "$REPORT_STATE_LOG")
+  echo "==> Using state log for wall-clock latency: $REPORT_STATE_LOG"
+else
+  echo "==> State log not found for node0; falling back to chain block timestamp latency."
+fi
+
 echo "==> Generating latency report..."
 run_and_log "$CLIENT_LOG_FILE" \
   "$REPORT_BIN" \
   --data-dir "$TESTNET_DIR/node0/data" \
   --database-type goleveldb \
+  "${REPORT_STATE_ARGS[@]}" \
   --csv "$REPO_DIR/results.csv"
 
 echo ""
@@ -277,9 +396,10 @@ echo "==> Latency report:"
 run_and_log "$CLIENT_LOG_FILE" \
   "$REPORT_BIN" \
   --data-dir "$TESTNET_DIR/node0/data" \
-  --database-type goleveldb
+  --database-type goleveldb \
+  "${REPORT_STATE_ARGS[@]}"
 
-# Step 10: Throughput from CSV.
+# Step 11: Throughput from CSV.
 echo ""
 echo "==> Throughput:"
 awk -F',' '
