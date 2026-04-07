@@ -62,3 +62,5 @@ go.work.sum
 # Local testnet data
 mytestnet/
 output/
+results.csv
+output.txt

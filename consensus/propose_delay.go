@@ -1,8 +1,9 @@
 package consensus
 
 import (
-	"encoding/json"
+	"encoding/xml"
 	"fmt"
+	"math"
 	"os"
 	"sort"
 	"strconv"
@@ -15,20 +16,29 @@ import (
 )
 
 const (
-	envProposeDelaySchedule = "COMETBFT_PROPOSE_DELAY_SCHEDULE"
-	envNodeIndex            = "COMETBFT_NODE_INDEX"
+	envProposeDelayFailureSpec = "COMETBFT_PROPOSE_DELAY_FAILURE_SPEC"
+	envNodeIndex               = "COMETBFT_NODE_INDEX"
+	envProposeDelayFaultyNodes = "COMETBFT_PROPOSE_DELAY_FAULTY_NODES"
+	envProposeDelayStartUnixMS = "COMETBFT_PROPOSE_DELAY_START_UNIX_MS"
 )
 
-// DelayScheduleEntry defines when proposal delay is changed for specific nodes.
-// Schedule file format:
-//
-//	[
-//	  {"at":"10s","nodes":{"0":"4s","1":"2s"}},
-//	  {"at":"40s","nodes":{"0":"0s"}}
-//	]
-type DelayScheduleEntry struct {
-	At    string            `json:"at"`
-	Nodes map[string]string `json:"nodes"`
+type failureSpec struct {
+	WarmUpTime string         `xml:"warmUpTime"`
+	Phases     []failurePhase `xml:"phases>phase"`
+}
+
+type failurePhase struct {
+	AtTime     string            `xml:"atTime"`
+	Time       string            `xml:"time"` // legacy fallback
+	Tendermint failureTendermint `xml:"tendermint"`
+}
+
+type failureTendermint struct {
+	ProposalDelay *failureProposalDelay `xml:"proposalDelay"`
+}
+
+type failureProposalDelay struct {
+	DelayMs string `xml:"delayMs"`
 }
 
 type nodeDelayUpdate struct {
@@ -43,43 +53,67 @@ type proposeDelayController struct {
 }
 
 func newProposeDelayControllerFromEnv(logger log.Logger) *proposeDelayController {
-	scheduleFile := strings.TrimSpace(os.Getenv(envProposeDelaySchedule))
-	if scheduleFile == "" {
+	specFile := strings.TrimSpace(os.Getenv(envProposeDelayFailureSpec))
+	if specFile == "" {
 		return nil
 	}
 
-	nodeIndexStr := strings.TrimSpace(os.Getenv(envNodeIndex))
-	if nodeIndexStr == "" {
+	nodeIndex, ok := parseRequiredNonNegativeIntEnv(envNodeIndex, logger)
+	if !ok {
+		return nil
+	}
+
+	faultyNodes, ok := parseRequiredNonNegativeIntEnv(envProposeDelayFaultyNodes, logger)
+	if !ok {
+		return nil
+	}
+	if faultyNodes == 0 {
 		if logger != nil {
-			logger.Error("propose-delay: schedule provided but node index env is missing", "env", envNodeIndex)
+			logger.Info("propose-delay: disabled (faulty nodes = 0)")
 		}
 		return nil
 	}
-	nodeIndex, err := strconv.Atoi(nodeIndexStr)
-	if err != nil {
+	if nodeIndex >= faultyNodes {
 		if logger != nil {
-			logger.Error("propose-delay: invalid node index", "env", envNodeIndex, "value", nodeIndexStr, "err", err)
+			logger.Info("propose-delay: disabled for non-faulty node", "node", nodeIndex, "faulty_nodes", faultyNodes)
 		}
 		return nil
 	}
 
-	updates, err := loadNodeDelaySchedule(scheduleFile, nodeIndex)
+	startUnixMS := int64(0)
+	if v := strings.TrimSpace(os.Getenv(envProposeDelayStartUnixMS)); v != "" {
+		parsed, err := strconv.ParseInt(v, 10, 64)
+		if err != nil || parsed < 0 {
+			if logger != nil {
+				logger.Error("propose-delay: invalid start unix ms", "env", envProposeDelayStartUnixMS, "value", v, "err", err)
+			}
+			return nil
+		}
+		startUnixMS = parsed
+	}
+
+	updates, err := loadNodeDelayScheduleFromFailureSpec(specFile)
 	if err != nil {
 		if logger != nil {
-			logger.Error("propose-delay: failed to load schedule", "file", scheduleFile, "err", err)
+			logger.Error("propose-delay: failed to load failure spec", "file", specFile, "err", err)
 		}
 		return nil
 	}
 	if len(updates) == 0 {
 		if logger != nil {
-			logger.Info("propose-delay: no schedule entries for this node", "node", nodeIndex, "file", scheduleFile)
+			logger.Info("propose-delay: no phase schedule entries found", "file", specFile)
 		}
 		return nil
 	}
 
 	c := &proposeDelayController{logger: logger}
 	c.delayNS.Store(0)
+
 	start := time.Now()
+	if startUnixMS > 0 {
+		start = time.Unix(0, startUnixMS*int64(time.Millisecond))
+	}
+
 	for _, update := range updates {
 		u := update
 		go func() {
@@ -91,50 +125,128 @@ func newProposeDelayControllerFromEnv(logger log.Logger) *proposeDelayController
 			c.logInfo("propose-delay: updated delay", "at", u.at.String(), "delay", u.delay.String())
 		}()
 	}
-	c.logInfo("propose-delay: enabled", "node", nodeIndex, "entries", len(updates), "file", scheduleFile)
+
+	c.logInfo(
+		"propose-delay: enabled",
+		"node", nodeIndex,
+		"faulty_nodes", faultyNodes,
+		"entries", len(updates),
+		"file", specFile,
+		"start_unix_ms", startUnixMS,
+	)
 	return c
 }
 
-func loadNodeDelaySchedule(scheduleFile string, nodeIndex int) ([]nodeDelayUpdate, error) {
-	data, err := os.ReadFile(scheduleFile)
+func parseRequiredNonNegativeIntEnv(name string, logger log.Logger) (int, bool) {
+	value := strings.TrimSpace(os.Getenv(name))
+	if value == "" {
+		if logger != nil {
+			logger.Error("propose-delay: missing required env", "env", name)
+		}
+		return 0, false
+	}
+	parsed, err := strconv.Atoi(value)
+	if err != nil || parsed < 0 {
+		if logger != nil {
+			logger.Error("propose-delay: invalid env", "env", name, "value", value, "err", err)
+		}
+		return 0, false
+	}
+	return parsed, true
+}
+
+func loadNodeDelayScheduleFromFailureSpec(specFile string) ([]nodeDelayUpdate, error) {
+	data, err := os.ReadFile(specFile)
 	if err != nil {
-		return nil, fmt.Errorf("reading schedule file: %w", err)
+		return nil, fmt.Errorf("reading failure spec: %w", err)
 	}
 
-	var schedule []DelayScheduleEntry
-	if err := json.Unmarshal(data, &schedule); err != nil {
-		return nil, fmt.Errorf("parsing schedule file: %w", err)
+	var spec failureSpec
+	if err := xml.Unmarshal(data, &spec); err != nil {
+		return nil, fmt.Errorf("parsing failure spec xml: %w", err)
 	}
 
-	nodeKey := strconv.Itoa(nodeIndex)
-	updates := make([]nodeDelayUpdate, 0)
-	for _, entry := range schedule {
-		delayStr, ok := entry.Nodes[nodeKey]
-		if !ok {
-			continue
+	warmUp, err := parseSecondsDuration(spec.WarmUpTime)
+	if err != nil {
+		return nil, fmt.Errorf("invalid warmUpTime %q: %w", spec.WarmUpTime, err)
+	}
+
+	updates := make([]nodeDelayUpdate, 0, len(spec.Phases))
+	for _, phase := range spec.Phases {
+		atText := strings.TrimSpace(phase.AtTime)
+		if atText == "" {
+			atText = strings.TrimSpace(phase.Time)
 		}
-
-		fireAfter, err := time.ParseDuration(entry.At)
+		at, err := parseSecondsDuration(atText)
 		if err != nil {
-			return nil, fmt.Errorf("parsing at=%q: %w", entry.At, err)
+			return nil, fmt.Errorf("invalid phase atTime/time %q: %w", atText, err)
 		}
+
+		delay := time.Duration(0)
+		if phase.Tendermint.ProposalDelay != nil {
+			delayText := strings.TrimSpace(phase.Tendermint.ProposalDelay.DelayMs)
+			if delayText != "" {
+				delay, err = parseMillisecondsDuration(delayText)
+				if err != nil {
+					return nil, fmt.Errorf("invalid tendermint.proposalDelay.delayMs %q: %w", delayText, err)
+				}
+			}
+		}
+
+		fireAfter := warmUp + at
 		if fireAfter < 0 {
-			return nil, fmt.Errorf("schedule at must be >= 0, got %q", entry.At)
+			fireAfter = 0
 		}
-
-		delay, err := time.ParseDuration(delayStr)
-		if err != nil {
-			return nil, fmt.Errorf("parsing delay=%q for node %d: %w", delayStr, nodeIndex, err)
-		}
-		if delay < 0 {
-			return nil, fmt.Errorf("delay must be >= 0, got %q", delayStr)
-		}
-
 		updates = append(updates, nodeDelayUpdate{at: fireAfter, delay: delay})
 	}
 
 	sort.Slice(updates, func(i, j int) bool { return updates[i].at < updates[j].at })
-	return updates, nil
+	return dedupeByAt(updates), nil
+}
+
+func dedupeByAt(in []nodeDelayUpdate) []nodeDelayUpdate {
+	if len(in) <= 1 {
+		return in
+	}
+	out := make([]nodeDelayUpdate, 0, len(in))
+	for _, u := range in {
+		if len(out) > 0 && out[len(out)-1].at == u.at {
+			out[len(out)-1] = u
+			continue
+		}
+		out = append(out, u)
+	}
+	return out
+}
+
+func parseSecondsDuration(text string) (time.Duration, error) {
+	value := strings.TrimSpace(text)
+	if value == "" {
+		return 0, nil
+	}
+	seconds, err := strconv.ParseFloat(value, 64)
+	if err != nil {
+		return 0, err
+	}
+	if seconds < 0 {
+		seconds = 0
+	}
+	return time.Duration(math.Round(seconds * float64(time.Second))), nil
+}
+
+func parseMillisecondsDuration(text string) (time.Duration, error) {
+	value := strings.TrimSpace(text)
+	if value == "" {
+		return 0, nil
+	}
+	milliseconds, err := strconv.ParseFloat(value, 64)
+	if err != nil {
+		return 0, err
+	}
+	if milliseconds < 0 {
+		milliseconds = 0
+	}
+	return time.Duration(math.Round(milliseconds * float64(time.Millisecond))), nil
 }
 
 func (c *proposeDelayController) currentDelay() time.Duration {
