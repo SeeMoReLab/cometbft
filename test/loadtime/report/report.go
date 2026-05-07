@@ -36,6 +36,7 @@ type Report struct {
 	ID                      uuid.UUID
 	Rate, Connections, Size uint64
 	Max, Min, Avg, StdDev   time.Duration
+	P50, P90, P95, P99      time.Duration
 
 	// NegativeCount is the number of negative durations encountered while
 	// reading the transaction data. A negative duration means that
@@ -130,6 +131,11 @@ func (rs *Reports) calculateAll() {
 		}
 		r.Avg = time.Duration(r.sum / int64(len(r.All)))
 		r.StdDev = time.Duration(int64(stat.StdDev(toFloat(r.All), nil)))
+		sortedDurations := toSortedDurationNanos(r.All)
+		r.P50 = percentileFromSortedNanos(sortedDurations, 50)
+		r.P90 = percentileFromSortedNanos(sortedDurations, 90)
+		r.P95 = percentileFromSortedNanos(sortedDurations, 95)
+		r.P99 = percentileFromSortedNanos(sortedDurations, 99)
 		rs.l = append(rs.l, r)
 	}
 	sort.Slice(rs.l, func(i, j int) bool {
@@ -272,4 +278,35 @@ func toFloat(in []DataPoint) []float64 {
 		r[i] = float64(int64(v.Duration))
 	}
 	return r
+}
+
+func toSortedDurationNanos(in []DataPoint) []int64 {
+	out := make([]int64, len(in))
+	for i, v := range in {
+		out[i] = int64(v.Duration)
+	}
+	sort.Slice(out, func(i, j int) bool { return out[i] < out[j] })
+	return out
+}
+
+func percentileFromSortedNanos(sorted []int64, p float64) time.Duration {
+	if len(sorted) == 0 {
+		return 0
+	}
+	if p <= 0 {
+		return time.Duration(sorted[0])
+	}
+	if p >= 100 {
+		return time.Duration(sorted[len(sorted)-1])
+	}
+	// Nearest-rank percentile: ceil(p/100 * N)
+	rank := int(math.Ceil((p / 100.0) * float64(len(sorted))))
+	idx := rank - 1
+	if idx < 0 {
+		idx = 0
+	}
+	if idx >= len(sorted) {
+		idx = len(sorted) - 1
+	}
+	return time.Duration(sorted[idx])
 }
