@@ -88,6 +88,10 @@ func main() {
 			"\tMinimum Latency: %s\n"+
 			"\tMaximum Latency: %s\n"+
 			"\tAverage Latency: %s\n"+
+			"\tMedian Latency (P50): %s\n"+
+			"\tP90 Latency: %s\n"+
+			"\tP95 Latency: %s\n"+
+			"\tP99 Latency: %s\n"+
 			"\tStandard Deviation: %s\n"+
 			"\tMissing Commit Heights: %d\n\n",
 			r.ID,
@@ -100,6 +104,10 @@ func main() {
 			r.Min,
 			r.Max,
 			r.Avg,
+			r.P50,
+			r.P90,
+			r.P95,
+			r.P99,
 			r.StdDev,
 			rs.MissingCommitTimes(),
 		)
