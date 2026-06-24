@@ -222,8 +222,8 @@ func (et *EpochTracker) OnBlockCommitted(height int64, txCount int, commitRound 
 		et.stopPollingAndApply()
 	}
 
-	// At n total (= 0.5n into phase B): snapshot B as pending reward, reset.
-	if et.txCounterB >= et.epochSize/2 {
+	// At n total and window > 0(= 0.5n into phase B): snapshot B as pending reward, reset.
+	if et.txCounterB >= et.epochSize/2 && et.windowB.heightCount > 0 {
 		et.snapshotBAndReset()
 	}
 }
