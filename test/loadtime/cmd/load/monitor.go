@@ -18,9 +18,6 @@ type progressState struct {
 	initialized bool
 	prevHeight  int64
 	prevBlock   *types.Block
-
-	totalFinished int64
-	totalLatency  time.Duration
 }
 
 func runProgressMonitor(ctx context.Context, wsEndpoint string, runID []byte, interval time.Duration) {
@@ -106,8 +103,6 @@ func collectFinishedTxs(ctx context.Context, client *rpchttp.HTTP, runID []byte,
 			latency := cur.Block.Time.Sub(p.Time.AsTime())
 			sampleCount++
 			sampleLatencies = append(sampleLatencies, latency)
-			st.totalFinished++
-			st.totalLatency += latency
 		}
 
 		st.prevBlock = cur.Block
@@ -121,25 +116,20 @@ func printProgressLine(start time.Time, st *progressState, sampleCount int64, sa
 	elapsed := int(time.Since(start).Seconds())
 
 	if sampleCount == 0 {
-		fmt.Printf("-- Monitor t=%ds finished_total=%d finished_delta=0 avg_latency_ms=NA p95_latency_ms=NA\n",
-			elapsed, st.totalFinished)
+		fmt.Printf("-- Monitor t=%ds finished_delta=0 avg_latency_ms=NA p95_latency_ms=NA max_latency_ms=NA\n", elapsed)
 		return
 	}
 
 	sampleAvg := durationAvg(sampleLatencies)
 	p95 := durationPercentile(sampleLatencies, 95)
-	totalAvg := time.Duration(0)
-	if st.totalFinished > 0 {
-		totalAvg = time.Duration(int64(st.totalLatency) / st.totalFinished)
-	}
+	maxLatency := durationMax(sampleLatencies)
 
-	fmt.Printf("-- Monitor t=%ds finished_total=%d finished_delta=%d avg_latency_ms=%.2f p95_latency_ms=%.2f total_avg_latency_ms=%.2f\n",
+	fmt.Printf("-- Monitor t=%ds finished_delta=%d avg_latency_ms=%.2f p95_latency_ms=%.2f max_latency_ms=%.2f\n",
 		elapsed,
-		st.totalFinished,
 		sampleCount,
 		durationMs(sampleAvg),
 		durationMs(p95),
-		durationMs(totalAvg),
+		durationMs(maxLatency),
 	)
 }
 
@@ -152,6 +142,16 @@ func durationAvg(v []time.Duration) time.Duration {
 		sum += int64(d)
 	}
 	return time.Duration(sum / int64(len(v)))
+}
+
+func durationMax(v []time.Duration) time.Duration {
+	var maximum time.Duration
+	for _, duration := range v {
+		if duration > maximum {
+			maximum = duration
+		}
+	}
+	return maximum
 }
 
 func durationPercentile(v []time.Duration, p float64) time.Duration {
