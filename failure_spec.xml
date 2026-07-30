@@ -1,0 +1,191 @@
+<?xml version="1.0"?>
+<failureSpec>
+
+    <!--
+      Time-based, phase-driven fault specification.
+      Replica IDs are global IDs (0..N-1).
+
+      Network precedence per phase: edge > source > global.
+      Protocol precedence per phase: replica override > global default.
+
+      Phase timing:
+        - Preferred: <atTime> means "activate this phase at t seconds from start".
+        - Legacy: <time> is interpreted as phase duration by the network applier.
+    -->
+
+    <schemaVersion>2</schemaVersion>
+    <replicaIdType>global</replicaIdType>
+    <!-- Warm-up period in seconds: no failure behavior is active during this time. -->
+    <warmUpTime>10</warmUpTime>
+
+    <phases>
+        <!-- Base case -->
+        <phase>
+            <!-- Activate this phase at t=0 seconds from experiment start -->
+            <atTime>0</atTime>
+
+            <network>
+                <directedEdges>true</directedEdges>
+                <precedence>global,source,edge</precedence>
+
+                <!-- Applied to all directed edges unless overridden -->
+                <global>
+                    <delayMs>0</delayMs>
+                    <lossPct>0</lossPct>
+                </global>
+
+                <!-- Applied to all outgoing edges from src unless overridden by edge -->
+                <sources>
+                    <!--
+                    <source>
+                        <src>0</src>
+                        <delayMs>0</delayMs>
+                        <lossPct>0</lossPct>
+                    </source>
+                    -->
+                </sources>
+
+                <!-- Applied to one directed edge (src -> dst) -->
+                <edges>
+                    <!--
+                    <edge>
+                        <src>0</src>
+                        <dst>1</dst>
+                        <delayMs>0</delayMs>
+                        <lossPct>0</lossPct>
+                    </edge>
+                    -->
+                </edges>
+            </network>
+
+            <tendermint>
+                <!--
+                  Proposal-delay behavior:
+                    Applies uniformly to all maverick replicas for this phase.
+                    No per-replica list is required.
+                -->
+                <!--
+                <proposalDelay>
+                    <delayMs>0</delayMs>
+                </proposalDelay>
+                -->
+            </tendermint>
+
+            <agent>
+                <!--
+                  Dirty report behavior:
+                    random dirty report is enabled only for listed replica IDs.
+                    If a replica ID is not listed, dirty report is disabled.
+                -->
+                <dirtyReport>
+                    <replicas>
+                        <!--
+                        <id>2</id>
+                        -->
+                    </replicas>
+                </dirtyReport>
+
+                <!--
+                  Ignore-report behavior:
+                    submit exactly 2f+1 reports even if more were collected.
+                    Enabled only for listed replica IDs.
+                -->
+                <ignoreReport>
+                    <replicas>
+                        <!--
+                        <id>3</id>
+                        -->
+                    </replicas>
+                </ignoreReport>
+            </agent>
+        </phase>
+
+        <!-- Small proposal delay -->
+        <phase>
+            <atTime>60</atTime>
+            <network>
+                <directedEdges>true</directedEdges>
+                <precedence>global,source,edge</precedence>
+
+                <global>
+                    <delayMs>0</delayMs>
+                    <lossPct>0</lossPct>
+                </global>
+            </network>
+
+            <tendermint>
+                <proposalDelay>
+                    <delayMs>300</delayMs>
+                </proposalDelay>
+            </tendermint>
+        </phase>
+
+        <!-- Large proposal delay -->
+        <phase>
+            <atTime>120</atTime>
+            <network>
+                <directedEdges>true</directedEdges>
+                <precedence>global,source,edge</precedence>
+
+                <global>
+                    <delayMs>0</delayMs>
+                    <lossPct>0</lossPct>
+                </global>
+            </network>
+
+            <tendermint>
+                <proposalDelay>
+                    <delayMs>900</delayMs>
+                </proposalDelay>
+            </tendermint>
+        </phase>
+
+        <!-- Small network delay -->
+        <phase>
+            <atTime>180</atTime>
+            <network>
+                <directedEdges>true</directedEdges>
+                <precedence>global,source,edge</precedence>
+
+                <global>
+                    <delayMs>150</delayMs>
+                    <lossPct>0</lossPct>
+                </global>
+            </network>
+        </phase>
+
+        <!-- Small network delay + small proposal delay -->
+        <phase>
+            <atTime>3600</atTime>
+            <network>
+                <directedEdges>true</directedEdges>
+                <precedence>global,source,edge</precedence>
+
+                <global>
+                    <delayMs>50</delayMs>
+                    <lossPct>0</lossPct>
+                </global>
+            </network>
+
+            <tendermint>
+                <proposalDelay>
+                    <delayMs>300</delayMs>
+                </proposalDelay>
+            </tendermint>
+        </phase>
+
+        <!-- Large network delay -->
+        <phase>
+            <atTime>4500</atTime>
+            <network>
+                <directedEdges>true</directedEdges>
+                <precedence>global,source,edge</precedence>
+
+                <global>
+                    <delayMs>150</delayMs>
+                    <lossPct>0</lossPct>
+                </global>
+            </network>
+        </phase>
+    </phases>
+</failureSpec>

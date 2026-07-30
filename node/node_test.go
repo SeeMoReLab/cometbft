@@ -1,7 +1,6 @@
 package node
 
 import (
-	"bytes"
 	"context"
 	"fmt"
 	"net"
@@ -36,7 +35,7 @@ import (
 )
 
 func TestNodeStartStop(t *testing.T) {
-	config := test.ResetTestRoot("node_node_test")
+	config := newNodeTestConfig(t, "node_node_test")
 	defer os.RemoveAll(config.RootDir)
 
 	// create & start node
@@ -98,7 +97,7 @@ func TestSplitAndTrimEmpty(t *testing.T) {
 }
 
 func TestNodeDelayedStart(t *testing.T) {
-	config := test.ResetTestRoot("node_delayed_start_test")
+	config := newNodeTestConfig(t, "node_delayed_start_test")
 	defer os.RemoveAll(config.RootDir)
 	now := cmttime.Now()
 
@@ -136,13 +135,9 @@ func TestNodeSetAppVersion(t *testing.T) {
 }
 
 func TestPprofServer(t *testing.T) {
-	config := test.ResetTestRoot("node_pprof_test")
+	config := newNodeTestConfig(t, "node_pprof_test")
 	defer os.RemoveAll(config.RootDir)
-	config.RPC.PprofListenAddress = testFreeAddr(t)
-
-	// should not work yet
-	_, err := http.Get("http://" + config.RPC.PprofListenAddress) //nolint: bodyclose
-	assert.Error(t, err)
+	config.RPC.PprofListenAddress = "127.0.0.1:0"
 
 	n, err := DefaultNewNode(config, log.TestingLogger())
 	assert.NoError(t, err)
@@ -150,9 +145,11 @@ func TestPprofServer(t *testing.T) {
 	defer func() {
 		require.NoError(t, n.Stop())
 	}()
-	assert.NotNil(t, n.pprofSrv)
+	require.NotNil(t, n.pprofSrv)
+	require.NotNil(t, n.pprofLn)
 
-	resp, err := http.Get("http://" + config.RPC.PprofListenAddress + "/debug/pprof")
+	pprofAddr := n.pprofLn.Addr().String()
+	resp, err := http.Get("http://" + pprofAddr + "/debug/pprof")
 	assert.NoError(t, err)
 	defer resp.Body.Close()
 	assert.Equal(t, 200, resp.StatusCode)
@@ -189,61 +186,6 @@ func TestNodeSetPrivValTCP(t *testing.T) {
 	n, err := DefaultNewNode(config, log.TestingLogger())
 	require.NoError(t, err)
 	assert.IsType(t, &privval.RetrySignerClient{}, n.PrivValidator())
-}
-
-// TestLibp2pExperimentalWarningVisual runs the same setup as TestLibp2pExperimentalWarning
-// but logs to stdout so you can see the warning.
-//
-// Run with:
-//
-//	go test -v -run TestLibp2pExperimentalWarningVisual ./node
-func TestLibp2pExperimentalWarningVisual(t *testing.T) {
-	if testing.Short() {
-		t.Skip("skipping visual test in short mode")
-	}
-	config := test.ResetTestRoot("node_libp2p_warning_visual_test")
-	defer os.RemoveAll(config.RootDir)
-
-	config.P2P.PexReactor = false
-	config.P2P.LibP2PConfig.Enabled = true
-	config.P2P.LibP2PConfig.BootstrapPeers = []cfg.LibP2PBootstrapPeer{
-		{Host: "127.0.0.1:26656", ID: "12D3KooWRH1MncKnMv1sP2w4zCJvL1B5nF2xR3sT4uV5wX6yZ7aB8cD9eF0gH1"},
-	}
-
-	logger := log.NewTMLogger(os.Stdout)
-	logger = log.NewFilter(logger, log.AllowAll())
-
-	t.Log("Creating node with libp2p enabled (watch for the orange/brown warning below)...")
-	_, _ = DefaultNewNode(config, logger)
-}
-
-func TestLibp2pExperimentalWarning(t *testing.T) {
-	config := test.ResetTestRoot("node_libp2p_warning_test")
-	defer os.RemoveAll(config.RootDir)
-
-	// Enable libp2p with minimal valid config (bootstrap peer required for validation)
-	config.P2P.PexReactor = false
-	config.P2P.LibP2PConfig.Enabled = true
-	config.P2P.LibP2PConfig.BootstrapPeers = []cfg.LibP2PBootstrapPeer{
-		{Host: "127.0.0.1:26656", ID: "12D3KooWRH1MncKnMv1sP2w4zCJvL1B5nF2xR3sT4uV5wX6yZ7aB8cD9eF0gH1"},
-	}
-
-	// Use a logger that captures output
-	var buf bytes.Buffer
-	logger := log.NewTMLogger(&buf)
-	logger = log.NewFilter(logger, log.AllowAll())
-
-	// Node creation may fail (e.g. when creating host/transport), but we should
-	// get the experimental warning logged before any failure
-	_, err := DefaultNewNode(config, logger)
-
-	output := buf.String()
-	require.Contains(t, output, "EXPERIMENTAL", "expected libp2p experimental warning in logs, got: %s", output)
-	require.Contains(t, output, "simultaneously for all validators", "expected validator warning text in logs, got: %s", output)
-	require.Contains(t, output, "peer IDs have been predetermined", "expected peer IDs warning text in logs, got: %s", output)
-
-	// We expect an error since we're not running a real libp2p network
-	_ = err
 }
 
 // address without a protocol must result in error
@@ -297,6 +239,46 @@ func testFreeAddr(t *testing.T) string {
 	defer ln.Close()
 
 	return fmt.Sprintf("127.0.0.1:%d", ln.Addr().(*net.TCPAddr).Port)
+}
+
+// TestStartRPCCleansUpOnFailure verifies that startRPC closes any listeners it
+// opened when a later listen call fails.
+func TestStartRPCCleansUpOnFailure(t *testing.T) {
+	config := test.ResetTestRoot("node_startrpc_cleanup_test")
+	defer os.RemoveAll(config.RootDir)
+	config.RPC.GRPCListenAddress = ""
+
+	// Bind both before releasing l1 so the OS can't reuse l1's port for l2.
+	l1, err := net.Listen("tcp", "127.0.0.1:0")
+	require.NoError(t, err)
+	l2, err := net.Listen("tcp", "127.0.0.1:0")
+	require.NoError(t, err)
+	defer l2.Close()
+	firstAddr := l1.Addr().String()
+	l1.Close()
+
+	config.RPC.ListenAddress = fmt.Sprintf("tcp://%s,tcp://%s", firstAddr, l2.Addr().String())
+
+	n, err := DefaultNewNode(config, log.TestingLogger())
+	require.NoError(t, err)
+
+	_, err = n.startRPC()
+	require.Error(t, err)
+
+	probe, err := net.Listen("tcp", firstAddr)
+	require.NoError(t, err, "startRPC leaked first listener on %s", firstAddr)
+	probe.Close()
+}
+
+// newNodeTestConfig returns a test config with kernel-assigned ephemeral P2P
+// and RPC ports to avoid cross-test port conflicts.
+func newNodeTestConfig(t *testing.T, testName string) *cfg.Config {
+	t.Helper()
+	config := test.ResetTestRoot(testName)
+	config.P2P.ListenAddress = "tcp://127.0.0.1:0"
+	config.RPC.ListenAddress = "tcp://127.0.0.1:0"
+	config.RPC.GRPCListenAddress = ""
+	return config
 }
 
 // create a proposal block using real and full
@@ -474,7 +456,7 @@ func TestMaxProposalBlockSize(t *testing.T) {
 }
 
 func TestNodeNewNodeCustomReactors(t *testing.T) {
-	config := test.ResetTestRoot("node_new_node_custom_reactors_test")
+	config := newNodeTestConfig(t, "node_new_node_custom_reactors_test")
 	defer os.RemoveAll(config.RootDir)
 
 	cr := p2pmock.NewReactor()

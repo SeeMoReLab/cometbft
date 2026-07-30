@@ -71,8 +71,9 @@ type State struct {
 	service.BaseService
 
 	// config details
-	config        *cfg.ConsensusConfig
-	privValidator types.PrivValidator // for signing votes
+	config            *cfg.ConsensusConfig
+	privValidator     types.PrivValidator // for signing votes
+	proposeDelaySched *proposeDelayController
 
 	// store blocks and commits
 	blockStore sm.BlockStore
@@ -135,6 +136,18 @@ type State struct {
 
 	// offline state sync height indicating to which height the node synced offline
 	offlineStateSyncHeight int64
+
+	// epochTracker manages the adaptive timer feedback loop.
+	epochTracker *EpochTracker
+
+	// phase timing instrumentation for debugging consensus latency bottlenecks.
+	phaseTimingHeight int64
+	phaseTimingRound  int32
+	phaseStartTimes   map[cstypes.RoundStepType]time.Time
+	lastPhaseAt       time.Time
+	lastPhaseHeight   int64
+	lastPhaseRound    int32
+	lastPhaseStep     cstypes.RoundStepType
 }
 
 // StateOption sets an optional parameter on the State.
@@ -165,10 +178,24 @@ func NewState(
 		evpool:           evpool,
 		evsw:             cmtevents.NewEventSwitch(),
 		metrics:          NopMetrics(),
+		phaseStartTimes:  make(map[cstypes.RoundStepType]time.Time),
 	}
 	for _, option := range options {
 		option(cs)
 	}
+
+	// Initialize the adaptive timer epoch tracker (no-op if AdaptiveTimerAddr is empty).
+	et, err := NewEpochTracker(config, log.NewNopLogger())
+	if err != nil {
+		et, _ = NewEpochTracker(&cfg.ConsensusConfig{
+			AdaptiveTimerAddr:      "",
+			AdaptiveTimerEpochSize: 1000,
+			TimeoutPropose:         config.TimeoutPropose,
+			TimeoutPrevote:         config.TimeoutPrevote,
+			TimeoutPrecommit:       config.TimeoutPrecommit,
+		}, log.NewNopLogger())
+	}
+	cs.epochTracker = et
 	// set function defaults (may be overwritten before calling Start)
 	cs.decideProposal = cs.defaultDecideProposal
 	cs.doPrevote = cs.defaultDoPrevote
@@ -193,6 +220,7 @@ func NewState(
 	// NOTE: we do not call scheduleRound0 yet, we do that upon Start()
 
 	cs.BaseService = *service.NewBaseService(nil, "State", cs)
+	cs.proposeDelaySched = newProposeDelayControllerFromEnv(cs.Logger)
 
 	return cs
 }
@@ -201,6 +229,12 @@ func NewState(
 func (cs *State) SetLogger(l log.Logger) {
 	cs.Logger = l
 	cs.timeoutTicker.SetLogger(l)
+	if cs.proposeDelaySched != nil {
+		cs.proposeDelaySched.setLogger(l)
+	}
+	if cs.epochTracker != nil {
+		cs.epochTracker.SetLogger(l.With("module", "epoch_tracker"))
+	}
 }
 
 // SetEventBus sets event bus.
@@ -428,6 +462,10 @@ func (cs *State) loadWalFile() error {
 
 // OnStop implements service.Service.
 func (cs *State) OnStop() {
+	if cs.epochTracker != nil {
+		cs.epochTracker.Close()
+	}
+
 	if err := cs.evsw.Stop(); err != nil {
 		cs.Logger.Error("failed trying to stop eventSwitch", "error", err)
 	}
@@ -560,6 +598,94 @@ func (cs *State) scheduleRound0(rs *cstypes.RoundState) {
 // Attempt to schedule a timeout (by sending timeoutInfo on the tickChan)
 func (cs *State) scheduleTimeout(duration time.Duration, height int64, round int32, step cstypes.RoundStepType) {
 	cs.timeoutTicker.ScheduleTimeout(timeoutInfo{duration, height, round, step})
+}
+
+func (cs *State) resetPhaseTiming(height int64, round int32) {
+	cs.phaseTimingHeight = height
+	cs.phaseTimingRound = round
+	if cs.phaseStartTimes == nil {
+		cs.phaseStartTimes = make(map[cstypes.RoundStepType]time.Time)
+	}
+	for k := range cs.phaseStartTimes {
+		delete(cs.phaseStartTimes, k)
+	}
+}
+
+func (cs *State) markPhaseEnter(height int64, round int32, step cstypes.RoundStepType) {
+	now := cmttime.Now()
+	if cs.phaseTimingHeight != height || cs.phaseTimingRound != round {
+		cs.resetPhaseTiming(height, round)
+	}
+	cs.phaseStartTimes[step] = now
+	if cs.Logger == nil {
+		cs.lastPhaseAt = now
+		cs.lastPhaseHeight = height
+		cs.lastPhaseRound = round
+		cs.lastPhaseStep = step
+		return
+	}
+
+	if cs.lastPhaseAt.IsZero() {
+		cs.Logger.Info("phase enter",
+			"height", height,
+			"round", round,
+			"phase", step.String(),
+		)
+	} else {
+		cs.Logger.Info("phase enter",
+			"height", height,
+			"round", round,
+			"phase", step.String(),
+			"elapsed_since_prev_phase_ms", now.Sub(cs.lastPhaseAt).Milliseconds(),
+			"prev_height", cs.lastPhaseHeight,
+			"prev_round", cs.lastPhaseRound,
+			"prev_phase", cs.lastPhaseStep.String(),
+		)
+	}
+
+	cs.lastPhaseAt = now
+	cs.lastPhaseHeight = height
+	cs.lastPhaseRound = round
+	cs.lastPhaseStep = step
+}
+
+func (cs *State) phaseElapsed(height int64, round int32, step cstypes.RoundStepType) (time.Duration, bool) {
+	if cs.phaseTimingHeight != height || cs.phaseTimingRound != round {
+		return 0, false
+	}
+	start, ok := cs.phaseStartTimes[step]
+	if !ok || start.IsZero() {
+		return 0, false
+	}
+	return cmttime.Now().Sub(start), true
+}
+
+func (cs *State) logPhaseEvent(event string, height int64, round int32, step cstypes.RoundStepType, keyVals ...interface{}) {
+	if cs.Logger == nil {
+		return
+	}
+	args := []interface{}{
+		"height", height,
+		"round", round,
+		"phase", step.String(),
+		"event", event,
+	}
+	if elapsed, ok := cs.phaseElapsed(height, round, step); ok {
+		args = append(args, "elapsed_ms", elapsed.Milliseconds())
+	}
+	args = append(args, keyVals...)
+	cs.Logger.Debug("phase event", args...)
+}
+
+func voteStep(msgType cmtproto.SignedMsgType) (cstypes.RoundStepType, bool) {
+	switch msgType {
+	case cmtproto.PrevoteType:
+		return cstypes.RoundStepPrevote, true
+	case cmtproto.PrecommitType:
+		return cstypes.RoundStepPrecommit, true
+	default:
+		return cstypes.RoundStepType(0), false
+	}
 }
 
 // send a msg into the receiveRoutine regarding our own proposal, block part, or vote
@@ -716,6 +842,7 @@ func (cs *State) updateToState(state sm.State) {
 	// RoundState fields
 	cs.updateHeight(height)
 	cs.updateRoundStep(0, cstypes.RoundStepNewHeight)
+	cs.markPhaseEnter(height, 0, cstypes.RoundStepNewHeight)
 
 	if cs.CommitTime.IsZero() {
 		// "Now" makes it easier to sync up dev nodes.
@@ -835,6 +962,8 @@ func (cs *State) receiveRoutine(maxSteps int) {
 		case mi = <-cs.peerMsgQueue:
 			cs.Logger.Debug("Received message from cs.peerMsgQueue", "peer", mi.PeerID)
 
+			// Peer messages are buffered; signed self-messages are handled via
+			// internalMsgQueue with WriteSync.
 			if err := cs.wal.Write(mi); err != nil {
 				cs.Logger.Error("failed writing to WAL", "err", err)
 			}
@@ -846,22 +975,7 @@ func (cs *State) receiveRoutine(maxSteps int) {
 		case mi = <-cs.internalMsgQueue:
 			cs.Logger.Debug("Received message from cs.internalMsgQueue", "peer_id", mi.PeerID)
 
-			writeWal := true
-
-			// avoid writing WAL for ingested verified blocks coming from blocksync
-			if _, ok := mi.Msg.(*ingestVerifiedBlockRequest); ok {
-				writeWal = false
-			}
-
-			if writeWal {
-				// NOTE: fsync
-				if err := cs.wal.WriteSync(mi); err != nil {
-					panic(fmt.Errorf(
-						"failed to write %v msg to consensus WAL; check your file system and restart the node: %w",
-						mi, err,
-					))
-				}
-			}
+			cs.writeInternalMsgToWAL(mi)
 
 			if _, ok := mi.Msg.(*VoteMessage); ok {
 				// we actually want to simulate failing during
@@ -887,6 +1001,33 @@ func (cs *State) receiveRoutine(maxSteps int) {
 			onExit(cs)
 			return
 		}
+	}
+}
+
+// writeInternalMsgToWAL persists local messages with per-type durability.
+func (cs *State) writeInternalMsgToWAL(mi msgInfo) {
+	switch mi.Msg.(type) {
+	case *VoteMessage, *ProposalMessage:
+		// Signed messages must hit disk before processing.
+		if err := cs.wal.WriteSync(mi); err != nil {
+			panic(fmt.Errorf(
+				"failed to write %v msg to consensus WAL; check your file system and restart the node: %w",
+				mi, err,
+			))
+		}
+	case *ingestVerifiedBlockRequest:
+		// Not replayed via WAL.
+	case *BlockPartMessage:
+		// Unsigned block parts use buffered WAL writes.
+		if err := cs.wal.Write(mi); err != nil {
+			panic(fmt.Errorf(
+				"failed to write %v msg to consensus WAL; check your file system and restart the node: %w",
+				mi, err,
+			))
+		}
+	default:
+		// New internal message types must be handled explicitly.
+		panic(fmt.Errorf("unexpected internal message type: %T", mi.Msg))
 	}
 }
 
@@ -920,19 +1061,11 @@ func (cs *State) handleMsg(mi msgInfo) {
 		// This prevented the reactor from being able to retrieve the most updated
 		// version of the RoundState. The reactor needs the updated RoundState to
 		// gossip the now completed block.
-		//
-		// This code can be further improved by either always operating on a copy
-		// of RoundState and only locking when switching out State's copy of
-		// RoundState with the updated copy or by emitting RoundState events in
-		// more places for routines depending on it to listen for.
 		cs.mtx.Unlock()
 
 		cs.mtx.Lock()
 		if added && cs.ProposalBlockParts.IsComplete() {
 			cs.handleCompleteProposal(msg.Height)
-		}
-		if added {
-			cs.statsMsgQueue <- mi
 		}
 
 		if err != nil && msg.Round != cs.Round {
@@ -949,9 +1082,6 @@ func (cs *State) handleMsg(mi msgInfo) {
 		// attempt to add the vote and dupeout the validator if it's a duplicate signature
 		// if the vote gives us a 2/3-any or 2/3-one, we transition
 		added, err = cs.tryAddVote(msg.Vote, peerID)
-		if added {
-			cs.statsMsgQueue <- mi
-		}
 
 		// if err == ErrAddingVote {
 		// TODO: punish peer
@@ -975,6 +1105,12 @@ func (cs *State) handleMsg(mi msgInfo) {
 		return
 	}
 
+	if added {
+		cs.mtx.Unlock()
+		cs.statsMsgQueue <- mi
+		cs.mtx.Lock()
+	}
+
 	if err != nil {
 		cs.Logger.Error(
 			"failed to process message",
@@ -988,7 +1124,7 @@ func (cs *State) handleMsg(mi msgInfo) {
 }
 
 func (cs *State) handleTimeout(ti timeoutInfo, rs cstypes.RoundState) {
-	cs.Logger.Debug("received tock", "timeout", ti.Duration, "height", ti.Height, "round", ti.Round, "step", ti.Step)
+	cs.logPhaseEvent("timeout-fired", ti.Height, ti.Round, ti.Step, "timeout_ms", ti.Duration.Milliseconds())
 
 	// timeouts must be for current height, round, step
 	if ti.Height != rs.Height || ti.Round < rs.Round || (ti.Round == rs.Round && ti.Step < rs.Step) {
@@ -1091,6 +1227,12 @@ func (cs *State) enterNewRound(height int64, round int32) {
 
 	prevHeight, prevRound, prevStep := cs.Height, cs.Round, cs.Step
 
+	if round == 0 {
+		if cs.epochTracker != nil {
+			cs.epochTracker.ApplyPendingTimeout(cs.config)
+		}
+	}
+
 	// increment validators if necessary
 	validators := cs.Validators
 	if cs.Round < round {
@@ -1102,6 +1244,7 @@ func (cs *State) enterNewRound(height int64, round int32) {
 	// we don't fire newStep for this step,
 	// but we fire an event, so update the round step first
 	cs.updateRoundStep(round, cstypes.RoundStepNewRound)
+	cs.markPhaseEnter(height, round, cstypes.RoundStepNewRound)
 	cs.Validators = validators
 	// If round == 0, we've already reset these upon new height, and meanwhile
 	// we might have received a proposal for round 0.
@@ -1177,6 +1320,13 @@ func (cs *State) enterPropose(height int64, round int32) {
 	}
 
 	logger.Debug("entering propose step", "current", log.NewLazySprintf("%v/%v/%v", cs.Height, cs.Round, cs.Step))
+	cs.markPhaseEnter(height, round, cstypes.RoundStepPropose)
+
+	if round == 0 {
+		if cs.epochTracker != nil {
+			cs.epochTracker.RecordProposeStart(height)
+		}
+	}
 
 	defer func() {
 		// Done enterPropose:
@@ -1229,6 +1379,39 @@ func (cs *State) isProposer(address []byte) bool {
 	return bytes.Equal(cs.Validators.GetProposer().Address, address)
 }
 
+func (cs *State) delayedSendPreparedProposal(height int64, round int32, delay time.Duration, proposal *types.Proposal, blockParts *types.PartSet) {
+	time.Sleep(delay)
+
+	cs.mtx.Lock()
+	defer cs.mtx.Unlock()
+
+	// Proposal can only be sent while we are still in the same propose step.
+	if cs.Height != height || cs.Round != round || cs.Step != cstypes.RoundStepPropose {
+		return
+	}
+
+	cs.sendPreparedProposal(height, round, proposal, blockParts)
+	if cs.isProposalComplete() {
+		cs.enterPrevote(height, round)
+	}
+}
+
+func (cs *State) sendPreparedProposal(height int64, round int32, proposal *types.Proposal, blockParts *types.PartSet) {
+	// send proposal and block parts on internal msg queue
+	cs.sendInternalMessage(msgInfo{&ProposalMessage{proposal}, ""})
+
+	for i := 0; i < int(blockParts.Total()); i++ {
+		part := blockParts.GetPart(i)
+		cs.sendInternalMessage(msgInfo{&BlockPartMessage{height, round, part}, ""})
+	}
+
+	cs.logPhaseEvent("proposal-send", height, round, cstypes.RoundStepPropose,
+		"proposal_hash", proposal.BlockID.Hash,
+		"parts_total", blockParts.Total(),
+	)
+	cs.Logger.Debug("signed proposal", "height", height, "round", round, "proposal", proposal)
+}
+
 func (cs *State) defaultDecideProposal(height int64, round int32) {
 	var block *types.Block
 	var blockParts *types.PartSet
@@ -1268,15 +1451,17 @@ func (cs *State) defaultDecideProposal(height int64, round int32) {
 	if err := cs.privValidator.SignProposal(cs.state.ChainID, p); err == nil {
 		proposal.Signature = p.Signature
 
-		// send proposal and block parts on internal msg queue
-		cs.sendInternalMessage(msgInfo{&ProposalMessage{proposal}, ""})
-
-		for i := 0; i < int(blockParts.Total()); i++ {
-			part := blockParts.GetPart(i)
-			cs.sendInternalMessage(msgInfo{&BlockPartMessage{cs.Height, cs.Round, part}, ""})
+		delay := time.Duration(0)
+		if cs.proposeDelaySched != nil {
+			delay = cs.proposeDelaySched.currentDelay()
+		}
+		if delay > 0 {
+			cs.Logger.Info("propose-delay: delaying proposal send", "delay", delay)
+			go cs.delayedSendPreparedProposal(height, round, delay, proposal, blockParts)
+			return
 		}
 
-		cs.Logger.Debug("signed proposal", "height", height, "round", round, "proposal", proposal)
+		cs.sendPreparedProposal(height, round, proposal, blockParts)
 	} else if !cs.replayMode {
 		cs.Logger.Error("propose step; failed signing proposal", "height", height, "round", round, "err", err)
 	}
@@ -1362,6 +1547,11 @@ func (cs *State) enterPrevote(height int64, round int32) {
 	}()
 
 	logger.Debug("entering prevote step", "current", log.NewLazySprintf("%v/%v/%v", cs.Height, cs.Round, cs.Step))
+	cs.markPhaseEnter(height, round, cstypes.RoundStepPrevote)
+
+	if round == 0 {
+		cs.epochTracker.RecordPrevoteStart(height)
+	}
 
 	// Sign and broadcast vote as necessary
 	cs.doPrevote(height, round)
@@ -1450,6 +1640,7 @@ func (cs *State) enterPrevoteWait(height int64, round int32) {
 	}
 
 	logger.Debug("entering prevote wait step", "current", log.NewLazySprintf("%v/%v/%v", cs.Height, cs.Round, cs.Step))
+	cs.markPhaseEnter(height, round, cstypes.RoundStepPrevoteWait)
 
 	defer func() {
 		// Done enterPrevoteWait:
@@ -1479,6 +1670,11 @@ func (cs *State) enterPrecommit(height int64, round int32) {
 	}
 
 	logger.Debug("entering precommit step", "current", log.NewLazySprintf("%v/%v/%v", cs.Height, cs.Round, cs.Step))
+	cs.markPhaseEnter(height, round, cstypes.RoundStepPrecommit)
+
+	if round == 0 {
+		cs.epochTracker.RecordPrecommitStart(height)
+	}
 
 	defer func() {
 		// Done enterPrecommit:
@@ -1609,6 +1805,7 @@ func (cs *State) enterPrecommitWait(height int64, round int32) {
 	}
 
 	logger.Debug("entering precommit wait step", "current", log.NewLazySprintf("%v/%v/%v", cs.Height, cs.Round, cs.Step))
+	cs.markPhaseEnter(height, round, cstypes.RoundStepPrecommitWait)
 
 	defer func() {
 		// Done enterPrecommitWait:
@@ -1633,6 +1830,7 @@ func (cs *State) enterCommit(height int64, commitRound int32) {
 	}
 
 	logger.Debug("entering commit step", "current", log.NewLazySprintf("%v/%v/%v", cs.Height, cs.Round, cs.Step))
+	cs.markPhaseEnter(height, commitRound, cstypes.RoundStepCommit)
 
 	defer func() {
 		// Done enterCommit:
@@ -1816,6 +2014,9 @@ func (cs *State) finalizeCommit(height int64) {
 
 	// must be called before we update state
 	cs.recordMetrics(height, block)
+	if cs.epochTracker != nil {
+		cs.epochTracker.OnBlockCommitted(height, len(block.Data.Txs), cs.CommitRound)
+	}
 
 	// NewHeightStep!
 	cs.updateToState(stateCopy)
@@ -1973,6 +2174,10 @@ func (cs *State) defaultSetProposal(proposal *types.Proposal) error {
 		cs.ProposalBlockParts = types.NewPartSetFromHeader(proposal.BlockID.PartSetHeader)
 	}
 
+	cs.logPhaseEvent("proposal-receive", proposal.Height, proposal.Round, cstypes.RoundStepPropose,
+		"proposer", pubKey.Address(),
+		"proposal_hash", proposal.BlockID.Hash,
+	)
 	cs.Logger.Info("received proposal", "proposal", proposal, "proposer", pubKey.Address())
 	return nil
 }
@@ -2046,9 +2251,26 @@ func (cs *State) addProposalBlockPart(msg *BlockPartMessage, peerID p2p.ID) (add
 			return added, err
 		}
 
+		if block.Height != cs.Height {
+			return added, fmt.Errorf(
+				"proposal block height mismatch: block.Height=%d, cs.Height=%d",
+				block.Height, cs.Height,
+			)
+		}
+		if cs.Proposal != nil && block.Height != cs.Proposal.Height {
+			return added, fmt.Errorf(
+				"proposal block height mismatch: block.Height=%d, proposal.Height=%d",
+				block.Height, cs.Proposal.Height,
+			)
+		}
+
 		cs.ProposalBlock = block
 
 		// NOTE: it's possible to receive complete proposal blocks for future rounds without having the proposal
+		cs.logPhaseEvent("proposal-block-complete", msg.Height, msg.Round, cstypes.RoundStepPropose,
+			"block_hash", cs.ProposalBlock.Hash(),
+			"parts_total", cs.ProposalBlockParts.Total(),
+		)
 		cs.Logger.Info("received complete proposal block", "height", cs.ProposalBlock.Height, "hash", cs.ProposalBlock.Hash())
 
 		if err := cs.eventBus.PublishEventCompleteProposal(cs.CompleteProposalEvent()); err != nil {
@@ -2156,6 +2378,13 @@ func (cs *State) addVote(vote *types.Vote, peerID p2p.ID) (added bool, err error
 		"extSigLen", len(vote.ExtensionSignature),
 		"peer_id", peerID,
 	)
+	if step, ok := voteStep(vote.Type); ok {
+		cs.logPhaseEvent("vote-receive", vote.Height, vote.Round, step,
+			"vote_type", vote.Type.String(),
+			"validator_index", vote.ValidatorIndex,
+			"peer_id", peerID,
+		)
+	}
 
 	if vote.Height < cs.Height || (vote.Height == cs.Height && vote.Round < cs.Round) {
 		cs.metrics.MarkLateVote(vote.Type)
@@ -2431,6 +2660,29 @@ func (cs *State) signVote(
 				return nil, err
 			}
 			vote.Extension = ext
+
+			// Self-verify the extension before broadcasting. Every other validator
+			// runs VerifyVoteExtension on this precommit's extension and rejects
+			// the precommit if it doesn't pass. Without this check, an application
+			// whose ExtendVote produces data its own VerifyVoteExtension rejects
+			// would cause a chain-wide deadlock: the proposer happily advances
+			// while peers loop verifying the same invalid extension (#5204). Treat
+			// self-rejection as a non-recoverable application bug — the two
+			// handlers are inconsistent — and panic with a clear message instead
+			// of producing a silent network-level stall.
+			//
+			// Skip self-verify when the extension is empty: an absent-but-required
+			// extension is caught downstream by SignAndCheckVote and produces a
+			// recoverable error, which is the existing behavior we want to preserve.
+			if len(vote.Extension) > 0 {
+				if err := cs.blockExec.VerifyVoteExtension(context.Background(), vote); err != nil {
+					panic(fmt.Errorf(
+						"validator %X failed self-verification of its own vote extension at height %d: %w; "+
+							"application ExtendVote and VerifyVoteExtension handlers are inconsistent",
+						addr, vote.Height, err,
+					))
+				}
+			}
 		}
 	}
 
@@ -2499,6 +2751,13 @@ func (cs *State) signAddVote(
 			hasExt, extEnabled, vote.Height, vote.Type))
 	}
 	cs.sendInternalMessage(msgInfo{&VoteMessage{vote}, ""})
+	if step, ok := voteStep(vote.Type); ok {
+		cs.logPhaseEvent("vote-send", vote.Height, vote.Round, step,
+			"vote_type", vote.Type.String(),
+			"validator_index", vote.ValidatorIndex,
+			"block_id_zero", vote.BlockID.IsZero(),
+		)
+	}
 	cs.Logger.Debug("signed and pushed vote", "height", cs.Height, "round", cs.Round, "vote", vote)
 }
 
@@ -2523,11 +2782,11 @@ func (cs *State) checkDoubleSigningRisk(height int64) error {
 	if cs.privValidator != nil && cs.privValidatorPubKey != nil && cs.config.DoubleSignCheckHeight > 0 && height > 0 {
 		valAddr := cs.privValidatorPubKey.Address()
 		doubleSignCheckHeight := cs.config.DoubleSignCheckHeight
-		if doubleSignCheckHeight > height {
-			doubleSignCheckHeight = height
+		if doubleSignCheckHeight >= height {
+			doubleSignCheckHeight = height - 1
 		}
 
-		for i := int64(1); i < doubleSignCheckHeight; i++ {
+		for i := int64(1); i <= doubleSignCheckHeight; i++ {
 			lastCommit := cs.blockStore.LoadSeenCommit(height - i)
 			if lastCommit != nil {
 				for sigIdx, s := range lastCommit.Signatures {

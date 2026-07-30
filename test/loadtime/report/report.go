@@ -36,6 +36,7 @@ type Report struct {
 	ID                      uuid.UUID
 	Rate, Connections, Size uint64
 	Max, Min, Avg, StdDev   time.Duration
+	P50, P90, P95, P99      time.Duration
 
 	// NegativeCount is the number of negative durations encountered while
 	// reading the transaction data. A negative duration means that
@@ -61,6 +62,14 @@ type Reports struct {
 	// transaction data. Parsing errors may occur if a transaction not generated
 	// by the payload package is submitted to the chain.
 	errorCount int
+
+	// timeSource describes which timestamp source was used for latency:
+	// "chain_block_time" (default) or "commit_log_time" when commitTimes are provided.
+	timeSource string
+
+	// missingCommitTimes counts block heights where commit log time was requested
+	// but unavailable, so we fell back to chain block time for that height.
+	missingCommitTimes int
 }
 
 func (rs *Reports) List() []Report {
@@ -69,6 +78,17 @@ func (rs *Reports) List() []Report {
 
 func (rs *Reports) ErrorCount() int {
 	return rs.errorCount
+}
+
+func (rs *Reports) TimeSource() string {
+	if rs.timeSource == "" {
+		return "chain_block_time"
+	}
+	return rs.timeSource
+}
+
+func (rs *Reports) MissingCommitTimes() int {
+	return rs.missingCommitTimes
 }
 
 func (rs *Reports) addDataPoint(id uuid.UUID, l time.Duration, bt time.Time, hash []byte, conns, rate, size uint64) {
@@ -111,6 +131,11 @@ func (rs *Reports) calculateAll() {
 		}
 		r.Avg = time.Duration(r.sum / int64(len(r.All)))
 		r.StdDev = time.Duration(int64(stat.StdDev(toFloat(r.All), nil)))
+		sortedDurations := toSortedDurationNanos(r.All)
+		r.P50 = percentileFromSortedNanos(sortedDurations, 50)
+		r.P90 = percentileFromSortedNanos(sortedDurations, 90)
+		r.P95 = percentileFromSortedNanos(sortedDurations, 95)
+		r.P99 = percentileFromSortedNanos(sortedDurations, 99)
 		rs.l = append(rs.l, r)
 	}
 	sort.Slice(rs.l, func(i, j int) bool {
@@ -128,6 +153,14 @@ func (rs *Reports) addError() {
 // GenerateFromBlockStore creates a Report using the data in the provided
 // BlockStore.
 func GenerateFromBlockStore(s BlockStore) (*Reports, error) {
+	return GenerateFromBlockStoreWithCommitTimes(s, nil)
+}
+
+// GenerateFromBlockStoreWithCommitTimes creates a Report using the data in the
+// provided BlockStore. If commitTimes is non-empty, latency uses commit log
+// wall-clock time for each block height when available, and falls back to chain
+// block time otherwise.
+func GenerateFromBlockStoreWithCommitTimes(s BlockStore, commitTimes map[int64]time.Time) (*Reports, error) {
 	type payloadData struct {
 		id                      uuid.UUID
 		l                       time.Duration
@@ -141,7 +174,12 @@ func GenerateFromBlockStore(s BlockStore) (*Reports, error) {
 		bt time.Time
 	}
 	reports := &Reports{
-		s: make(map[uuid.UUID]Report),
+		s:          make(map[uuid.UUID]Report),
+		timeSource: "chain_block_time",
+	}
+	useCommitTimes := len(commitTimes) > 0
+	if useCommitTimes {
+		reports.timeSource = "commit_log_time"
 	}
 
 	// Deserializing to proto can be slow but does not depend on other data
@@ -186,6 +224,7 @@ func GenerateFromBlockStore(s BlockStore) (*Reports, error) {
 	}()
 
 	go func() {
+		missingCommitTimes := 0
 		base, height := s.Base(), s.Height()
 		prev := s.LoadBlock(base)
 		for i := base + 1; i < height; i++ {
@@ -201,11 +240,25 @@ func GenerateFromBlockStore(s BlockStore) (*Reports, error) {
 			// be used in the latency calculations because the last block whose
 			// transactions are used in the block one before the last.
 			cur := s.LoadBlock(i)
-			for _, tx := range prev.Txs {
-				txc <- txData{tx: tx, bt: cur.Time}
+			if prev == nil || cur == nil {
+				prev = cur
+				continue
+			}
+			prevHeight := i - 1
+			latencyTime := cur.Time
+			if useCommitTimes {
+				if t, ok := commitTimes[prevHeight]; ok {
+					latencyTime = t
+				} else {
+					missingCommitTimes++
+				}
+			}
+			for _, tx := range prev.Data.Txs {
+				txc <- txData{tx: tx, bt: latencyTime}
 			}
 			prev = cur
 		}
+		reports.missingCommitTimes = missingCommitTimes
 		close(txc)
 	}()
 	for pd := range pdc {
@@ -225,4 +278,35 @@ func toFloat(in []DataPoint) []float64 {
 		r[i] = float64(int64(v.Duration))
 	}
 	return r
+}
+
+func toSortedDurationNanos(in []DataPoint) []int64 {
+	out := make([]int64, len(in))
+	for i, v := range in {
+		out[i] = int64(v.Duration)
+	}
+	sort.Slice(out, func(i, j int) bool { return out[i] < out[j] })
+	return out
+}
+
+func percentileFromSortedNanos(sorted []int64, p float64) time.Duration {
+	if len(sorted) == 0 {
+		return 0
+	}
+	if p <= 0 {
+		return time.Duration(sorted[0])
+	}
+	if p >= 100 {
+		return time.Duration(sorted[len(sorted)-1])
+	}
+	// Nearest-rank percentile: ceil(p/100 * N)
+	rank := int(math.Ceil((p / 100.0) * float64(len(sorted))))
+	idx := rank - 1
+	if idx < 0 {
+		idx = 0
+	}
+	if idx >= len(sorted) {
+		idx = len(sorted) - 1
+	}
+	return time.Duration(sorted[idx])
 }
