@@ -188,11 +188,12 @@ func NewState(
 	et, err := NewEpochTracker(config, log.NewNopLogger())
 	if err != nil {
 		et, _ = NewEpochTracker(&cfg.ConsensusConfig{
-			AdaptiveTimerAddr:      "",
-			AdaptiveTimerEpochSize: 1000,
-			TimeoutPropose:         config.TimeoutPropose,
-			TimeoutPrevote:         config.TimeoutPrevote,
-			TimeoutPrecommit:       config.TimeoutPrecommit,
+			AdaptiveTimerAddr:       "",
+			AdaptiveTimerWindowMode: cfg.AdaptiveTimerWindowModeConsensus,
+			AdaptiveTimerEpochSize:  1000,
+			TimeoutPropose:          config.TimeoutPropose,
+			TimeoutPrevote:          config.TimeoutPrevote,
+			TimeoutPrecommit:        config.TimeoutPrecommit,
 		}, log.NewNopLogger())
 	}
 	cs.epochTracker = et

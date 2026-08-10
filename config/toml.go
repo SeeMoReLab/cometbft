@@ -595,9 +595,25 @@ double_sign_check_height = {{ .Consensus.DoubleSignCheckHeight }}
 # Leave empty to disable the adaptive timer feedback loop.
 adaptive_timer_addr = "{{ .Consensus.AdaptiveTimerAddr }}"
 
-# Number of committed transactions per learning epoch.
-# A report is sent at epoch_size/2 txs; the reward window is epoch_size/2 to epoch_size.
+# How learning episode boundaries are drawn: "consensus" counts committed consensus
+# instances (adaptive_timer_epoch_size), "wall-clock" uses elapsed time
+# (adaptive_timer_feature_duration and friends).
+adaptive_timer_window_mode = "{{ .Consensus.AdaptiveTimerWindowMode }}"
+
+# Number of committed consensus instances in each feature and reward window.
+# After the feature report, allow 0.1*epoch_size for the recommendation and
+# another 0.1*epoch_size for post-apply warm-up before collecting the reward.
+# Only used when adaptive_timer_window_mode = "consensus".
 adaptive_timer_epoch_size = {{ .Consensus.AdaptiveTimerEpochSize }}
+
+# Wall-clock learning window durations. Each episode collects features for
+# feature_duration, waits reply_wait for the agent's recommendation, applies it and
+# discards warmup_duration, then collects the reward for reward_duration.
+# Only used when adaptive_timer_window_mode = "wall-clock".
+adaptive_timer_feature_duration = "{{ .Consensus.AdaptiveTimerFeatureDuration }}"
+adaptive_timer_reply_wait = "{{ .Consensus.AdaptiveTimerReplyWait }}"
+adaptive_timer_warmup_duration = "{{ .Consensus.AdaptiveTimerWarmupDuration }}"
+adaptive_timer_reward_duration = "{{ .Consensus.AdaptiveTimerRewardDuration }}"
 
 # Integer node ID sent in LearningAgent reports. Must be unique per node (0, 1, 2, ...).
 adaptive_timer_node_index = {{ .Consensus.AdaptiveTimerNodeIndex }}

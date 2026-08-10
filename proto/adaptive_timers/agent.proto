@@ -131,10 +131,10 @@ message TendermintReport {
     uint32 total_transactions = 1;
     uint32 total_consensus_instances = 2;
 
-    // End-to-end SBFT consensus latency summaries (milliseconds).
+    // End-to-end Tendermint consensus latency summaries (milliseconds).
     float avg_consensus_latency_ms = 3;
-    float p95_consensus_latency_ms = 4;
-    float p99_consensus_latency_ms = 5;
+    float p50_consensus_latency_ms = 4;
+    float p90_consensus_latency_ms = 5;
 
     // Throughput and core rates.
     float throughput_tps = 6;
@@ -142,7 +142,8 @@ message TendermintReport {
 
     // Batch characteristics.
     float avg_batch_size = 8;
-    float p95_batch_size = 9;
+    float p50_batch_size = 9;
+    float p90_batch_size = 15;
 
     // Leadership dynamics.
     uint32 leader_change_count = 10;

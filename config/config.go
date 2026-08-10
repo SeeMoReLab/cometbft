@@ -1232,6 +1232,14 @@ func (cfg *BlockSyncConfig) ValidateBasic() error {
 //-----------------------------------------------------------------------------
 // ConsensusConfig
 
+const (
+	// AdaptiveTimerWindowModeConsensus draws learning episode boundaries by counting
+	// committed consensus instances.
+	AdaptiveTimerWindowModeConsensus = "consensus"
+	// AdaptiveTimerWindowModeWallClock draws learning episode boundaries by elapsed time.
+	AdaptiveTimerWindowModeWallClock = "wall-clock"
+)
+
 // ConsensusConfig defines the configuration for the Tendermint consensus algorithm, adopted by CometBFT,
 // including timeouts and details about the WAL and the block structure.
 type ConsensusConfig struct {
@@ -1276,9 +1284,32 @@ type ConsensusConfig struct {
 	// If empty, the adaptive timer feedback loop is disabled.
 	AdaptiveTimerAddr string `mapstructure:"adaptive_timer_addr"`
 
-	// AdaptiveTimerEpochSize is the number of committed transactions per learning epoch.
-	// A report is sent at epoch_size/2 transactions; the reward window covers epoch_size/2 to epoch_size.
+	// AdaptiveTimerWindowMode selects how learning episode boundaries are drawn.
+	// "consensus" counts committed consensus instances (see adaptive_timer_epoch_size);
+	// "wall-clock" uses elapsed time (see the adaptive_timer_*_duration fields).
+	AdaptiveTimerWindowMode string `mapstructure:"adaptive_timer_window_mode"`
+
+	// AdaptiveTimerEpochSize is the number of committed consensus instances in each
+	// feature and reward window. After the feature report, 0.1*epoch_size is allowed
+	// for the recommendation and another 0.1*epoch_size is used as post-apply warm-up.
+	// Used only when adaptive_timer_window_mode is "consensus".
 	AdaptiveTimerEpochSize int64 `mapstructure:"adaptive_timer_epoch_size"`
+
+	// AdaptiveTimerFeatureDuration is the length of the feature collection window.
+	// Used only when adaptive_timer_window_mode is "wall-clock".
+	AdaptiveTimerFeatureDuration time.Duration `mapstructure:"adaptive_timer_feature_duration"`
+
+	// AdaptiveTimerReplyWait is how long to wait for the agent's recommendation after
+	// sending the feature report. Used only when adaptive_timer_window_mode is "wall-clock".
+	AdaptiveTimerReplyWait time.Duration `mapstructure:"adaptive_timer_reply_wait"`
+
+	// AdaptiveTimerWarmupDuration is the post-apply warm-up discarded before reward
+	// collection starts. Used only when adaptive_timer_window_mode is "wall-clock".
+	AdaptiveTimerWarmupDuration time.Duration `mapstructure:"adaptive_timer_warmup_duration"`
+
+	// AdaptiveTimerRewardDuration is the length of the reward collection window.
+	// Used only when adaptive_timer_window_mode is "wall-clock".
+	AdaptiveTimerRewardDuration time.Duration `mapstructure:"adaptive_timer_reward_duration"`
 
 	// AdaptiveTimerNodeIndex is the integer node ID included in ReportLocal.node_id.
 	// Must be unique per node (0, 1, 2, ...).
@@ -1304,8 +1335,14 @@ func DefaultConsensusConfig() *ConsensusConfig {
 		DoubleSignCheckHeight:       int64(0),
 		BlockTimeTolerance:          60 * time.Second,
 		AdaptiveTimerAddr:           "",
+		AdaptiveTimerWindowMode:     AdaptiveTimerWindowModeConsensus,
 		AdaptiveTimerEpochSize:      1000,
-		AdaptiveTimerNodeIndex:      0,
+		//nolint:mnd // wall-clock window defaults, mirroring the SmartBFT learning agent.
+		AdaptiveTimerFeatureDuration: 8 * time.Second,
+		AdaptiveTimerReplyWait:       2 * time.Second,
+		AdaptiveTimerWarmupDuration:  2 * time.Second,
+		AdaptiveTimerRewardDuration:  8 * time.Second,
+		AdaptiveTimerNodeIndex:       0,
 	}
 }
 
@@ -1410,6 +1447,32 @@ func (cfg *ConsensusConfig) ValidateBasic() error {
 	}
 	if cfg.BlockTimeTolerance <= 0 {
 		return errors.New("block_time_tolerance must be positive")
+	}
+	switch cfg.AdaptiveTimerWindowMode {
+	case AdaptiveTimerWindowModeConsensus:
+		if cfg.AdaptiveTimerEpochSize <= 0 {
+			return errors.New("adaptive_timer_epoch_size must be positive")
+		}
+	case AdaptiveTimerWindowModeWallClock:
+		if cfg.AdaptiveTimerFeatureDuration <= 0 {
+			return errors.New("adaptive_timer_feature_duration must be positive")
+		}
+		if cfg.AdaptiveTimerReplyWait <= 0 {
+			return errors.New("adaptive_timer_reply_wait must be positive")
+		}
+		if cfg.AdaptiveTimerWarmupDuration <= 0 {
+			return errors.New("adaptive_timer_warmup_duration must be positive")
+		}
+		if cfg.AdaptiveTimerRewardDuration <= 0 {
+			return errors.New("adaptive_timer_reward_duration must be positive")
+		}
+	default:
+		return fmt.Errorf(
+			"unknown adaptive_timer_window_mode %q; expected %q or %q",
+			cfg.AdaptiveTimerWindowMode,
+			AdaptiveTimerWindowModeConsensus,
+			AdaptiveTimerWindowModeWallClock,
+		)
 	}
 	return nil
 }
