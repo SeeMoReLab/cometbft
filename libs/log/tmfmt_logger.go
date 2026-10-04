@@ -98,13 +98,13 @@ func (l tmfmtLogger) Log(keyvals ...any) error {
 	// Form a custom CometBFT line
 	//
 	// Example:
-	//     D[2016-05-02|11:06:44.322]   Stopping AddrBook (ignoring: already stopped)
+	//     D[2016-05-02T11:06:44.322Z]   Stopping AddrBook (ignoring: already stopped)
 	//
 	// Description:
 	//     D										- first character of the level, uppercase (ASCII only)
-	//     [2016-05-02|11:06:44.322]    - our time format (see https://golang.org/src/time/format.go)
+	//     [2016-05-02T11:06:44.322Z]   - ISO-8601 UTC, the timestamp the harness plot reads
 	//     Stopping ...					- message
-	fmt.Fprintf(&enc.buf, "%c[%s] %-44s ", lvl[0]-32, time.Now().Format("15:04:05.000"), msg)
+	fmt.Fprintf(&enc.buf, "%c[%s] %-44s ", lvl[0]-32, time.Now().UTC().Format("2006-01-02T15:04:05.000Z07:00"), msg)
 
 	if module != unknown {
 		enc.buf.WriteString("module=" + module + " ")

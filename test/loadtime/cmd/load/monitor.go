@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"math"
 	"net/url"
 	"sort"
 	"strings"
@@ -18,37 +19,42 @@ type progressState struct {
 	initialized bool
 	prevHeight  int64
 	prevBlock   *types.Block
+	// prevSample is when the previous Monitor line was printed.
+	prevSample time.Time
+}
+
+// clientTag is the "[client <ISO-8601 UTC>]" prefix the other protocols' clients print.
+func clientTag() string {
+	return fmt.Sprintf("[client %s]", time.Now().UTC().Format("2006-01-02T15:04:05.000Z07:00"))
 }
 
 func runProgressMonitor(ctx context.Context, wsEndpoint string, runID []byte, interval time.Duration) {
 	rpcAddr, err := endpointToRPCAddr(wsEndpoint)
 	if err != nil {
-		fmt.Printf("-- Monitor error: invalid endpoint %q: %v\n", wsEndpoint, err)
+		fmt.Printf("%s Monitor error: invalid endpoint %q: %v\n", clientTag(), wsEndpoint, err)
 		return
 	}
 
 	client, err := rpchttp.New(rpcAddr, "/websocket")
 	if err != nil {
-		fmt.Printf("-- Monitor error: failed to create RPC client for %q: %v\n", rpcAddr, err)
+		fmt.Printf("%s Monitor error: failed to create RPC client for %q: %v\n", clientTag(), rpcAddr, err)
 		return
 	}
 
 	ticker := time.NewTicker(interval)
 	defer ticker.Stop()
 
-	start := time.Now()
-	st := &progressState{}
+	st := &progressState{prevSample: time.Now()}
 
 	for {
 		select {
 		case <-ctx.Done():
-			// Best-effort final flush before exit.
-			sampleCount, sampleLatencies := collectFinishedTxs(context.Background(), client, runID, st)
-			printProgressLine(start, st, sampleCount, sampleLatencies)
+			// No final flush: the shutdown's partial interval would print a sample of a few
+			// ms, whose tps is meaningless.
 			return
 		case <-ticker.C:
 			sampleCount, sampleLatencies := collectFinishedTxs(ctx, client, runID, st)
-			printProgressLine(start, st, sampleCount, sampleLatencies)
+			printProgressLine(st, sampleCount, sampleLatencies)
 		}
 	}
 }
@@ -56,7 +62,7 @@ func runProgressMonitor(ctx context.Context, wsEndpoint string, runID []byte, in
 func collectFinishedTxs(ctx context.Context, client *rpchttp.HTTP, runID []byte, st *progressState) (int64, []time.Duration) {
 	status, err := client.Status(ctx)
 	if err != nil {
-		fmt.Printf("-- Monitor error: status query failed: %v\n", err)
+		fmt.Printf("%s Monitor error: status query failed: %v\n", clientTag(), err)
 		return 0, nil
 	}
 
@@ -68,7 +74,7 @@ func collectFinishedTxs(ctx context.Context, client *rpchttp.HTTP, runID []byte,
 	if !st.initialized {
 		b, err := client.Block(ctx, &latest)
 		if err != nil {
-			fmt.Printf("-- Monitor error: initial block query failed at height %d: %v\n", latest, err)
+			fmt.Printf("%s Monitor error: initial block query failed at height %d: %v\n", clientTag(), latest, err)
 			return 0, nil
 		}
 		st.initialized = true
@@ -84,7 +90,7 @@ func collectFinishedTxs(ctx context.Context, client *rpchttp.HTTP, runID []byte,
 		curHeight := st.prevHeight + 1
 		cur, err := client.Block(ctx, &curHeight)
 		if err != nil {
-			fmt.Printf("-- Monitor error: block query failed at height %d: %v\n", curHeight, err)
+			fmt.Printf("%s Monitor error: block query failed at height %d: %v\n", clientTag(), curHeight, err)
 			break
 		}
 
@@ -112,24 +118,29 @@ func collectFinishedTxs(ctx context.Context, client *rpchttp.HTTP, runID []byte,
 	return sampleCount, sampleLatencies
 }
 
-func printProgressLine(start time.Time, st *progressState, sampleCount int64, sampleLatencies []time.Duration) {
-	elapsed := int(time.Since(start).Seconds())
-
-	if sampleCount == 0 {
-		fmt.Printf("-- Monitor t=%ds finished_delta=0 avg_latency_ms=NA p95_latency_ms=NA max_latency_ms=NA\n", elapsed)
-		return
+// printProgressLine prints the Monitor line in the other protocols' client format:
+// whole-ms nearest-rank percentiles, all 0 when nothing finished. Latency here is the
+// committing block's time minus the transaction's creation time, not a client reply.
+// There is no err field: the load client never learns of rejected transactions.
+func printProgressLine(st *progressState, sampleCount int64, sampleLatencies []time.Duration) {
+	now := time.Now()
+	seconds := now.Sub(st.prevSample).Seconds()
+	st.prevSample = now
+	tps := 0.0
+	if seconds > 0 {
+		tps = float64(sampleCount) / seconds
 	}
 
-	sampleAvg := durationAvg(sampleLatencies)
-	p95 := durationPercentile(sampleLatencies, 95)
-	maxLatency := durationMax(sampleLatencies)
-
-	fmt.Printf("-- Monitor t=%ds finished_delta=%d avg_latency_ms=%.2f p95_latency_ms=%.2f max_latency_ms=%.2f\n",
-		elapsed,
+	fmt.Printf("%s Monitor duration=%.3fs succ=%d tps=%.3f avg_ms=%.3f p50=%d p95=%d p99=%d max=%d\n",
+		clientTag(),
+		seconds,
 		sampleCount,
-		durationMs(sampleAvg),
-		durationMs(p95),
-		durationMs(maxLatency),
+		tps,
+		durationMs(durationAvg(sampleLatencies)),
+		percentileMs(sampleLatencies, 0.50),
+		percentileMs(sampleLatencies, 0.95),
+		percentileMs(sampleLatencies, 0.99),
+		durationMax(sampleLatencies).Milliseconds(),
 	)
 }
 
@@ -154,7 +165,8 @@ func durationMax(v []time.Duration) time.Duration {
 	return maximum
 }
 
-func durationPercentile(v []time.Duration, p float64) time.Duration {
+// percentileMs returns the nearest-rank percentile (the ceil(n*p)-th smallest) in whole ms.
+func percentileMs(v []time.Duration, p float64) int64 {
 	if len(v) == 0 {
 		return 0
 	}
@@ -162,11 +174,11 @@ func durationPercentile(v []time.Duration, p float64) time.Duration {
 	copy(sorted, v)
 	sort.Slice(sorted, func(i, j int) bool { return sorted[i] < sorted[j] })
 
-	idx := int((p / 100.0) * float64(len(sorted)))
-	if idx >= len(sorted) {
-		idx = len(sorted) - 1
+	rank := int(math.Ceil(p * float64(len(sorted))))
+	if rank < 1 {
+		rank = 1
 	}
-	return sorted[idx]
+	return sorted[rank-1].Milliseconds()
 }
 
 func durationMs(d time.Duration) float64 {

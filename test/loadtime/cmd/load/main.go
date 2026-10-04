@@ -180,7 +180,7 @@ func parseFlags() (loadtest.Config, time.Duration, time.Duration, bool, bool, in
 	fs.StringVar(&cfg.StatsOutputFile, "stats-output", "", "Where to store aggregate statistics (in CSV format) for the load test")
 	fs.BoolVar(&verbose, "verbose", false, "Increase output logging verbosity to DEBUG level")
 	fs.BoolVar(&verbose, "v", false, "Increase output logging verbosity to DEBUG level")
-	fs.StringVar(&progressEvery, "progress-interval", "1s", "How often to emit '-- Monitor' lines (e.g. 1s, 2s)")
+	fs.StringVar(&progressEvery, "progress-interval", "1s", "How often to emit Monitor lines (e.g. 1s, 2s)")
 	fs.BoolVar(&noProgress, "no-progress", false, "Disable live progress monitor output")
 	fs.Int64Var(&startUnixMs, "start-unix-ms", 0, "Absolute Unix timestamp in milliseconds at which to begin sending transactions (0 = start immediately)")
 
@@ -396,6 +396,7 @@ func waitUntilUnixMillis(startUnixMs int64) {
 		return
 	}
 	target := time.Unix(0, startUnixMs*int64(time.Millisecond))
+	fmt.Printf("Waiting until benchmark start unix ms %d (%s)\n", startUnixMs, target.UTC().Format(time.RFC3339Nano))
 	wait := time.Until(target)
 	if wait > 0 {
 		time.Sleep(wait)

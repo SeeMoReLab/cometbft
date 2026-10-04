@@ -155,6 +155,8 @@ type EpochTracker struct {
 
 	pendingReward  *pendingReward
 	currentTimeout *adaptivetimers.TendermintTimeout
+	// appliedLogged is set once the initial "applied timeouts:" line is logged.
+	appliedLogged bool
 
 	// timeoutResultCh receives the recommended timeout from the polling goroutine.
 	// Buffered(1): at most one result per episode.
@@ -599,6 +601,16 @@ func (et *EpochTracker) ApplyPendingTimeout(config *cfg.ConsensusConfig) {
 		"prevote_changed", config.TimeoutPrevote != prevote,
 		"precommit_changed", config.TimeoutPrecommit != precommit,
 	)
+	// The harness plot reads this line: once with the initial values, then on every change.
+	if !et.appliedLogged || config.TimeoutPropose != propose || config.TimeoutPrevote != prevote ||
+		config.TimeoutPrecommit != precommit {
+		et.logger.Info("applied timeouts:",
+			"propose_ms", propose.Milliseconds(),
+			"prevote_ms", prevote.Milliseconds(),
+			"precommit_ms", precommit.Milliseconds(),
+		)
+		et.appliedLogged = true
+	}
 	config.TimeoutPropose = propose
 	config.TimeoutPrevote = prevote
 	config.TimeoutPrecommit = precommit
