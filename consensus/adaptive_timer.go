@@ -85,10 +85,9 @@ func (s wallClockStage) String() string {
 // so that episodes keep advancing even while consensus is stalled. mu guards all
 // mutable state, since the driver and the consensus receiveRoutine both touch it.
 type EpochTracker struct {
-	consensusCfg *cfg.ConsensusConfig
-	logger       log.Logger
-	client       adaptivetimers.LearningAgentClient // nil = disabled
-	conn         *grpc.ClientConn
+	logger log.Logger
+	client adaptivetimers.LearningAgentClient // nil = disabled
+	conn   *grpc.ClientConn
 
 	nodeID uint32
 
@@ -137,7 +136,6 @@ type EpochTracker struct {
 func NewEpochTracker(config *cfg.ConsensusConfig, logger log.Logger) (*EpochTracker, error) {
 	now := time.Now()
 	et := &EpochTracker{
-		consensusCfg:    config,
 		logger:          logger,
 		nodeID:          config.AdaptiveTimerNodeIndex,
 		featureDuration: config.AdaptiveTimerFeatureDuration,
@@ -159,15 +157,6 @@ func NewEpochTracker(config *cfg.ConsensusConfig, logger log.Logger) (*EpochTrac
 
 	if config.AdaptiveTimerAddr == "" {
 		return et, nil
-	}
-
-	if config.AdaptiveTimerFeatureDuration <= 0 || config.AdaptiveTimerReplyWait <= 0 ||
-		config.AdaptiveTimerWarmupDuration <= 0 || config.AdaptiveTimerRewardDuration <= 0 {
-		return nil, fmt.Errorf(
-			"adaptive_timer: requires positive durations, got feature=%s reply_wait=%s warmup=%s reward=%s",
-			config.AdaptiveTimerFeatureDuration, config.AdaptiveTimerReplyWait,
-			config.AdaptiveTimerWarmupDuration, config.AdaptiveTimerRewardDuration,
-		)
 	}
 
 	//nolint:staticcheck

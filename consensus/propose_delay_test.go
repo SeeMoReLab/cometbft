@@ -25,6 +25,16 @@ func TestProposeDelayControllerFromEnv(t *testing.T) {
 		}
 	})
 
+	t.Run("missing start time is an error", func(t *testing.T) {
+		t.Setenv(envProposeDelayFailureSpec, spec)
+		t.Setenv(envNodeIndex, "0")
+		t.Setenv(envProposeDelayFaultyNodes, "1")
+		t.Setenv(envProposeDelayStartUnixMS, "")
+		if _, err := newProposeDelayControllerFromEnv(logger); err == nil {
+			t.Fatal("expected an error")
+		}
+	})
+
 	t.Run("missing node index is an error", func(t *testing.T) {
 		t.Setenv(envProposeDelayFailureSpec, spec)
 		t.Setenv(envNodeIndex, "")
@@ -57,7 +67,7 @@ func TestProposeDelayControllerFromEnv(t *testing.T) {
 		t.Setenv(envProposeDelayFailureSpec, spec)
 		t.Setenv(envNodeIndex, "0")
 		t.Setenv(envProposeDelayFaultyNodes, "1")
-		t.Setenv(envProposeDelayStartUnixMS, "")
+		t.Setenv(envProposeDelayStartUnixMS, "1")
 		c, err := newProposeDelayControllerFromEnv(logger)
 		if err != nil || c == nil {
 			t.Fatalf("got (%v, %v), want a controller", c, err)

@@ -2,6 +2,7 @@ package consensus
 
 import (
 	"encoding/xml"
+	"errors"
 	"fmt"
 	"math"
 	"os"
@@ -29,7 +30,6 @@ type failureSpec struct {
 
 type failurePhase struct {
 	AtTime     string            `xml:"atTime"`
-	Time       string            `xml:"time"` // legacy fallback
 	Tendermint failureTendermint `xml:"tendermint"`
 }
 
@@ -79,13 +79,9 @@ func newProposeDelayControllerFromEnv(logger log.Logger) (*proposeDelayControlle
 		return nil, nil
 	}
 
-	startUnixMS := int64(0)
-	if v := strings.TrimSpace(os.Getenv(envProposeDelayStartUnixMS)); v != "" {
-		parsed, err := strconv.ParseInt(v, 10, 64)
-		if err != nil || parsed < 0 {
-			return nil, fmt.Errorf("propose-delay: invalid %s=%q: %v", envProposeDelayStartUnixMS, v, err)
-		}
-		startUnixMS = parsed
+	startUnixMS, err := parseRequiredNonNegativeIntEnv(envProposeDelayStartUnixMS)
+	if err != nil {
+		return nil, err
 	}
 
 	updates, err := loadNodeDelayScheduleFromFailureSpec(specFile)
@@ -100,10 +96,7 @@ func newProposeDelayControllerFromEnv(logger log.Logger) (*proposeDelayControlle
 	c := &proposeDelayController{logger: logger}
 	c.delayNS.Store(0)
 
-	start := time.Now()
-	if startUnixMS > 0 {
-		start = time.Unix(0, startUnixMS*int64(time.Millisecond))
-	}
+	start := time.UnixMilli(int64(startUnixMS))
 
 	for _, update := range updates {
 		u := update
@@ -160,11 +153,11 @@ func loadNodeDelayScheduleFromFailureSpec(specFile string) ([]nodeDelayUpdate, e
 	for _, phase := range spec.Phases {
 		atText := strings.TrimSpace(phase.AtTime)
 		if atText == "" {
-			atText = strings.TrimSpace(phase.Time)
+			return nil, errors.New("phase has no <atTime>")
 		}
 		at, err := parseSecondsDuration(atText)
 		if err != nil {
-			return nil, fmt.Errorf("invalid phase atTime/time %q: %w", atText, err)
+			return nil, fmt.Errorf("invalid phase atTime %q: %w", atText, err)
 		}
 
 		delay := time.Duration(0)

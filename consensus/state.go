@@ -184,15 +184,12 @@ func NewState(
 		option(cs)
 	}
 
-	// Initialize the adaptive timer epoch tracker (no-op if AdaptiveTimerAddr is empty).
+	// Initialize the adaptive timer epoch tracker (no-op if AdaptiveTimerAddr is
+	// empty). Its configuration was validated with the rest of the config, so an
+	// error here is a dial failure and must not silently disable learning.
 	et, err := NewEpochTracker(config, log.NewNopLogger())
 	if err != nil {
-		et, _ = NewEpochTracker(&cfg.ConsensusConfig{
-			AdaptiveTimerAddr: "",
-			TimeoutPropose:    config.TimeoutPropose,
-			TimeoutPrevote:    config.TimeoutPrevote,
-			TimeoutPrecommit:  config.TimeoutPrecommit,
-		}, log.NewNopLogger())
+		panic(fmt.Sprintf("consensus: creating adaptive timer epoch tracker: %v", err))
 	}
 	cs.epochTracker = et
 	// set function defaults (may be overwritten before calling Start)
