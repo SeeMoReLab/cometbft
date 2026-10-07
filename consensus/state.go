@@ -139,15 +139,6 @@ type State struct {
 
 	// epochTracker manages the adaptive timer feedback loop.
 	epochTracker *EpochTracker
-
-	// phase timing instrumentation for debugging consensus latency bottlenecks.
-	phaseTimingHeight int64
-	phaseTimingRound  int32
-	phaseStartTimes   map[cstypes.RoundStepType]time.Time
-	lastPhaseAt       time.Time
-	lastPhaseHeight   int64
-	lastPhaseRound    int32
-	lastPhaseStep     cstypes.RoundStepType
 }
 
 // StateOption sets an optional parameter on the State.
@@ -178,7 +169,6 @@ func NewState(
 		evpool:           evpool,
 		evsw:             cmtevents.NewEventSwitch(),
 		metrics:          NopMetrics(),
-		phaseStartTimes:  make(map[cstypes.RoundStepType]time.Time),
 	}
 	for _, option := range options {
 		option(cs)
@@ -605,92 +595,18 @@ func (cs *State) scheduleTimeout(duration time.Duration, height int64, round int
 	cs.timeoutTicker.ScheduleTimeout(timeoutInfo{duration, height, round, step})
 }
 
-func (cs *State) resetPhaseTiming(height int64, round int32) {
-	cs.phaseTimingHeight = height
-	cs.phaseTimingRound = round
-	if cs.phaseStartTimes == nil {
-		cs.phaseStartTimes = make(map[cstypes.RoundStepType]time.Time)
-	}
-	for k := range cs.phaseStartTimes {
-		delete(cs.phaseStartTimes, k)
-	}
-}
-
+// markPhaseEnter logs entry into a consensus step; scripts/tendermint_phase_report.py
+// parses these lines.
 func (cs *State) markPhaseEnter(height int64, round int32, step cstypes.RoundStepType) {
-	now := cmttime.Now()
-	if cs.phaseTimingHeight != height || cs.phaseTimingRound != round {
-		cs.resetPhaseTiming(height, round)
-	}
-	cs.phaseStartTimes[step] = now
-	if cs.Logger == nil {
-		cs.lastPhaseAt = now
-		cs.lastPhaseHeight = height
-		cs.lastPhaseRound = round
-		cs.lastPhaseStep = step
-		return
-	}
-
-	if cs.lastPhaseAt.IsZero() {
-		cs.Logger.Info("phase enter",
-			"height", height,
-			"round", round,
-			"phase", step.String(),
-		)
-	} else {
-		cs.Logger.Info("phase enter",
-			"height", height,
-			"round", round,
-			"phase", step.String(),
-			"elapsed_since_prev_phase_ms", now.Sub(cs.lastPhaseAt).Milliseconds(),
-			"prev_height", cs.lastPhaseHeight,
-			"prev_round", cs.lastPhaseRound,
-			"prev_phase", cs.lastPhaseStep.String(),
-		)
-	}
-
-	cs.lastPhaseAt = now
-	cs.lastPhaseHeight = height
-	cs.lastPhaseRound = round
-	cs.lastPhaseStep = step
-}
-
-func (cs *State) phaseElapsed(height int64, round int32, step cstypes.RoundStepType) (time.Duration, bool) {
-	if cs.phaseTimingHeight != height || cs.phaseTimingRound != round {
-		return 0, false
-	}
-	start, ok := cs.phaseStartTimes[step]
-	if !ok || start.IsZero() {
-		return 0, false
-	}
-	return cmttime.Now().Sub(start), true
-}
-
-func (cs *State) logPhaseEvent(event string, height int64, round int32, step cstypes.RoundStepType, keyVals ...interface{}) {
+	// NewState calls updateToState before the BaseService, and so the logger, exists.
 	if cs.Logger == nil {
 		return
 	}
-	args := []interface{}{
+	cs.Logger.Info("phase enter",
 		"height", height,
 		"round", round,
 		"phase", step.String(),
-		"event", event,
-	}
-	if elapsed, ok := cs.phaseElapsed(height, round, step); ok {
-		args = append(args, "elapsed_ms", elapsed.Milliseconds())
-	}
-	args = append(args, keyVals...)
-	cs.Logger.Debug("phase event", args...)
-}
-
-func voteStep(msgType cmtproto.SignedMsgType) (cstypes.RoundStepType, bool) {
-	switch msgType {
-	case cmtproto.PrevoteType:
-		return cstypes.RoundStepPrevote, true
-	case cmtproto.PrecommitType:
-		return cstypes.RoundStepPrecommit, true
-	default:
-		return cstypes.RoundStepType(0), false
-	}
+	)
 }
 
 // send a msg into the receiveRoutine regarding our own proposal, block part, or vote
@@ -1129,7 +1045,7 @@ func (cs *State) handleMsg(mi msgInfo) {
 }
 
 func (cs *State) handleTimeout(ti timeoutInfo, rs cstypes.RoundState) {
-	cs.logPhaseEvent("timeout-fired", ti.Height, ti.Round, ti.Step, "timeout_ms", ti.Duration.Milliseconds())
+	cs.Logger.Debug("received tock", "timeout", ti.Duration, "height", ti.Height, "round", ti.Round, "step", ti.Step)
 
 	// timeouts must be for current height, round, step
 	if ti.Height != rs.Height || ti.Round < rs.Round || (ti.Round == rs.Round && ti.Step < rs.Step) {
@@ -1410,10 +1326,6 @@ func (cs *State) sendPreparedProposal(height int64, round int32, proposal *types
 		cs.sendInternalMessage(msgInfo{&BlockPartMessage{height, round, part}, ""})
 	}
 
-	cs.logPhaseEvent("proposal-send", height, round, cstypes.RoundStepPropose,
-		"proposal_hash", proposal.BlockID.Hash,
-		"parts_total", blockParts.Total(),
-	)
 	cs.Logger.Debug("signed proposal", "height", height, "round", round, "proposal", proposal)
 }
 
@@ -2179,10 +2091,6 @@ func (cs *State) defaultSetProposal(proposal *types.Proposal) error {
 		cs.ProposalBlockParts = types.NewPartSetFromHeader(proposal.BlockID.PartSetHeader)
 	}
 
-	cs.logPhaseEvent("proposal-receive", proposal.Height, proposal.Round, cstypes.RoundStepPropose,
-		"proposer", pubKey.Address(),
-		"proposal_hash", proposal.BlockID.Hash,
-	)
 	cs.Logger.Info("received proposal", "proposal", proposal, "proposer", pubKey.Address())
 	return nil
 }
@@ -2272,10 +2180,6 @@ func (cs *State) addProposalBlockPart(msg *BlockPartMessage, peerID p2p.ID) (add
 		cs.ProposalBlock = block
 
 		// NOTE: it's possible to receive complete proposal blocks for future rounds without having the proposal
-		cs.logPhaseEvent("proposal-block-complete", msg.Height, msg.Round, cstypes.RoundStepPropose,
-			"block_hash", cs.ProposalBlock.Hash(),
-			"parts_total", cs.ProposalBlockParts.Total(),
-		)
 		cs.Logger.Info("received complete proposal block", "height", cs.ProposalBlock.Height, "hash", cs.ProposalBlock.Hash())
 
 		if err := cs.eventBus.PublishEventCompleteProposal(cs.CompleteProposalEvent()); err != nil {
@@ -2383,13 +2287,6 @@ func (cs *State) addVote(vote *types.Vote, peerID p2p.ID) (added bool, err error
 		"extSigLen", len(vote.ExtensionSignature),
 		"peer_id", peerID,
 	)
-	if step, ok := voteStep(vote.Type); ok {
-		cs.logPhaseEvent("vote-receive", vote.Height, vote.Round, step,
-			"vote_type", vote.Type.String(),
-			"validator_index", vote.ValidatorIndex,
-			"peer_id", peerID,
-		)
-	}
 
 	if vote.Height < cs.Height || (vote.Height == cs.Height && vote.Round < cs.Round) {
 		cs.metrics.MarkLateVote(vote.Type)
@@ -2756,13 +2653,6 @@ func (cs *State) signAddVote(
 			hasExt, extEnabled, vote.Height, vote.Type))
 	}
 	cs.sendInternalMessage(msgInfo{&VoteMessage{vote}, ""})
-	if step, ok := voteStep(vote.Type); ok {
-		cs.logPhaseEvent("vote-send", vote.Height, vote.Round, step,
-			"vote_type", vote.Type.String(),
-			"validator_index", vote.ValidatorIndex,
-			"block_id_zero", vote.BlockID.IsZero(),
-		)
-	}
 	cs.Logger.Debug("signed and pushed vote", "height", cs.Height, "round", cs.Round, "vote", vote)
 }
 

@@ -490,17 +490,6 @@ func (et *EpochTracker) ApplyPendingTimeout(config *cfg.ConsensusConfig) {
 		)
 		return
 	}
-	et.logger.Info("adaptive_timer: applying timeouts",
-		"propose_before_ms", config.TimeoutPropose.Milliseconds(),
-		"prevote_before_ms", config.TimeoutPrevote.Milliseconds(),
-		"precommit_before_ms", config.TimeoutPrecommit.Milliseconds(),
-		"propose_after_ms", propose.Milliseconds(),
-		"prevote_after_ms", prevote.Milliseconds(),
-		"precommit_after_ms", precommit.Milliseconds(),
-		"propose_changed", config.TimeoutPropose != propose,
-		"prevote_changed", config.TimeoutPrevote != prevote,
-		"precommit_changed", config.TimeoutPrecommit != precommit,
-	)
 	// The harness plot reads this line: once with the initial values, then on every change.
 	if !et.appliedLogged || config.TimeoutPropose != propose || config.TimeoutPrevote != prevote ||
 		config.TimeoutPrecommit != precommit {
