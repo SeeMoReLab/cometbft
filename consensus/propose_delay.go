@@ -24,8 +24,9 @@ const (
 )
 
 type failureSpec struct {
-	WarmUpTime string         `xml:"warmUpTime"`
-	Phases     []failurePhase `xml:"phases>phase"`
+	WarmUpTime   string         `xml:"warmUpTime"`
+	WarmUpTimeMs string         `xml:"warmUpTimeMs"`
+	Phases       []failurePhase `xml:"phases>phase"`
 }
 
 type failurePhase struct {
@@ -144,9 +145,18 @@ func loadNodeDelayScheduleFromFailureSpec(specFile string) ([]nodeDelayUpdate, e
 		return nil, fmt.Errorf("parsing failure spec xml: %w", err)
 	}
 
-	warmUp, err := parseSecondsDuration(spec.WarmUpTime)
-	if err != nil {
-		return nil, fmt.Errorf("invalid warmUpTime %q: %w", spec.WarmUpTime, err)
+	// warmUpTimeMs takes precedence, as in the network applier and the agent.
+	var warmUp time.Duration
+	if strings.TrimSpace(spec.WarmUpTimeMs) != "" {
+		warmUp, err = parseMillisecondsDuration(spec.WarmUpTimeMs)
+		if err != nil {
+			return nil, fmt.Errorf("invalid warmUpTimeMs %q: %w", spec.WarmUpTimeMs, err)
+		}
+	} else {
+		warmUp, err = parseSecondsDuration(spec.WarmUpTime)
+		if err != nil {
+			return nil, fmt.Errorf("invalid warmUpTime %q: %w", spec.WarmUpTime, err)
+		}
 	}
 
 	updates := make([]nodeDelayUpdate, 0, len(spec.Phases))

@@ -4,6 +4,7 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+	"time"
 
 	"github.com/cometbft/cometbft/libs/log"
 )
@@ -73,4 +74,20 @@ func TestProposeDelayControllerFromEnv(t *testing.T) {
 			t.Fatalf("got (%v, %v), want a controller", c, err)
 		}
 	})
+}
+
+func TestFailureSpecWarmUpTimeMsTakesPrecedence(t *testing.T) {
+	spec := filepath.Join(t.TempDir(), "failure_spec.xml")
+	if err := os.WriteFile(spec, []byte(`<failureSpec><warmUpTime>10</warmUpTime><warmUpTimeMs>1500</warmUpTimeMs><phases>
+<phase><atTime>2</atTime><tendermint><proposalDelay><delayMs>100</delayMs></proposalDelay></tendermint></phase>
+</phases></failureSpec>`), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	updates, err := loadNodeDelayScheduleFromFailureSpec(spec)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(updates) != 1 || updates[0].at != 3500*time.Millisecond {
+		t.Fatalf("updates = %+v, want one update at 3.5s (1.5s warm-up + 2s)", updates)
+	}
 }
