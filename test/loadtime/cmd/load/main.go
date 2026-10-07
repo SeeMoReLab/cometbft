@@ -4,35 +4,33 @@ import (
 	"context"
 	"flag"
 	"fmt"
-	"math"
 	"os"
-	"strconv"
 	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/informalsystems/tm-load-test/pkg/loadtest"
-	"github.com/sirupsen/logrus"
 
 	rpchttp "github.com/cometbft/cometbft/rpc/client/http"
 	"github.com/cometbft/cometbft/test/loadtime/payload"
 	"github.com/cometbft/cometbft/types"
 )
 
-// Ensure all of the interfaces are correctly satisfied.
-var (
-	_ loadtest.ClientFactory = (*ClientFactory)(nil)
-	_ loadtest.Client        = (*TxGenerator)(nil)
-)
+// progressInterval is how often the progress monitor prints a Monitor line.
+const progressInterval = time.Second
 
-// ClientFactory implements the loadtest.ClientFactory interface.
-type ClientFactory struct {
-	ID []byte
+// loadConfig holds the load parameters the harness sets.
+type loadConfig struct {
+	endpoints   []string
+	connections int
+	rate        int
+	sendPeriod  time.Duration
+	duration    time.Duration
+	size        int
+	startUnixMs int64
 }
 
-// TxGenerator is responsible for generating transactions.
 // TxGenerator holds the set of information that will be used to generate
 // each transaction.
 type TxGenerator struct {
@@ -43,27 +41,9 @@ type TxGenerator struct {
 }
 
 func main() {
-	logrus.SetLevel(logrus.WarnLevel)
-
 	u := [16]byte(uuid.New()) // generate run ID on startup
-	if err := loadtest.RegisterClientFactory("loadtime-client", &ClientFactory{ID: u[:]}); err != nil {
-		panic(err)
-	}
 
-	if len(os.Args) > 1 {
-		switch os.Args[1] {
-		case "coordinator", "worker", "version", "completion":
-			loadtest.Run(&loadtest.CLIConfig{
-				AppName:              "loadtime",
-				AppShortDesc:         "Generate timestamped transaction load.",
-				AppLongDesc:          "loadtime generates transaction load for the purpose of measuring the end-to-end latency of a transaction from submission to execution in a CometBFT network.",
-				DefaultClientFactory: "loadtime-client",
-			})
-			return
-		}
-	}
-
-	cfg, sendPeriod, progressInterval, progressEnabled, verbose, startUnixMs, err := parseFlags()
+	cfg, err := parseFlags()
 	if err != nil {
 		if err == flag.ErrHelp {
 			os.Exit(0)
@@ -72,68 +52,24 @@ func main() {
 		os.Exit(2)
 	}
 
-	if verbose {
-		logrus.SetLevel(logrus.DebugLevel)
-	}
+	waitUntilUnixMillis(cfg.startUnixMs)
 
-	if err := cfg.Validate(); err != nil {
-		fmt.Fprintf(os.Stderr, "error: %v\n", err)
-		os.Exit(2)
-	}
-
-	waitUntilUnixMillis(startUnixMs)
-
-	var monitorCancel context.CancelFunc
+	monitorCtx, monitorCancel := context.WithCancel(context.Background())
 	monitorDone := make(chan struct{})
-	if progressEnabled {
-		var monitorCtx context.Context
-		monitorCtx, monitorCancel = context.WithCancel(context.Background())
-		go func() {
-			defer close(monitorDone)
-			runProgressMonitor(monitorCtx, cfg.Endpoints[0], u[:], progressInterval)
-		}()
-	} else {
-		close(monitorDone)
-	}
+	go func() {
+		defer close(monitorDone)
+		runProgressMonitor(monitorCtx, cfg.endpoints[0], u[:], progressInterval)
+	}()
 
-	if sendPeriod%time.Second == 0 {
-		err = loadtest.ExecuteStandalone(cfg)
-	} else {
-		if cfg.ExpectPeers > 0 || cfg.EndpointSelectMethod != loadtest.SelectSuppliedEndpoints || cfg.MaxEndpoints > 0 || cfg.MinConnectivity > 0 {
-			fmt.Fprintln(os.Stderr, "error: sub-second --send-period is currently supported only for directly supplied endpoints (no peer discovery options)")
-			os.Exit(2)
-		}
-		err = executeStandaloneWithDuration(cfg, sendPeriod, u[:], verbose)
-	}
+	err = sendLoad(cfg, u[:])
 
-	if monitorCancel != nil {
-		monitorCancel()
-	}
+	monitorCancel()
 	<-monitorDone
 
 	if err != nil {
+		fmt.Fprintf(os.Stderr, "error: %v\n", err)
 		os.Exit(1)
 	}
-}
-
-func (f *ClientFactory) ValidateConfig(cfg loadtest.Config) error {
-	psb, err := payload.MaxUnpaddedSize()
-	if err != nil {
-		return err
-	}
-	if psb > cfg.Size {
-		return fmt.Errorf("payload size exceeds configured size")
-	}
-	return nil
-}
-
-func (f *ClientFactory) NewClient(cfg loadtest.Config) (loadtest.Client, error) {
-	return &TxGenerator{
-		id:    f.ID,
-		conns: uint64(cfg.Connections),
-		rate:  uint64(cfg.Rate),
-		size:  uint64(cfg.Size),
-	}, nil
 }
 
 func (c *TxGenerator) GenerateTx() ([]byte, error) {
@@ -145,47 +81,25 @@ func (c *TxGenerator) GenerateTx() ([]byte, error) {
 	})
 }
 
-func parseFlags() (loadtest.Config, time.Duration, time.Duration, bool, bool, int64, error) {
-	var cfg loadtest.Config
-	var endpointsCSV string
-	var sendPeriodArg string
-	var progressEvery string
-	var noProgress bool
-	var verbose bool
-	var startUnixMs int64
+func parseFlags() (loadConfig, error) {
+	var (
+		cfg          loadConfig
+		endpointsCSV string
+		sendPeriod   string
+		durationSecs int
+	)
 
 	fs := flag.NewFlagSet("loadtime", flag.ContinueOnError)
 	fs.SetOutput(os.Stdout)
-
-	fs.StringVar(&cfg.ClientFactory, "client-factory", "loadtime-client", "The identifier of the client factory to use for generating load testing transactions")
-	fs.IntVar(&cfg.Connections, "connections", 1, "The number of connections to open to each endpoint simultaneously")
-	fs.IntVar(&cfg.Connections, "c", 1, "The number of connections to open to each endpoint simultaneously")
-	fs.IntVar(&cfg.Time, "time", 60, "The duration (in seconds) for which to handle the load test")
-	fs.IntVar(&cfg.Time, "T", 60, "The duration (in seconds) for which to handle the load test")
-	fs.StringVar(&sendPeriodArg, "send-period", "1s", "The period at which to send transaction batches (supports sub-second values like 200ms; plain integers are treated as seconds)")
-	fs.StringVar(&sendPeriodArg, "p", "1s", "The period at which to send transaction batches (supports sub-second values like 200ms; plain integers are treated as seconds)")
-	fs.IntVar(&cfg.Rate, "rate", 1000, "The number of transactions to generate each send period on each connection, to each endpoint")
-	fs.IntVar(&cfg.Rate, "r", 1000, "The number of transactions to generate each send period on each connection, to each endpoint")
-	fs.IntVar(&cfg.Size, "size", 250, "The size of each transaction, in bytes - must be greater than 40")
-	fs.IntVar(&cfg.Size, "s", 250, "The size of each transaction, in bytes - must be greater than 40")
-	fs.IntVar(&cfg.Count, "count", -1, "The maximum number of transactions to send - set to -1 to turn off this limit")
-	fs.IntVar(&cfg.Count, "N", -1, "The maximum number of transactions to send - set to -1 to turn off this limit")
-	fs.StringVar(&cfg.BroadcastTxMethod, "broadcast-tx-method", "async", "The broadcast_tx method to use when submitting transactions - can be async, sync or commit")
-	fs.StringVar(&endpointsCSV, "endpoints", "", "A comma-separated list of URLs indicating CometBFT WebSockets RPC endpoints to which to connect")
-	fs.StringVar(&cfg.EndpointSelectMethod, "endpoint-select-method", loadtest.SelectSuppliedEndpoints, "The method by which to select endpoints")
-	fs.IntVar(&cfg.ExpectPeers, "expect-peers", 0, "The minimum number of peers to expect when crawling the P2P network from the specified endpoint(s) prior to waiting for workers to connect")
-	fs.IntVar(&cfg.MaxEndpoints, "max-endpoints", 0, "The maximum number of endpoints to use for testing, where 0 means unlimited")
-	fs.IntVar(&cfg.PeerConnectTimeout, "peer-connect-timeout", 600, "The number of seconds to wait for all required peers to connect if expect-peers > 0")
-	fs.IntVar(&cfg.MinConnectivity, "min-peer-connectivity", 0, "The minimum number of peers to which each peer must be connected before starting the load test")
-	fs.StringVar(&cfg.StatsOutputFile, "stats-output", "", "Where to store aggregate statistics (in CSV format) for the load test")
-	fs.BoolVar(&verbose, "verbose", false, "Increase output logging verbosity to DEBUG level")
-	fs.BoolVar(&verbose, "v", false, "Increase output logging verbosity to DEBUG level")
-	fs.StringVar(&progressEvery, "progress-interval", "1s", "How often to emit Monitor lines (e.g. 1s, 2s)")
-	fs.BoolVar(&noProgress, "no-progress", false, "Disable live progress monitor output")
-	fs.Int64Var(&startUnixMs, "start-unix-ms", 0, "Absolute Unix timestamp in milliseconds at which to begin sending transactions (0 = start immediately)")
-
+	fs.StringVar(&endpointsCSV, "endpoints", "", "Comma-separated CometBFT WebSocket RPC endpoints, e.g. ws://host:26657/websocket")
+	fs.IntVar(&cfg.connections, "connections", 1, "Connections to open to each endpoint")
+	fs.IntVar(&cfg.rate, "rate", 1000, "Transactions sent per send period on each connection")
+	fs.StringVar(&sendPeriod, "send-period", "1s", "Period between transaction batches, as a Go duration (e.g. 100ms)")
+	fs.IntVar(&durationSecs, "time", 60, "Duration of the load in seconds")
+	fs.IntVar(&cfg.size, "size", 250, "Size of each transaction in bytes")
+	fs.Int64Var(&cfg.startUnixMs, "start-unix-ms", 0, "Unix time in ms at which to start sending (0 = immediately)")
 	fs.Usage = func() {
-		fmt.Fprintln(os.Stdout, "loadtime generates transaction load for measuring end-to-end transaction latency.")
+		fmt.Fprintln(os.Stdout, "load generates timestamped transaction load for measuring end-to-end latency.")
 		fmt.Fprintln(os.Stdout, "")
 		fmt.Fprintln(os.Stdout, "Usage:")
 		fmt.Fprintln(os.Stdout, "  load [flags]")
@@ -195,149 +109,95 @@ func parseFlags() (loadtest.Config, time.Duration, time.Duration, bool, bool, in
 	}
 
 	if err := fs.Parse(os.Args[1:]); err != nil {
-		return loadtest.Config{}, 0, 0, false, false, 0, err
+		return loadConfig{}, err
 	}
 	if fs.NArg() > 0 {
-		return loadtest.Config{}, 0, 0, false, false, 0, fmt.Errorf("unexpected arguments: %s", strings.Join(fs.Args(), " "))
+		return loadConfig{}, fmt.Errorf("unexpected arguments: %s", strings.Join(fs.Args(), " "))
 	}
 
-	parts := strings.Split(endpointsCSV, ",")
-	cfg.Endpoints = make([]string, 0, len(parts))
-	for _, p := range parts {
-		p = strings.TrimSpace(p)
-		if p != "" {
-			cfg.Endpoints = append(cfg.Endpoints, p)
+	for _, p := range strings.Split(endpointsCSV, ",") {
+		if p = strings.TrimSpace(p); p != "" {
+			cfg.endpoints = append(cfg.endpoints, p)
 		}
 	}
-
-	sendPeriod, err := parseSendPeriod(sendPeriodArg)
+	if len(cfg.endpoints) == 0 {
+		return loadConfig{}, fmt.Errorf("--endpoints is required")
+	}
+	if cfg.connections < 1 {
+		return loadConfig{}, fmt.Errorf("--connections must be >= 1")
+	}
+	if cfg.rate < 1 {
+		return loadConfig{}, fmt.Errorf("--rate must be >= 1")
+	}
+	period, err := time.ParseDuration(strings.TrimSpace(sendPeriod))
 	if err != nil {
-		return loadtest.Config{}, 0, 0, false, false, 0, err
+		return loadConfig{}, fmt.Errorf("invalid --send-period %q: %w", sendPeriod, err)
 	}
-	// tm-load-test config only supports integer-second send periods.
-	// We keep cfg.SendPeriod valid and handle sub-second pacing in standalone mode.
-	cfg.SendPeriod = int(math.Ceil(sendPeriod.Seconds()))
-	if cfg.SendPeriod < 1 {
-		cfg.SendPeriod = 1
+	if period <= 0 {
+		return loadConfig{}, fmt.Errorf("--send-period must be > 0")
 	}
-
-	interval, err := time.ParseDuration(progressEvery)
+	cfg.sendPeriod = period
+	if durationSecs < 1 {
+		return loadConfig{}, fmt.Errorf("--time must be >= 1")
+	}
+	cfg.duration = time.Duration(durationSecs) * time.Second
+	minSize, err := payload.MaxUnpaddedSize()
 	if err != nil {
-		return loadtest.Config{}, 0, 0, false, false, 0, fmt.Errorf("invalid --progress-interval %q: %w", progressEvery, err)
+		return loadConfig{}, err
 	}
-	if interval <= 0 {
-		return loadtest.Config{}, 0, 0, false, false, 0, fmt.Errorf("--progress-interval must be > 0")
+	if cfg.size < minSize {
+		return loadConfig{}, fmt.Errorf("--size must be >= %d bytes, the unpadded payload size", minSize)
 	}
-	if startUnixMs < 0 {
-		return loadtest.Config{}, 0, 0, false, false, 0, fmt.Errorf("--start-unix-ms must be >= 0")
+	if cfg.startUnixMs < 0 {
+		return loadConfig{}, fmt.Errorf("--start-unix-ms must be >= 0")
 	}
-
-	return cfg, sendPeriod, interval, !noProgress, verbose, startUnixMs, nil
+	return cfg, nil
 }
 
-func parseSendPeriod(v string) (time.Duration, error) {
-	v = strings.TrimSpace(v)
-	if v == "" {
-		return 0, fmt.Errorf("--send-period must not be empty")
-	}
-
-	if secs, err := strconv.Atoi(v); err == nil {
-		if secs <= 0 {
-			return 0, fmt.Errorf("--send-period must be > 0")
-		}
-		return time.Duration(secs) * time.Second, nil
-	}
-
-	d, err := time.ParseDuration(v)
-	if err != nil {
-		return 0, fmt.Errorf("invalid --send-period %q: %w", v, err)
-	}
-	if d <= 0 {
-		return 0, fmt.Errorf("--send-period must be > 0")
-	}
-	return d, nil
-}
-
-type txSendLimiter struct {
-	max      int64
-	reserved int64
-}
-
-func newTxSendLimiter(max int) *txSendLimiter {
-	return &txSendLimiter{max: int64(max)}
-}
-
-func (l *txSendLimiter) reserve() bool {
-	if l.max < 0 {
-		return true
-	}
-	for {
-		cur := atomic.LoadInt64(&l.reserved)
-		if cur >= l.max {
-			return false
-		}
-		if atomic.CompareAndSwapInt64(&l.reserved, cur, cur+1) {
-			return true
-		}
-	}
-}
-
-func executeStandaloneWithDuration(cfg loadtest.Config, sendPeriod time.Duration, runID []byte, verbose bool) error {
-	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(cfg.Time)*time.Second)
+// sendLoad runs cfg.connections workers per endpoint, each sending cfg.rate
+// transactions every cfg.sendPeriod until cfg.duration has passed.
+func sendLoad(cfg loadConfig, runID []byte) error {
+	ctx, cancel := context.WithTimeout(context.Background(), cfg.duration)
 	defer cancel()
 
 	gen := &TxGenerator{
 		id:    runID,
-		conns: uint64(cfg.Connections),
-		rate:  uint64(cfg.Rate),
-		size:  uint64(cfg.Size),
+		conns: uint64(cfg.connections),
+		rate:  uint64(cfg.rate),
+		size:  uint64(cfg.size),
 	}
-	limiter := newTxSendLimiter(cfg.Count)
 	var wg sync.WaitGroup
 	var startedWorkers int64
 
-	for _, endpoint := range cfg.Endpoints {
+	for _, endpoint := range cfg.endpoints {
 		rpcAddr, err := endpointToRPCAddr(endpoint)
 		if err != nil {
 			return fmt.Errorf("invalid endpoint %q: %w", endpoint, err)
 		}
-		for i := 0; i < cfg.Connections; i++ {
+		for i := 0; i < cfg.connections; i++ {
 			wg.Add(1)
 			go func(addr string) {
 				defer wg.Done()
 
 				client, err := rpchttp.New(addr, "/websocket")
 				if err != nil {
-					if verbose {
-						logrus.WithError(err).Warnf("failed to create RPC client for %s", addr)
-					}
+					fmt.Fprintf(os.Stderr, "failed to create RPC client for %s: %v\n", addr, err)
 					return
 				}
 				atomic.AddInt64(&startedWorkers, 1)
 
 				sendBatch := func() bool {
-					for j := 0; j < cfg.Rate; j++ {
+					for j := 0; j < cfg.rate; j++ {
 						if ctx.Err() != nil {
 							return false
 						}
-						if !limiter.reserve() {
-							cancel()
-							return false
-						}
-
 						tx, err := gen.GenerateTx()
 						if err != nil {
-							if verbose {
-								logrus.WithError(err).Warn("failed to generate transaction")
-							}
 							continue
 						}
-						if err := broadcastByMethod(ctx, client, cfg.BroadcastTxMethod, tx); err != nil {
-							// Keep sending despite RPC errors to preserve load pressure.
-							if verbose {
-								logrus.WithError(err).Warnf("broadcast (%s) failed", cfg.BroadcastTxMethod)
-							}
-						}
+						// Broadcast errors are not retried: the load keeps its pressure,
+						// and lost transactions show up as missing in the report.
+						_ = broadcastAsync(ctx, client, tx)
 					}
 					return true
 				}
@@ -347,7 +207,7 @@ func executeStandaloneWithDuration(cfg loadtest.Config, sendPeriod time.Duration
 					return
 				}
 
-				ticker := time.NewTicker(sendPeriod)
+				ticker := time.NewTicker(cfg.sendPeriod)
 				defer ticker.Stop()
 
 				for {
@@ -371,24 +231,11 @@ func executeStandaloneWithDuration(cfg loadtest.Config, sendPeriod time.Duration
 	return nil
 }
 
-func broadcastByMethod(ctx context.Context, client *rpchttp.HTTP, method string, tx []byte) error {
-	t := types.Tx(tx)
+func broadcastAsync(ctx context.Context, client *rpchttp.HTTP, tx []byte) error {
 	reqCtx, cancel := context.WithTimeout(ctx, 15*time.Second)
 	defer cancel()
-
-	switch method {
-	case "async":
-		_, err := client.BroadcastTxAsync(reqCtx, t)
-		return err
-	case "sync":
-		_, err := client.BroadcastTxSync(reqCtx, t)
-		return err
-	case "commit":
-		_, err := client.BroadcastTxCommit(reqCtx, t)
-		return err
-	default:
-		return fmt.Errorf("unsupported broadcast method %q", method)
-	}
+	_, err := client.BroadcastTxAsync(reqCtx, types.Tx(tx))
+	return err
 }
 
 func waitUntilUnixMillis(startUnixMs int64) {
