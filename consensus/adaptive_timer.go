@@ -27,7 +27,8 @@ type windowData struct {
 	prevoteLatenciesMs   []float64 // enterPrevote(round=0) → enterPrecommit(round=0)
 	precommitLatenciesMs []float64 // enterPrecommit(round=0) → finalizeCommit
 	batchSizes           []float64 // txs per committed block
-	roundsGt0            uint32    // heights where commitRound > 0 (timeout violations / leader changes)
+	roundsGt0            uint32    // heights where commitRound > 0: the height's leader was replaced
+	roundChanges         uint32    // sum of commitRound: every round change installs a new proposer
 	windowStart          time.Time
 }
 
@@ -39,7 +40,7 @@ type heightSample struct {
 	proposeLatencyMs   float64
 	prevoteLatencyMs   float64
 	precommitLatencyMs float64
-	violation          bool
+	commitRound        int32
 }
 
 type pendingReward struct {
@@ -262,9 +263,9 @@ func (et *EpochTracker) OnBlockCommitted(height int64, txCount int, commitRound 
 // committed height and releases its recorded phase-entry times.
 func (et *EpochTracker) buildHeightSampleLocked(now time.Time, height int64, txCount int, commitRound int32) heightSample {
 	sample := heightSample{
-		height:    height,
-		txCount:   float64(txCount),
-		violation: commitRound > 0,
+		height:      height,
+		txCount:     float64(txCount),
+		commitRound: commitRound,
 	}
 
 	proposeT, hasProposeT := et.proposeTime[height]
@@ -807,8 +808,9 @@ func accumulateHeight(w *windowData, s heightSample) {
 	if s.txCount > 0 {
 		w.batchSizes = append(w.batchSizes, s.txCount)
 	}
-	if s.violation {
+	if s.commitRound > 0 {
 		w.roundsGt0++
+		w.roundChanges += uint32(s.commitRound)
 	}
 }
 
@@ -838,11 +840,14 @@ func buildReport(w *windowData, end time.Time) *adaptivetimers.TendermintReport 
 		AvgBatchSize:            windowAvg(w.batchSizes),
 		P50BatchSize:            windowPercentile(w.batchSizes, 50),
 		P90BatchSize:            windowPercentile(w.batchSizes, 90),
-		LeaderChangeCount:       w.roundsGt0,
-		RegencyChangeCount:      w.roundsGt0,
-		ProposeLatencyMs:        windowAvg(w.proposeLatenciesMs),
-		PrevoteLatencyMs:        windowAvg(w.prevoteLatenciesMs),
-		PrecommitLatencyMs:      windowAvg(w.precommitLatenciesMs),
+		// Tendermint rotates the proposer every height, so a "leader change" is a
+		// height whose round-0 proposer was replaced, and a "regency change" is
+		// each round change, the analogue of a view change.
+		LeaderChangeCount:  w.roundsGt0,
+		RegencyChangeCount: w.roundChanges,
+		ProposeLatencyMs:   windowAvg(w.proposeLatenciesMs),
+		PrevoteLatencyMs:   windowAvg(w.prevoteLatenciesMs),
+		PrecommitLatencyMs: windowAvg(w.precommitLatenciesMs),
 	}
 }
 

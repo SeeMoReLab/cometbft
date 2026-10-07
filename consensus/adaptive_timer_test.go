@@ -295,3 +295,19 @@ func TestBuildReportUsesNominalWindowLength(t *testing.T) {
 		t.Fatalf("violation rate = %f, want 0.25", report.TimeoutViolationRate)
 	}
 }
+
+func TestReportSeparatesLeaderAndRegencyChanges(t *testing.T) {
+	start := time.Unix(100, 0)
+	w := windowData{windowStart: start}
+	for i, round := range []int32{0, 1, 0, 3} {
+		accumulateHeight(&w, heightSample{height: int64(i + 1), txCount: 1, commitRound: round})
+	}
+
+	report := buildReport(&w, start.Add(time.Second))
+	if report.LeaderChangeCount != 2 {
+		t.Fatalf("leader changes = %d, want 2 heights with a replaced proposer", report.LeaderChangeCount)
+	}
+	if report.RegencyChangeCount != 4 {
+		t.Fatalf("regency changes = %d, want 4 round changes", report.RegencyChangeCount)
+	}
+}
