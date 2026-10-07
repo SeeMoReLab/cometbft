@@ -221,7 +221,6 @@ func NewState(
 	// NOTE: we do not call scheduleRound0 yet, we do that upon Start()
 
 	cs.BaseService = *service.NewBaseService(nil, "State", cs)
-	cs.proposeDelaySched = newProposeDelayControllerFromEnv(cs.Logger)
 
 	return cs
 }
@@ -348,6 +347,16 @@ func (cs *State) LoadCommit(height int64) *types.Commit {
 // OnStart loads the latest state via the WAL, and starts the timeout and
 // receive routines.
 func (cs *State) OnStart() error {
+	// Built here rather than in NewState so it logs through the logger set by
+	// SetLogger, and so an invalid configuration fails startup.
+	if cs.proposeDelaySched == nil {
+		sched, err := newProposeDelayControllerFromEnv(cs.Logger)
+		if err != nil {
+			return err
+		}
+		cs.proposeDelaySched = sched
+	}
+
 	// We may set the WAL in testing before calling Start, so only OpenWAL if it's
 	// still the nilWAL.
 	if _, ok := cs.wal.(nilWAL); ok {

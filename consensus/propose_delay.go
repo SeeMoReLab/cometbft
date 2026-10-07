@@ -52,58 +52,49 @@ type proposeDelayController struct {
 	mtx     sync.RWMutex
 }
 
-func newProposeDelayControllerFromEnv(logger log.Logger) *proposeDelayController {
+// newProposeDelayControllerFromEnv builds the proposal-delay controller from the
+// COMETBFT_PROPOSE_DELAY_* environment. It returns (nil, nil) when no failure
+// spec is configured or this node is not a faulty node, and an error when the
+// configuration is present but invalid.
+func newProposeDelayControllerFromEnv(logger log.Logger) (*proposeDelayController, error) {
 	specFile := strings.TrimSpace(os.Getenv(envProposeDelayFailureSpec))
 	if specFile == "" {
-		return nil
+		return nil, nil
 	}
 
-	nodeIndex, ok := parseRequiredNonNegativeIntEnv(envNodeIndex, logger)
-	if !ok {
-		return nil
+	nodeIndex, err := parseRequiredNonNegativeIntEnv(envNodeIndex)
+	if err != nil {
+		return nil, err
 	}
-
-	faultyNodes, ok := parseRequiredNonNegativeIntEnv(envProposeDelayFaultyNodes, logger)
-	if !ok {
-		return nil
+	faultyNodes, err := parseRequiredNonNegativeIntEnv(envProposeDelayFaultyNodes)
+	if err != nil {
+		return nil, err
 	}
 	if faultyNodes == 0 {
-		if logger != nil {
-			logger.Info("propose-delay: disabled (faulty nodes = 0)")
-		}
-		return nil
+		logger.Info("propose-delay: disabled (faulty nodes = 0)")
+		return nil, nil
 	}
 	if nodeIndex >= faultyNodes {
-		if logger != nil {
-			logger.Info("propose-delay: disabled for non-faulty node", "node", nodeIndex, "faulty_nodes", faultyNodes)
-		}
-		return nil
+		logger.Info("propose-delay: disabled for non-faulty node", "node", nodeIndex, "faulty_nodes", faultyNodes)
+		return nil, nil
 	}
 
 	startUnixMS := int64(0)
 	if v := strings.TrimSpace(os.Getenv(envProposeDelayStartUnixMS)); v != "" {
 		parsed, err := strconv.ParseInt(v, 10, 64)
 		if err != nil || parsed < 0 {
-			if logger != nil {
-				logger.Error("propose-delay: invalid start unix ms", "env", envProposeDelayStartUnixMS, "value", v, "err", err)
-			}
-			return nil
+			return nil, fmt.Errorf("propose-delay: invalid %s=%q: %v", envProposeDelayStartUnixMS, v, err)
 		}
 		startUnixMS = parsed
 	}
 
 	updates, err := loadNodeDelayScheduleFromFailureSpec(specFile)
 	if err != nil {
-		if logger != nil {
-			logger.Error("propose-delay: failed to load failure spec", "file", specFile, "err", err)
-		}
-		return nil
+		return nil, fmt.Errorf("propose-delay: loading failure spec %q: %w", specFile, err)
 	}
 	if len(updates) == 0 {
-		if logger != nil {
-			logger.Info("propose-delay: no phase schedule entries found", "file", specFile)
-		}
-		return nil
+		logger.Info("propose-delay: no phase schedule entries found", "file", specFile)
+		return nil, nil
 	}
 
 	c := &proposeDelayController{logger: logger}
@@ -134,25 +125,19 @@ func newProposeDelayControllerFromEnv(logger log.Logger) *proposeDelayController
 		"file", specFile,
 		"start_unix_ms", startUnixMS,
 	)
-	return c
+	return c, nil
 }
 
-func parseRequiredNonNegativeIntEnv(name string, logger log.Logger) (int, bool) {
+func parseRequiredNonNegativeIntEnv(name string) (int, error) {
 	value := strings.TrimSpace(os.Getenv(name))
 	if value == "" {
-		if logger != nil {
-			logger.Error("propose-delay: missing required env", "env", name)
-		}
-		return 0, false
+		return 0, fmt.Errorf("propose-delay: missing required env %s", name)
 	}
 	parsed, err := strconv.Atoi(value)
 	if err != nil || parsed < 0 {
-		if logger != nil {
-			logger.Error("propose-delay: invalid env", "env", name, "value", value, "err", err)
-		}
-		return 0, false
+		return 0, fmt.Errorf("propose-delay: invalid %s=%q: %v", name, value, err)
 	}
-	return parsed, true
+	return parsed, nil
 }
 
 func loadNodeDelayScheduleFromFailureSpec(specFile string) ([]nodeDelayUpdate, error) {
