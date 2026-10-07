@@ -41,6 +41,9 @@ func LoadCommitTimesFromStateLog(path string) (map[int64]time.Time, error) {
 		}
 	}
 
+	if len(res) == 0 {
+		return nil, fmt.Errorf("no timestamped 'committed state' lines parsed from state log %q", path)
+	}
 	return res, nil
 }
 
@@ -73,6 +76,11 @@ func parseCommittedStateLine(line string) (time.Time, int64, bool) {
 }
 
 func parseLogTimestamp(text string) (time.Time, bool) {
+	// Current tmfmt logger format: ISO-8601 in UTC, e.g. 2026-10-06T22:13:53.645Z.
+	if t, err := time.Parse(time.RFC3339Nano, text); err == nil {
+		return t, true
+	}
+	// Legacy tmfmt logger format, written in local time.
 	layouts := []string{
 		"2006-01-02|15:04:05.000000",
 		"2006-01-02|15:04:05.000",
