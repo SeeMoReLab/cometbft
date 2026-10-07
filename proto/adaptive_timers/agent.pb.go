@@ -31,27 +31,33 @@ const _ = proto.GoGoProtoPackageIsVersion3 // please upgrade the proto package
 type Protocol int32
 
 const (
-	Protocol_PROTOCOL_UNSPECIFIED      Protocol = 0
-	Protocol_PROTOCOL_PBFT             Protocol = 1
-	Protocol_PROTOCOL_TWO_PC_OVER_PBFT Protocol = 2
-	Protocol_PROTOCOL_SBFT             Protocol = 3
-	Protocol_PROTOCOL_TENDERMINT       Protocol = 4
+	Protocol_PROTOCOL_UNSPECIFIED Protocol = 0
+	Protocol_PROTOCOL_PBFT        Protocol = 1
+	Protocol_PROTOCOL_SBFT        Protocol = 3
+	Protocol_PROTOCOL_TENDERMINT  Protocol = 4
+	Protocol_PROTOCOL_HOTSTUFF    Protocol = 5
+	Protocol_PROTOCOL_AUTOBAHN    Protocol = 6
+	Protocol_PROTOCOL_SMARTBFT    Protocol = 7
 )
 
 var Protocol_name = map[int32]string{
 	0: "PROTOCOL_UNSPECIFIED",
 	1: "PROTOCOL_PBFT",
-	2: "PROTOCOL_TWO_PC_OVER_PBFT",
 	3: "PROTOCOL_SBFT",
 	4: "PROTOCOL_TENDERMINT",
+	5: "PROTOCOL_HOTSTUFF",
+	6: "PROTOCOL_AUTOBAHN",
+	7: "PROTOCOL_SMARTBFT",
 }
 
 var Protocol_value = map[string]int32{
-	"PROTOCOL_UNSPECIFIED":      0,
-	"PROTOCOL_PBFT":             1,
-	"PROTOCOL_TWO_PC_OVER_PBFT": 2,
-	"PROTOCOL_SBFT":             3,
-	"PROTOCOL_TENDERMINT":       4,
+	"PROTOCOL_UNSPECIFIED": 0,
+	"PROTOCOL_PBFT":        1,
+	"PROTOCOL_SBFT":        3,
+	"PROTOCOL_TENDERMINT":  4,
+	"PROTOCOL_HOTSTUFF":    5,
+	"PROTOCOL_AUTOBAHN":    6,
+	"PROTOCOL_SMARTBFT":    7,
 }
 
 func (x Protocol) String() string {
@@ -90,36 +96,40 @@ func (x TimeoutStatus_Status) String() string {
 }
 
 func (TimeoutStatus_Status) EnumDescriptor() ([]byte, []int) {
-	return fileDescriptor_5ce53b760672e5c1, []int{17, 0}
+	return fileDescriptor_5ce53b760672e5c1, []int{23, 0}
 }
 
-// PBFT-specific state report.
+// PBFT state report, shared by CppBedrock PBFT/LinearPBFT.
 type PbftReport struct {
 	// Workload size in the learning window.
 	TotalTransactions       uint32 `protobuf:"varint,1,opt,name=total_transactions,json=totalTransactions,proto3" json:"total_transactions,omitempty"`
 	TotalConsensusInstances uint32 `protobuf:"varint,2,opt,name=total_consensus_instances,json=totalConsensusInstances,proto3" json:"total_consensus_instances,omitempty"`
 	// End-to-end PBFT consensus latency summaries (milliseconds).
 	AvgConsensusLatencyMs float32 `protobuf:"fixed32,3,opt,name=avg_consensus_latency_ms,json=avgConsensusLatencyMs,proto3" json:"avg_consensus_latency_ms,omitempty"`
-	P95ConsensusLatencyMs float32 `protobuf:"fixed32,4,opt,name=p95_consensus_latency_ms,json=p95ConsensusLatencyMs,proto3" json:"p95_consensus_latency_ms,omitempty"`
-	P99ConsensusLatencyMs float32 `protobuf:"fixed32,5,opt,name=p99_consensus_latency_ms,json=p99ConsensusLatencyMs,proto3" json:"p99_consensus_latency_ms,omitempty"`
-	// Throughput and core rates.
-	ThroughputTps        float32 `protobuf:"fixed32,6,opt,name=throughput_tps,json=throughputTps,proto3" json:"throughput_tps,omitempty"`
-	TimeoutViolationRate float32 `protobuf:"fixed32,7,opt,name=timeout_violation_rate,json=timeoutViolationRate,proto3" json:"timeout_violation_rate,omitempty"`
+	P50ConsensusLatencyMs float32 `protobuf:"fixed32,4,opt,name=p50_consensus_latency_ms,json=p50ConsensusLatencyMs,proto3" json:"p50_consensus_latency_ms,omitempty"`
+	P95ConsensusLatencyMs float32 `protobuf:"fixed32,5,opt,name=p95_consensus_latency_ms,json=p95ConsensusLatencyMs,proto3" json:"p95_consensus_latency_ms,omitempty"`
+	// Throughput.
+	ThroughputTps float32 `protobuf:"fixed32,6,opt,name=throughput_tps,json=throughputTps,proto3" json:"throughput_tps,omitempty"`
 	// Batch characteristics.
-	AvgBatchSize float32 `protobuf:"fixed32,8,opt,name=avg_batch_size,json=avgBatchSize,proto3" json:"avg_batch_size,omitempty"`
-	P95BatchSize float32 `protobuf:"fixed32,9,opt,name=p95_batch_size,json=p95BatchSize,proto3" json:"p95_batch_size,omitempty"`
+	AvgBatchSize float32 `protobuf:"fixed32,7,opt,name=avg_batch_size,json=avgBatchSize,proto3" json:"avg_batch_size,omitempty"`
+	P95BatchSize float32 `protobuf:"fixed32,8,opt,name=p95_batch_size,json=p95BatchSize,proto3" json:"p95_batch_size,omitempty"`
 	// Leadership dynamics.
-	LeaderChangeCount  uint32 `protobuf:"varint,10,opt,name=leader_change_count,json=leaderChangeCount,proto3" json:"leader_change_count,omitempty"`
-	RegencyChangeCount uint32 `protobuf:"varint,11,opt,name=regency_change_count,json=regencyChangeCount,proto3" json:"regency_change_count,omitempty"`
-	// Phase delays (milliseconds).
-	PhaseProposeAvgDelayMs      float32 `protobuf:"fixed32,12,opt,name=phase_propose_avg_delay_ms,json=phaseProposeAvgDelayMs,proto3" json:"phase_propose_avg_delay_ms,omitempty"`
-	PhaseProposeP95DelayMs      float32 `protobuf:"fixed32,13,opt,name=phase_propose_p95_delay_ms,json=phaseProposeP95DelayMs,proto3" json:"phase_propose_p95_delay_ms,omitempty"`
-	PhaseWriteAvgDelayMs        float32 `protobuf:"fixed32,14,opt,name=phase_write_avg_delay_ms,json=phaseWriteAvgDelayMs,proto3" json:"phase_write_avg_delay_ms,omitempty"`
-	PhaseWriteP95DelayMs        float32 `protobuf:"fixed32,15,opt,name=phase_write_p95_delay_ms,json=phaseWriteP95DelayMs,proto3" json:"phase_write_p95_delay_ms,omitempty"`
-	PhaseAcceptAvgDelayMs       float32 `protobuf:"fixed32,16,opt,name=phase_accept_avg_delay_ms,json=phaseAcceptAvgDelayMs,proto3" json:"phase_accept_avg_delay_ms,omitempty"`
-	PhaseAcceptP95DelayMs       float32 `protobuf:"fixed32,17,opt,name=phase_accept_p95_delay_ms,json=phaseAcceptP95DelayMs,proto3" json:"phase_accept_p95_delay_ms,omitempty"`
-	PhasePostDecisionAvgDelayMs float32 `protobuf:"fixed32,18,opt,name=phase_post_decision_avg_delay_ms,json=phasePostDecisionAvgDelayMs,proto3" json:"phase_post_decision_avg_delay_ms,omitempty"`
-	PhasePostDecisionP95DelayMs float32 `protobuf:"fixed32,19,opt,name=phase_post_decision_p95_delay_ms,json=phasePostDecisionP95DelayMs,proto3" json:"phase_post_decision_p95_delay_ms,omitempty"`
+	LeaderChangeCount  uint32 `protobuf:"varint,9,opt,name=leader_change_count,json=leaderChangeCount,proto3" json:"leader_change_count,omitempty"`
+	RegencyChangeCount uint32 `protobuf:"varint,10,opt,name=regency_change_count,json=regencyChangeCount,proto3" json:"regency_change_count,omitempty"`
+	// Timer and liveness context for the same learning window.
+	TimeoutMs                 uint32  `protobuf:"varint,11,opt,name=timeout_ms,json=timeoutMs,proto3" json:"timeout_ms,omitempty"`
+	AvgInterCommitGapMs       float32 `protobuf:"fixed32,12,opt,name=avg_inter_commit_gap_ms,json=avgInterCommitGapMs,proto3" json:"avg_inter_commit_gap_ms,omitempty"`
+	P50InterCommitGapMs       float32 `protobuf:"fixed32,13,opt,name=p50_inter_commit_gap_ms,json=p50InterCommitGapMs,proto3" json:"p50_inter_commit_gap_ms,omitempty"`
+	P95InterCommitGapMs       float32 `protobuf:"fixed32,14,opt,name=p95_inter_commit_gap_ms,json=p95InterCommitGapMs,proto3" json:"p95_inter_commit_gap_ms,omitempty"`
+	ViewChangeCount           uint32  `protobuf:"varint,15,opt,name=view_change_count,json=viewChangeCount,proto3" json:"view_change_count,omitempty"`
+	NoProgressViewChangeCount uint32  `protobuf:"varint,16,opt,name=no_progress_view_change_count,json=noProgressViewChangeCount,proto3" json:"no_progress_view_change_count,omitempty"`
+	// Phase-wise latency (milliseconds), reported by CppBedrock PBFT:
+	// pre-prepare arrival -> prepare quorum, prepare quorum -> commit quorum,
+	// commit quorum -> local execution. Zero when the engine does not
+	// measure them (SmartBFT-shaped consumers ignore these fields).
+	PrePrepareLatencyMs float32 `protobuf:"fixed32,17,opt,name=pre_prepare_latency_ms,json=prePrepareLatencyMs,proto3" json:"pre_prepare_latency_ms,omitempty"`
+	PrepareLatencyMs    float32 `protobuf:"fixed32,18,opt,name=prepare_latency_ms,json=prepareLatencyMs,proto3" json:"prepare_latency_ms,omitempty"`
+	CommitLatencyMs     float32 `protobuf:"fixed32,19,opt,name=commit_latency_ms,json=commitLatencyMs,proto3" json:"commit_latency_ms,omitempty"`
 }
 
 func (m *PbftReport) Reset()         { *m = PbftReport{} }
@@ -176,6 +186,13 @@ func (m *PbftReport) GetAvgConsensusLatencyMs() float32 {
 	return 0
 }
 
+func (m *PbftReport) GetP50ConsensusLatencyMs() float32 {
+	if m != nil {
+		return m.P50ConsensusLatencyMs
+	}
+	return 0
+}
+
 func (m *PbftReport) GetP95ConsensusLatencyMs() float32 {
 	if m != nil {
 		return m.P95ConsensusLatencyMs
@@ -183,23 +200,9 @@ func (m *PbftReport) GetP95ConsensusLatencyMs() float32 {
 	return 0
 }
 
-func (m *PbftReport) GetP99ConsensusLatencyMs() float32 {
-	if m != nil {
-		return m.P99ConsensusLatencyMs
-	}
-	return 0
-}
-
 func (m *PbftReport) GetThroughputTps() float32 {
 	if m != nil {
 		return m.ThroughputTps
-	}
-	return 0
-}
-
-func (m *PbftReport) GetTimeoutViolationRate() float32 {
-	if m != nil {
-		return m.TimeoutViolationRate
 	}
 	return 0
 }
@@ -232,414 +235,116 @@ func (m *PbftReport) GetRegencyChangeCount() uint32 {
 	return 0
 }
 
-func (m *PbftReport) GetPhaseProposeAvgDelayMs() float32 {
+func (m *PbftReport) GetTimeoutMs() uint32 {
 	if m != nil {
-		return m.PhaseProposeAvgDelayMs
+		return m.TimeoutMs
 	}
 	return 0
 }
 
-func (m *PbftReport) GetPhaseProposeP95DelayMs() float32 {
+func (m *PbftReport) GetAvgInterCommitGapMs() float32 {
 	if m != nil {
-		return m.PhaseProposeP95DelayMs
+		return m.AvgInterCommitGapMs
 	}
 	return 0
 }
 
-func (m *PbftReport) GetPhaseWriteAvgDelayMs() float32 {
+func (m *PbftReport) GetP50InterCommitGapMs() float32 {
 	if m != nil {
-		return m.PhaseWriteAvgDelayMs
+		return m.P50InterCommitGapMs
 	}
 	return 0
 }
 
-func (m *PbftReport) GetPhaseWriteP95DelayMs() float32 {
+func (m *PbftReport) GetP95InterCommitGapMs() float32 {
 	if m != nil {
-		return m.PhaseWriteP95DelayMs
+		return m.P95InterCommitGapMs
 	}
 	return 0
 }
 
-func (m *PbftReport) GetPhaseAcceptAvgDelayMs() float32 {
+func (m *PbftReport) GetViewChangeCount() uint32 {
 	if m != nil {
-		return m.PhaseAcceptAvgDelayMs
+		return m.ViewChangeCount
 	}
 	return 0
 }
 
-func (m *PbftReport) GetPhaseAcceptP95DelayMs() float32 {
+func (m *PbftReport) GetNoProgressViewChangeCount() uint32 {
 	if m != nil {
-		return m.PhaseAcceptP95DelayMs
+		return m.NoProgressViewChangeCount
 	}
 	return 0
 }
 
-func (m *PbftReport) GetPhasePostDecisionAvgDelayMs() float32 {
+func (m *PbftReport) GetPrePrepareLatencyMs() float32 {
 	if m != nil {
-		return m.PhasePostDecisionAvgDelayMs
+		return m.PrePrepareLatencyMs
 	}
 	return 0
 }
 
-func (m *PbftReport) GetPhasePostDecisionP95DelayMs() float32 {
+func (m *PbftReport) GetPrepareLatencyMs() float32 {
 	if m != nil {
-		return m.PhasePostDecisionP95DelayMs
+		return m.PrepareLatencyMs
 	}
 	return 0
 }
 
-// 2PC-over-PBFT specific state report.
-// Includes workload composition, outcome counters, reason counters, and latency summaries.
-type TwoPcOverPbftReport struct {
-	// Base PBFT metrics for the same learning window.
-	Pbft *PbftReport `protobuf:"bytes,1,opt,name=pbft,proto3" json:"pbft,omitempty"`
-	// Workload composition for the learning window.
-	TotalTransactions       uint32 `protobuf:"varint,2,opt,name=total_transactions,json=totalTransactions,proto3" json:"total_transactions,omitempty"`
-	SingleShardTransactions uint32 `protobuf:"varint,3,opt,name=single_shard_transactions,json=singleShardTransactions,proto3" json:"single_shard_transactions,omitempty"`
-	CrossShardTransactions  uint32 `protobuf:"varint,4,opt,name=cross_shard_transactions,json=crossShardTransactions,proto3" json:"cross_shard_transactions,omitempty"`
-	// 2PC outcome counters.
-	PrepareOkCount   uint32 `protobuf:"varint,5,opt,name=prepare_ok_count,json=prepareOkCount,proto3" json:"prepare_ok_count,omitempty"`
-	PrepareFailCount uint32 `protobuf:"varint,6,opt,name=prepare_fail_count,json=prepareFailCount,proto3" json:"prepare_fail_count,omitempty"`
-	CommitOkCount    uint32 `protobuf:"varint,7,opt,name=commit_ok_count,json=commitOkCount,proto3" json:"commit_ok_count,omitempty"`
-	AbortCount       uint32 `protobuf:"varint,8,opt,name=abort_count,json=abortCount,proto3" json:"abort_count,omitempty"`
-	InDoubtCount     uint32 `protobuf:"varint,9,opt,name=in_doubt_count,json=inDoubtCount,proto3" json:"in_doubt_count,omitempty"`
-	// Timeout/unknown-outcome counters.
-	PrepareTimeoutCount              uint32 `protobuf:"varint,10,opt,name=prepare_timeout_count,json=prepareTimeoutCount,proto3" json:"prepare_timeout_count,omitempty"`
-	CommitTimeoutUnknownOutcomeCount uint32 `protobuf:"varint,11,opt,name=commit_timeout_unknown_outcome_count,json=commitTimeoutUnknownOutcomeCount,proto3" json:"commit_timeout_unknown_outcome_count,omitempty"`
-	AbortBestEffortTimeoutCount      uint32 `protobuf:"varint,12,opt,name=abort_best_effort_timeout_count,json=abortBestEffortTimeoutCount,proto3" json:"abort_best_effort_timeout_count,omitempty"`
-	// Additional operational counters.
-	LockContentionCount uint32 `protobuf:"varint,13,opt,name=lock_contention_count,json=lockContentionCount,proto3" json:"lock_contention_count,omitempty"`
-	// Rate summaries.
-	PrepareTimeoutRate float32 `protobuf:"fixed32,14,opt,name=prepare_timeout_rate,json=prepareTimeoutRate,proto3" json:"prepare_timeout_rate,omitempty"`
-	AbortRate          float32 `protobuf:"fixed32,15,opt,name=abort_rate,json=abortRate,proto3" json:"abort_rate,omitempty"`
-	CommitRate         float32 `protobuf:"fixed32,16,opt,name=commit_rate,json=commitRate,proto3" json:"commit_rate,omitempty"`
-	LockContentionRate float32 `protobuf:"fixed32,17,opt,name=lock_contention_rate,json=lockContentionRate,proto3" json:"lock_contention_rate,omitempty"`
-	// End-to-end and phase latency summaries in milliseconds.
-	AvgEndToEndLatencyMs float32 `protobuf:"fixed32,18,opt,name=avg_end_to_end_latency_ms,json=avgEndToEndLatencyMs,proto3" json:"avg_end_to_end_latency_ms,omitempty"`
-	P95EndToEndLatencyMs float32 `protobuf:"fixed32,19,opt,name=p95_end_to_end_latency_ms,json=p95EndToEndLatencyMs,proto3" json:"p95_end_to_end_latency_ms,omitempty"`
-	P99EndToEndLatencyMs float32 `protobuf:"fixed32,20,opt,name=p99_end_to_end_latency_ms,json=p99EndToEndLatencyMs,proto3" json:"p99_end_to_end_latency_ms,omitempty"`
-	AvgPrepareLatencyMs  float32 `protobuf:"fixed32,21,opt,name=avg_prepare_latency_ms,json=avgPrepareLatencyMs,proto3" json:"avg_prepare_latency_ms,omitempty"`
-	P95PrepareLatencyMs  float32 `protobuf:"fixed32,22,opt,name=p95_prepare_latency_ms,json=p95PrepareLatencyMs,proto3" json:"p95_prepare_latency_ms,omitempty"`
-	AvgCommitLatencyMs   float32 `protobuf:"fixed32,23,opt,name=avg_commit_latency_ms,json=avgCommitLatencyMs,proto3" json:"avg_commit_latency_ms,omitempty"`
-	P95CommitLatencyMs   float32 `protobuf:"fixed32,24,opt,name=p95_commit_latency_ms,json=p95CommitLatencyMs,proto3" json:"p95_commit_latency_ms,omitempty"`
-	AvgLockWaitMs        float32 `protobuf:"fixed32,25,opt,name=avg_lock_wait_ms,json=avgLockWaitMs,proto3" json:"avg_lock_wait_ms,omitempty"`
-	P95LockWaitMs        float32 `protobuf:"fixed32,26,opt,name=p95_lock_wait_ms,json=p95LockWaitMs,proto3" json:"p95_lock_wait_ms,omitempty"`
-	AvgLockHoldMs        float32 `protobuf:"fixed32,27,opt,name=avg_lock_hold_ms,json=avgLockHoldMs,proto3" json:"avg_lock_hold_ms,omitempty"`
-	P95LockHoldMs        float32 `protobuf:"fixed32,28,opt,name=p95_lock_hold_ms,json=p95LockHoldMs,proto3" json:"p95_lock_hold_ms,omitempty"`
-	// Standardized failure reason counters.
-	ReasonPrepareLockBusyCount             uint32 `protobuf:"varint,29,opt,name=reason_prepare_lock_busy_count,json=reasonPrepareLockBusyCount,proto3" json:"reason_prepare_lock_busy_count,omitempty"`
-	ReasonPrepareValidationFailCount       uint32 `protobuf:"varint,30,opt,name=reason_prepare_validation_fail_count,json=reasonPrepareValidationFailCount,proto3" json:"reason_prepare_validation_fail_count,omitempty"`
-	ReasonPrepareTimeoutCount              uint32 `protobuf:"varint,31,opt,name=reason_prepare_timeout_count,json=reasonPrepareTimeoutCount,proto3" json:"reason_prepare_timeout_count,omitempty"`
-	ReasonPrepareOtherCount                uint32 `protobuf:"varint,32,opt,name=reason_prepare_other_count,json=reasonPrepareOtherCount,proto3" json:"reason_prepare_other_count,omitempty"`
-	ReasonCommitTimeoutUnknownOutcomeCount uint32 `protobuf:"varint,33,opt,name=reason_commit_timeout_unknown_outcome_count,json=reasonCommitTimeoutUnknownOutcomeCount,proto3" json:"reason_commit_timeout_unknown_outcome_count,omitempty"`
-	ReasonAbortBestEffortTimeoutCount      uint32 `protobuf:"varint,34,opt,name=reason_abort_best_effort_timeout_count,json=reasonAbortBestEffortTimeoutCount,proto3" json:"reason_abort_best_effort_timeout_count,omitempty"`
-	ReasonOtherCount                       uint32 `protobuf:"varint,35,opt,name=reason_other_count,json=reasonOtherCount,proto3" json:"reason_other_count,omitempty"`
-}
-
-func (m *TwoPcOverPbftReport) Reset()         { *m = TwoPcOverPbftReport{} }
-func (m *TwoPcOverPbftReport) String() string { return proto.CompactTextString(m) }
-func (*TwoPcOverPbftReport) ProtoMessage()    {}
-func (*TwoPcOverPbftReport) Descriptor() ([]byte, []int) {
-	return fileDescriptor_5ce53b760672e5c1, []int{1}
-}
-func (m *TwoPcOverPbftReport) XXX_Unmarshal(b []byte) error {
-	return m.Unmarshal(b)
-}
-func (m *TwoPcOverPbftReport) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
-	if deterministic {
-		return xxx_messageInfo_TwoPcOverPbftReport.Marshal(b, m, deterministic)
-	} else {
-		b = b[:cap(b)]
-		n, err := m.MarshalToSizedBuffer(b)
-		if err != nil {
-			return nil, err
-		}
-		return b[:n], nil
-	}
-}
-func (m *TwoPcOverPbftReport) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_TwoPcOverPbftReport.Merge(m, src)
-}
-func (m *TwoPcOverPbftReport) XXX_Size() int {
-	return m.Size()
-}
-func (m *TwoPcOverPbftReport) XXX_DiscardUnknown() {
-	xxx_messageInfo_TwoPcOverPbftReport.DiscardUnknown(m)
-}
-
-var xxx_messageInfo_TwoPcOverPbftReport proto.InternalMessageInfo
-
-func (m *TwoPcOverPbftReport) GetPbft() *PbftReport {
+func (m *PbftReport) GetCommitLatencyMs() float32 {
 	if m != nil {
-		return m.Pbft
-	}
-	return nil
-}
-
-func (m *TwoPcOverPbftReport) GetTotalTransactions() uint32 {
-	if m != nil {
-		return m.TotalTransactions
+		return m.CommitLatencyMs
 	}
 	return 0
 }
 
-func (m *TwoPcOverPbftReport) GetSingleShardTransactions() uint32 {
-	if m != nil {
-		return m.SingleShardTransactions
-	}
-	return 0
-}
-
-func (m *TwoPcOverPbftReport) GetCrossShardTransactions() uint32 {
-	if m != nil {
-		return m.CrossShardTransactions
-	}
-	return 0
-}
-
-func (m *TwoPcOverPbftReport) GetPrepareOkCount() uint32 {
-	if m != nil {
-		return m.PrepareOkCount
-	}
-	return 0
-}
-
-func (m *TwoPcOverPbftReport) GetPrepareFailCount() uint32 {
-	if m != nil {
-		return m.PrepareFailCount
-	}
-	return 0
-}
-
-func (m *TwoPcOverPbftReport) GetCommitOkCount() uint32 {
-	if m != nil {
-		return m.CommitOkCount
-	}
-	return 0
-}
-
-func (m *TwoPcOverPbftReport) GetAbortCount() uint32 {
-	if m != nil {
-		return m.AbortCount
-	}
-	return 0
-}
-
-func (m *TwoPcOverPbftReport) GetInDoubtCount() uint32 {
-	if m != nil {
-		return m.InDoubtCount
-	}
-	return 0
-}
-
-func (m *TwoPcOverPbftReport) GetPrepareTimeoutCount() uint32 {
-	if m != nil {
-		return m.PrepareTimeoutCount
-	}
-	return 0
-}
-
-func (m *TwoPcOverPbftReport) GetCommitTimeoutUnknownOutcomeCount() uint32 {
-	if m != nil {
-		return m.CommitTimeoutUnknownOutcomeCount
-	}
-	return 0
-}
-
-func (m *TwoPcOverPbftReport) GetAbortBestEffortTimeoutCount() uint32 {
-	if m != nil {
-		return m.AbortBestEffortTimeoutCount
-	}
-	return 0
-}
-
-func (m *TwoPcOverPbftReport) GetLockContentionCount() uint32 {
-	if m != nil {
-		return m.LockContentionCount
-	}
-	return 0
-}
-
-func (m *TwoPcOverPbftReport) GetPrepareTimeoutRate() float32 {
-	if m != nil {
-		return m.PrepareTimeoutRate
-	}
-	return 0
-}
-
-func (m *TwoPcOverPbftReport) GetAbortRate() float32 {
-	if m != nil {
-		return m.AbortRate
-	}
-	return 0
-}
-
-func (m *TwoPcOverPbftReport) GetCommitRate() float32 {
-	if m != nil {
-		return m.CommitRate
-	}
-	return 0
-}
-
-func (m *TwoPcOverPbftReport) GetLockContentionRate() float32 {
-	if m != nil {
-		return m.LockContentionRate
-	}
-	return 0
-}
-
-func (m *TwoPcOverPbftReport) GetAvgEndToEndLatencyMs() float32 {
-	if m != nil {
-		return m.AvgEndToEndLatencyMs
-	}
-	return 0
-}
-
-func (m *TwoPcOverPbftReport) GetP95EndToEndLatencyMs() float32 {
-	if m != nil {
-		return m.P95EndToEndLatencyMs
-	}
-	return 0
-}
-
-func (m *TwoPcOverPbftReport) GetP99EndToEndLatencyMs() float32 {
-	if m != nil {
-		return m.P99EndToEndLatencyMs
-	}
-	return 0
-}
-
-func (m *TwoPcOverPbftReport) GetAvgPrepareLatencyMs() float32 {
-	if m != nil {
-		return m.AvgPrepareLatencyMs
-	}
-	return 0
-}
-
-func (m *TwoPcOverPbftReport) GetP95PrepareLatencyMs() float32 {
-	if m != nil {
-		return m.P95PrepareLatencyMs
-	}
-	return 0
-}
-
-func (m *TwoPcOverPbftReport) GetAvgCommitLatencyMs() float32 {
-	if m != nil {
-		return m.AvgCommitLatencyMs
-	}
-	return 0
-}
-
-func (m *TwoPcOverPbftReport) GetP95CommitLatencyMs() float32 {
-	if m != nil {
-		return m.P95CommitLatencyMs
-	}
-	return 0
-}
-
-func (m *TwoPcOverPbftReport) GetAvgLockWaitMs() float32 {
-	if m != nil {
-		return m.AvgLockWaitMs
-	}
-	return 0
-}
-
-func (m *TwoPcOverPbftReport) GetP95LockWaitMs() float32 {
-	if m != nil {
-		return m.P95LockWaitMs
-	}
-	return 0
-}
-
-func (m *TwoPcOverPbftReport) GetAvgLockHoldMs() float32 {
-	if m != nil {
-		return m.AvgLockHoldMs
-	}
-	return 0
-}
-
-func (m *TwoPcOverPbftReport) GetP95LockHoldMs() float32 {
-	if m != nil {
-		return m.P95LockHoldMs
-	}
-	return 0
-}
-
-func (m *TwoPcOverPbftReport) GetReasonPrepareLockBusyCount() uint32 {
-	if m != nil {
-		return m.ReasonPrepareLockBusyCount
-	}
-	return 0
-}
-
-func (m *TwoPcOverPbftReport) GetReasonPrepareValidationFailCount() uint32 {
-	if m != nil {
-		return m.ReasonPrepareValidationFailCount
-	}
-	return 0
-}
-
-func (m *TwoPcOverPbftReport) GetReasonPrepareTimeoutCount() uint32 {
-	if m != nil {
-		return m.ReasonPrepareTimeoutCount
-	}
-	return 0
-}
-
-func (m *TwoPcOverPbftReport) GetReasonPrepareOtherCount() uint32 {
-	if m != nil {
-		return m.ReasonPrepareOtherCount
-	}
-	return 0
-}
-
-func (m *TwoPcOverPbftReport) GetReasonCommitTimeoutUnknownOutcomeCount() uint32 {
-	if m != nil {
-		return m.ReasonCommitTimeoutUnknownOutcomeCount
-	}
-	return 0
-}
-
-func (m *TwoPcOverPbftReport) GetReasonAbortBestEffortTimeoutCount() uint32 {
-	if m != nil {
-		return m.ReasonAbortBestEffortTimeoutCount
-	}
-	return 0
-}
-
-func (m *TwoPcOverPbftReport) GetReasonOtherCount() uint32 {
-	if m != nil {
-		return m.ReasonOtherCount
-	}
-	return 0
-}
-
-// SBFT-specific state report.
-// For now this mirrors PBFT metrics up to leadership dynamics.
+// SBFT state report (CppBedrock SBFT). Fields 1-16 have the same layout and
+// semantics as PbftReport so tooling can treat the two uniformly; the
+// remaining fields carry the SBFT-specific phase and fast/slow-path context.
 type SbftReport struct {
-	// Workload size in the learning window.
-	TotalTransactions       uint32 `protobuf:"varint,1,opt,name=total_transactions,json=totalTransactions,proto3" json:"total_transactions,omitempty"`
-	TotalConsensusInstances uint32 `protobuf:"varint,2,opt,name=total_consensus_instances,json=totalConsensusInstances,proto3" json:"total_consensus_instances,omitempty"`
-	// End-to-end SBFT consensus latency summaries (milliseconds).
-	AvgConsensusLatencyMs float32 `protobuf:"fixed32,3,opt,name=avg_consensus_latency_ms,json=avgConsensusLatencyMs,proto3" json:"avg_consensus_latency_ms,omitempty"`
-	P95ConsensusLatencyMs float32 `protobuf:"fixed32,4,opt,name=p95_consensus_latency_ms,json=p95ConsensusLatencyMs,proto3" json:"p95_consensus_latency_ms,omitempty"`
-	P99ConsensusLatencyMs float32 `protobuf:"fixed32,5,opt,name=p99_consensus_latency_ms,json=p99ConsensusLatencyMs,proto3" json:"p99_consensus_latency_ms,omitempty"`
-	// Throughput and core rates.
-	ThroughputTps        float32 `protobuf:"fixed32,6,opt,name=throughput_tps,json=throughputTps,proto3" json:"throughput_tps,omitempty"`
-	TimeoutViolationRate float32 `protobuf:"fixed32,7,opt,name=timeout_violation_rate,json=timeoutViolationRate,proto3" json:"timeout_violation_rate,omitempty"`
-	// Batch characteristics.
-	AvgBatchSize float32 `protobuf:"fixed32,8,opt,name=avg_batch_size,json=avgBatchSize,proto3" json:"avg_batch_size,omitempty"`
-	P95BatchSize float32 `protobuf:"fixed32,9,opt,name=p95_batch_size,json=p95BatchSize,proto3" json:"p95_batch_size,omitempty"`
-	// Leadership dynamics.
-	LeaderChangeCount  uint32 `protobuf:"varint,10,opt,name=leader_change_count,json=leaderChangeCount,proto3" json:"leader_change_count,omitempty"`
-	RegencyChangeCount uint32 `protobuf:"varint,11,opt,name=regency_change_count,json=regencyChangeCount,proto3" json:"regency_change_count,omitempty"`
+	TotalTransactions       uint32  `protobuf:"varint,1,opt,name=total_transactions,json=totalTransactions,proto3" json:"total_transactions,omitempty"`
+	TotalConsensusInstances uint32  `protobuf:"varint,2,opt,name=total_consensus_instances,json=totalConsensusInstances,proto3" json:"total_consensus_instances,omitempty"`
+	AvgConsensusLatencyMs   float32 `protobuf:"fixed32,3,opt,name=avg_consensus_latency_ms,json=avgConsensusLatencyMs,proto3" json:"avg_consensus_latency_ms,omitempty"`
+	P50ConsensusLatencyMs   float32 `protobuf:"fixed32,4,opt,name=p50_consensus_latency_ms,json=p50ConsensusLatencyMs,proto3" json:"p50_consensus_latency_ms,omitempty"`
+	P95ConsensusLatencyMs   float32 `protobuf:"fixed32,5,opt,name=p95_consensus_latency_ms,json=p95ConsensusLatencyMs,proto3" json:"p95_consensus_latency_ms,omitempty"`
+	ThroughputTps           float32 `protobuf:"fixed32,6,opt,name=throughput_tps,json=throughputTps,proto3" json:"throughput_tps,omitempty"`
+	AvgBatchSize            float32 `protobuf:"fixed32,7,opt,name=avg_batch_size,json=avgBatchSize,proto3" json:"avg_batch_size,omitempty"`
+	P95BatchSize            float32 `protobuf:"fixed32,8,opt,name=p95_batch_size,json=p95BatchSize,proto3" json:"p95_batch_size,omitempty"`
+	LeaderChangeCount       uint32  `protobuf:"varint,9,opt,name=leader_change_count,json=leaderChangeCount,proto3" json:"leader_change_count,omitempty"`
+	RegencyChangeCount      uint32  `protobuf:"varint,10,opt,name=regency_change_count,json=regencyChangeCount,proto3" json:"regency_change_count,omitempty"`
+	// The election (view-change) timeout in force for this window.
+	TimeoutMs                 uint32  `protobuf:"varint,11,opt,name=timeout_ms,json=timeoutMs,proto3" json:"timeout_ms,omitempty"`
+	AvgInterCommitGapMs       float32 `protobuf:"fixed32,12,opt,name=avg_inter_commit_gap_ms,json=avgInterCommitGapMs,proto3" json:"avg_inter_commit_gap_ms,omitempty"`
+	P50InterCommitGapMs       float32 `protobuf:"fixed32,13,opt,name=p50_inter_commit_gap_ms,json=p50InterCommitGapMs,proto3" json:"p50_inter_commit_gap_ms,omitempty"`
+	P95InterCommitGapMs       float32 `protobuf:"fixed32,14,opt,name=p95_inter_commit_gap_ms,json=p95InterCommitGapMs,proto3" json:"p95_inter_commit_gap_ms,omitempty"`
+	ViewChangeCount           uint32  `protobuf:"varint,15,opt,name=view_change_count,json=viewChangeCount,proto3" json:"view_change_count,omitempty"`
+	NoProgressViewChangeCount uint32  `protobuf:"varint,16,opt,name=no_progress_view_change_count,json=noProgressViewChangeCount,proto3" json:"no_progress_view_change_count,omitempty"`
+	// Phase-wise latency (milliseconds): pre-prepare arrival -> prepare
+	// quorum, prepare quorum -> commit quorum, commit quorum -> execution.
+	PrePrepareLatencyMs float32 `protobuf:"fixed32,17,opt,name=pre_prepare_latency_ms,json=prePrepareLatencyMs,proto3" json:"pre_prepare_latency_ms,omitempty"`
+	PrepareLatencyMs    float32 `protobuf:"fixed32,18,opt,name=prepare_latency_ms,json=prepareLatencyMs,proto3" json:"prepare_latency_ms,omitempty"`
+	CommitLatencyMs     float32 `protobuf:"fixed32,19,opt,name=commit_latency_ms,json=commitLatencyMs,proto3" json:"commit_latency_ms,omitempty"`
+	// The slow-path (fast-path wait) timeout in force for this window.
+	SlowPathTimeoutMs uint32 `protobuf:"varint,20,opt,name=slow_path_timeout_ms,json=slowPathTimeoutMs,proto3" json:"slow_path_timeout_ms,omitempty"`
+	// Consensus instances decided on the fast path versus the slow path in
+	// this window. Zero for both until the engine attributes paths.
+	FastPathCount uint32 `protobuf:"varint,21,opt,name=fast_path_count,json=fastPathCount,proto3" json:"fast_path_count,omitempty"`
+	SlowPathCount uint32 `protobuf:"varint,22,opt,name=slow_path_count,json=slowPathCount,proto3" json:"slow_path_count,omitempty"`
+	// Measured only by the replica that led each sequence: over the sequences
+	// it led in this window, the median time from the 2f+1-th to the n-th
+	// prepare (the fast-path wait that would have caught it) among those whose
+	// n-th prepare arrived by execution, and the counts with and without it.
+	// Zero on a replica that led nothing.
+	NthPrepareGapMs       float32 `protobuf:"fixed32,23,opt,name=nth_prepare_gap_ms,json=nthPrepareGapMs,proto3" json:"nth_prepare_gap_ms,omitempty"`
+	NthPrepareSeenCount   uint32  `protobuf:"varint,24,opt,name=nth_prepare_seen_count,json=nthPrepareSeenCount,proto3" json:"nth_prepare_seen_count,omitempty"`
+	NthPrepareUnseenCount uint32  `protobuf:"varint,25,opt,name=nth_prepare_unseen_count,json=nthPrepareUnseenCount,proto3" json:"nth_prepare_unseen_count,omitempty"`
 }
 
 func (m *SbftReport) Reset()         { *m = SbftReport{} }
 func (m *SbftReport) String() string { return proto.CompactTextString(m) }
 func (*SbftReport) ProtoMessage()    {}
 func (*SbftReport) Descriptor() ([]byte, []int) {
-	return fileDescriptor_5ce53b760672e5c1, []int{2}
+	return fileDescriptor_5ce53b760672e5c1, []int{1}
 }
 func (m *SbftReport) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -689,6 +394,13 @@ func (m *SbftReport) GetAvgConsensusLatencyMs() float32 {
 	return 0
 }
 
+func (m *SbftReport) GetP50ConsensusLatencyMs() float32 {
+	if m != nil {
+		return m.P50ConsensusLatencyMs
+	}
+	return 0
+}
+
 func (m *SbftReport) GetP95ConsensusLatencyMs() float32 {
 	if m != nil {
 		return m.P95ConsensusLatencyMs
@@ -696,23 +408,9 @@ func (m *SbftReport) GetP95ConsensusLatencyMs() float32 {
 	return 0
 }
 
-func (m *SbftReport) GetP99ConsensusLatencyMs() float32 {
-	if m != nil {
-		return m.P99ConsensusLatencyMs
-	}
-	return 0
-}
-
 func (m *SbftReport) GetThroughputTps() float32 {
 	if m != nil {
 		return m.ThroughputTps
-	}
-	return 0
-}
-
-func (m *SbftReport) GetTimeoutViolationRate() float32 {
-	if m != nil {
-		return m.TimeoutViolationRate
 	}
 	return 0
 }
@@ -745,6 +443,111 @@ func (m *SbftReport) GetRegencyChangeCount() uint32 {
 	return 0
 }
 
+func (m *SbftReport) GetTimeoutMs() uint32 {
+	if m != nil {
+		return m.TimeoutMs
+	}
+	return 0
+}
+
+func (m *SbftReport) GetAvgInterCommitGapMs() float32 {
+	if m != nil {
+		return m.AvgInterCommitGapMs
+	}
+	return 0
+}
+
+func (m *SbftReport) GetP50InterCommitGapMs() float32 {
+	if m != nil {
+		return m.P50InterCommitGapMs
+	}
+	return 0
+}
+
+func (m *SbftReport) GetP95InterCommitGapMs() float32 {
+	if m != nil {
+		return m.P95InterCommitGapMs
+	}
+	return 0
+}
+
+func (m *SbftReport) GetViewChangeCount() uint32 {
+	if m != nil {
+		return m.ViewChangeCount
+	}
+	return 0
+}
+
+func (m *SbftReport) GetNoProgressViewChangeCount() uint32 {
+	if m != nil {
+		return m.NoProgressViewChangeCount
+	}
+	return 0
+}
+
+func (m *SbftReport) GetPrePrepareLatencyMs() float32 {
+	if m != nil {
+		return m.PrePrepareLatencyMs
+	}
+	return 0
+}
+
+func (m *SbftReport) GetPrepareLatencyMs() float32 {
+	if m != nil {
+		return m.PrepareLatencyMs
+	}
+	return 0
+}
+
+func (m *SbftReport) GetCommitLatencyMs() float32 {
+	if m != nil {
+		return m.CommitLatencyMs
+	}
+	return 0
+}
+
+func (m *SbftReport) GetSlowPathTimeoutMs() uint32 {
+	if m != nil {
+		return m.SlowPathTimeoutMs
+	}
+	return 0
+}
+
+func (m *SbftReport) GetFastPathCount() uint32 {
+	if m != nil {
+		return m.FastPathCount
+	}
+	return 0
+}
+
+func (m *SbftReport) GetSlowPathCount() uint32 {
+	if m != nil {
+		return m.SlowPathCount
+	}
+	return 0
+}
+
+func (m *SbftReport) GetNthPrepareGapMs() float32 {
+	if m != nil {
+		return m.NthPrepareGapMs
+	}
+	return 0
+}
+
+func (m *SbftReport) GetNthPrepareSeenCount() uint32 {
+	if m != nil {
+		return m.NthPrepareSeenCount
+	}
+	return 0
+}
+
+func (m *SbftReport) GetNthPrepareUnseenCount() uint32 {
+	if m != nil {
+		return m.NthPrepareUnseenCount
+	}
+	return 0
+}
+
 type TendermintReport struct {
 	// Workload size in the learning window.
 	TotalTransactions       uint32 `protobuf:"varint,1,opt,name=total_transactions,json=totalTransactions,proto3" json:"total_transactions,omitempty"`
@@ -773,7 +576,7 @@ func (m *TendermintReport) Reset()         { *m = TendermintReport{} }
 func (m *TendermintReport) String() string { return proto.CompactTextString(m) }
 func (*TendermintReport) ProtoMessage()    {}
 func (*TendermintReport) Descriptor() ([]byte, []int) {
-	return fileDescriptor_5ce53b760672e5c1, []int{3}
+	return fileDescriptor_5ce53b760672e5c1, []int{2}
 }
 func (m *TendermintReport) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -907,6 +710,514 @@ func (m *TendermintReport) GetPrecommitLatencyMs() float32 {
 	return 0
 }
 
+// Batched (chained 2-chain) HotStuff state report. Field layout mirrors
+// PbftReport so tooling can treat the two uniformly; semantic notes:
+//   - view_change_count counts local round timeouts fired.
+//   - no_progress_view_change_count counts timeouts fired with no commit since
+//     the previous timeout.
+//   - regency_change_count counts observed round-number jumps beyond +1
+//     between consecutive commits (i.e. rounds skipped via TCs).
+//   - leader_change_count follows the committed blocks' authors; HotStuff
+//     rotates leaders every round, so this tracks commit cadence, not
+//     elections.
+type HotstuffReport struct {
+	TotalTransactions         uint32  `protobuf:"varint,1,opt,name=total_transactions,json=totalTransactions,proto3" json:"total_transactions,omitempty"`
+	TotalConsensusInstances   uint32  `protobuf:"varint,2,opt,name=total_consensus_instances,json=totalConsensusInstances,proto3" json:"total_consensus_instances,omitempty"`
+	AvgConsensusLatencyMs     float32 `protobuf:"fixed32,3,opt,name=avg_consensus_latency_ms,json=avgConsensusLatencyMs,proto3" json:"avg_consensus_latency_ms,omitempty"`
+	P50ConsensusLatencyMs     float32 `protobuf:"fixed32,4,opt,name=p50_consensus_latency_ms,json=p50ConsensusLatencyMs,proto3" json:"p50_consensus_latency_ms,omitempty"`
+	P95ConsensusLatencyMs     float32 `protobuf:"fixed32,5,opt,name=p95_consensus_latency_ms,json=p95ConsensusLatencyMs,proto3" json:"p95_consensus_latency_ms,omitempty"`
+	ThroughputTps             float32 `protobuf:"fixed32,6,opt,name=throughput_tps,json=throughputTps,proto3" json:"throughput_tps,omitempty"`
+	AvgBatchSize              float32 `protobuf:"fixed32,7,opt,name=avg_batch_size,json=avgBatchSize,proto3" json:"avg_batch_size,omitempty"`
+	P95BatchSize              float32 `protobuf:"fixed32,8,opt,name=p95_batch_size,json=p95BatchSize,proto3" json:"p95_batch_size,omitempty"`
+	LeaderChangeCount         uint32  `protobuf:"varint,9,opt,name=leader_change_count,json=leaderChangeCount,proto3" json:"leader_change_count,omitempty"`
+	RegencyChangeCount        uint32  `protobuf:"varint,10,opt,name=regency_change_count,json=regencyChangeCount,proto3" json:"regency_change_count,omitempty"`
+	TimeoutMs                 uint32  `protobuf:"varint,11,opt,name=timeout_ms,json=timeoutMs,proto3" json:"timeout_ms,omitempty"`
+	AvgInterCommitGapMs       float32 `protobuf:"fixed32,12,opt,name=avg_inter_commit_gap_ms,json=avgInterCommitGapMs,proto3" json:"avg_inter_commit_gap_ms,omitempty"`
+	P50InterCommitGapMs       float32 `protobuf:"fixed32,13,opt,name=p50_inter_commit_gap_ms,json=p50InterCommitGapMs,proto3" json:"p50_inter_commit_gap_ms,omitempty"`
+	P95InterCommitGapMs       float32 `protobuf:"fixed32,14,opt,name=p95_inter_commit_gap_ms,json=p95InterCommitGapMs,proto3" json:"p95_inter_commit_gap_ms,omitempty"`
+	ViewChangeCount           uint32  `protobuf:"varint,15,opt,name=view_change_count,json=viewChangeCount,proto3" json:"view_change_count,omitempty"`
+	NoProgressViewChangeCount uint32  `protobuf:"varint,16,opt,name=no_progress_view_change_count,json=noProgressViewChangeCount,proto3" json:"no_progress_view_change_count,omitempty"`
+}
+
+func (m *HotstuffReport) Reset()         { *m = HotstuffReport{} }
+func (m *HotstuffReport) String() string { return proto.CompactTextString(m) }
+func (*HotstuffReport) ProtoMessage()    {}
+func (*HotstuffReport) Descriptor() ([]byte, []int) {
+	return fileDescriptor_5ce53b760672e5c1, []int{3}
+}
+func (m *HotstuffReport) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *HotstuffReport) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	if deterministic {
+		return xxx_messageInfo_HotstuffReport.Marshal(b, m, deterministic)
+	} else {
+		b = b[:cap(b)]
+		n, err := m.MarshalToSizedBuffer(b)
+		if err != nil {
+			return nil, err
+		}
+		return b[:n], nil
+	}
+}
+func (m *HotstuffReport) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_HotstuffReport.Merge(m, src)
+}
+func (m *HotstuffReport) XXX_Size() int {
+	return m.Size()
+}
+func (m *HotstuffReport) XXX_DiscardUnknown() {
+	xxx_messageInfo_HotstuffReport.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_HotstuffReport proto.InternalMessageInfo
+
+func (m *HotstuffReport) GetTotalTransactions() uint32 {
+	if m != nil {
+		return m.TotalTransactions
+	}
+	return 0
+}
+
+func (m *HotstuffReport) GetTotalConsensusInstances() uint32 {
+	if m != nil {
+		return m.TotalConsensusInstances
+	}
+	return 0
+}
+
+func (m *HotstuffReport) GetAvgConsensusLatencyMs() float32 {
+	if m != nil {
+		return m.AvgConsensusLatencyMs
+	}
+	return 0
+}
+
+func (m *HotstuffReport) GetP50ConsensusLatencyMs() float32 {
+	if m != nil {
+		return m.P50ConsensusLatencyMs
+	}
+	return 0
+}
+
+func (m *HotstuffReport) GetP95ConsensusLatencyMs() float32 {
+	if m != nil {
+		return m.P95ConsensusLatencyMs
+	}
+	return 0
+}
+
+func (m *HotstuffReport) GetThroughputTps() float32 {
+	if m != nil {
+		return m.ThroughputTps
+	}
+	return 0
+}
+
+func (m *HotstuffReport) GetAvgBatchSize() float32 {
+	if m != nil {
+		return m.AvgBatchSize
+	}
+	return 0
+}
+
+func (m *HotstuffReport) GetP95BatchSize() float32 {
+	if m != nil {
+		return m.P95BatchSize
+	}
+	return 0
+}
+
+func (m *HotstuffReport) GetLeaderChangeCount() uint32 {
+	if m != nil {
+		return m.LeaderChangeCount
+	}
+	return 0
+}
+
+func (m *HotstuffReport) GetRegencyChangeCount() uint32 {
+	if m != nil {
+		return m.RegencyChangeCount
+	}
+	return 0
+}
+
+func (m *HotstuffReport) GetTimeoutMs() uint32 {
+	if m != nil {
+		return m.TimeoutMs
+	}
+	return 0
+}
+
+func (m *HotstuffReport) GetAvgInterCommitGapMs() float32 {
+	if m != nil {
+		return m.AvgInterCommitGapMs
+	}
+	return 0
+}
+
+func (m *HotstuffReport) GetP50InterCommitGapMs() float32 {
+	if m != nil {
+		return m.P50InterCommitGapMs
+	}
+	return 0
+}
+
+func (m *HotstuffReport) GetP95InterCommitGapMs() float32 {
+	if m != nil {
+		return m.P95InterCommitGapMs
+	}
+	return 0
+}
+
+func (m *HotstuffReport) GetViewChangeCount() uint32 {
+	if m != nil {
+		return m.ViewChangeCount
+	}
+	return 0
+}
+
+func (m *HotstuffReport) GetNoProgressViewChangeCount() uint32 {
+	if m != nil {
+		return m.NoProgressViewChangeCount
+	}
+	return 0
+}
+
+// Autobahn state report. Same layout and semantics as HotstuffReport, with
+// batch sizes measured in payload digests per committed header (transaction
+// counts live in the worker processes, not the primary).
+type AutobahnReport struct {
+	TotalTransactions         uint32  `protobuf:"varint,1,opt,name=total_transactions,json=totalTransactions,proto3" json:"total_transactions,omitempty"`
+	TotalConsensusInstances   uint32  `protobuf:"varint,2,opt,name=total_consensus_instances,json=totalConsensusInstances,proto3" json:"total_consensus_instances,omitempty"`
+	AvgConsensusLatencyMs     float32 `protobuf:"fixed32,3,opt,name=avg_consensus_latency_ms,json=avgConsensusLatencyMs,proto3" json:"avg_consensus_latency_ms,omitempty"`
+	P50ConsensusLatencyMs     float32 `protobuf:"fixed32,4,opt,name=p50_consensus_latency_ms,json=p50ConsensusLatencyMs,proto3" json:"p50_consensus_latency_ms,omitempty"`
+	P95ConsensusLatencyMs     float32 `protobuf:"fixed32,5,opt,name=p95_consensus_latency_ms,json=p95ConsensusLatencyMs,proto3" json:"p95_consensus_latency_ms,omitempty"`
+	ThroughputTps             float32 `protobuf:"fixed32,6,opt,name=throughput_tps,json=throughputTps,proto3" json:"throughput_tps,omitempty"`
+	AvgBatchSize              float32 `protobuf:"fixed32,7,opt,name=avg_batch_size,json=avgBatchSize,proto3" json:"avg_batch_size,omitempty"`
+	P95BatchSize              float32 `protobuf:"fixed32,8,opt,name=p95_batch_size,json=p95BatchSize,proto3" json:"p95_batch_size,omitempty"`
+	LeaderChangeCount         uint32  `protobuf:"varint,9,opt,name=leader_change_count,json=leaderChangeCount,proto3" json:"leader_change_count,omitempty"`
+	RegencyChangeCount        uint32  `protobuf:"varint,10,opt,name=regency_change_count,json=regencyChangeCount,proto3" json:"regency_change_count,omitempty"`
+	TimeoutMs                 uint32  `protobuf:"varint,11,opt,name=timeout_ms,json=timeoutMs,proto3" json:"timeout_ms,omitempty"`
+	AvgInterCommitGapMs       float32 `protobuf:"fixed32,12,opt,name=avg_inter_commit_gap_ms,json=avgInterCommitGapMs,proto3" json:"avg_inter_commit_gap_ms,omitempty"`
+	P50InterCommitGapMs       float32 `protobuf:"fixed32,13,opt,name=p50_inter_commit_gap_ms,json=p50InterCommitGapMs,proto3" json:"p50_inter_commit_gap_ms,omitempty"`
+	P95InterCommitGapMs       float32 `protobuf:"fixed32,14,opt,name=p95_inter_commit_gap_ms,json=p95InterCommitGapMs,proto3" json:"p95_inter_commit_gap_ms,omitempty"`
+	ViewChangeCount           uint32  `protobuf:"varint,15,opt,name=view_change_count,json=viewChangeCount,proto3" json:"view_change_count,omitempty"`
+	NoProgressViewChangeCount uint32  `protobuf:"varint,16,opt,name=no_progress_view_change_count,json=noProgressViewChangeCount,proto3" json:"no_progress_view_change_count,omitempty"`
+}
+
+func (m *AutobahnReport) Reset()         { *m = AutobahnReport{} }
+func (m *AutobahnReport) String() string { return proto.CompactTextString(m) }
+func (*AutobahnReport) ProtoMessage()    {}
+func (*AutobahnReport) Descriptor() ([]byte, []int) {
+	return fileDescriptor_5ce53b760672e5c1, []int{4}
+}
+func (m *AutobahnReport) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *AutobahnReport) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	if deterministic {
+		return xxx_messageInfo_AutobahnReport.Marshal(b, m, deterministic)
+	} else {
+		b = b[:cap(b)]
+		n, err := m.MarshalToSizedBuffer(b)
+		if err != nil {
+			return nil, err
+		}
+		return b[:n], nil
+	}
+}
+func (m *AutobahnReport) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_AutobahnReport.Merge(m, src)
+}
+func (m *AutobahnReport) XXX_Size() int {
+	return m.Size()
+}
+func (m *AutobahnReport) XXX_DiscardUnknown() {
+	xxx_messageInfo_AutobahnReport.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_AutobahnReport proto.InternalMessageInfo
+
+func (m *AutobahnReport) GetTotalTransactions() uint32 {
+	if m != nil {
+		return m.TotalTransactions
+	}
+	return 0
+}
+
+func (m *AutobahnReport) GetTotalConsensusInstances() uint32 {
+	if m != nil {
+		return m.TotalConsensusInstances
+	}
+	return 0
+}
+
+func (m *AutobahnReport) GetAvgConsensusLatencyMs() float32 {
+	if m != nil {
+		return m.AvgConsensusLatencyMs
+	}
+	return 0
+}
+
+func (m *AutobahnReport) GetP50ConsensusLatencyMs() float32 {
+	if m != nil {
+		return m.P50ConsensusLatencyMs
+	}
+	return 0
+}
+
+func (m *AutobahnReport) GetP95ConsensusLatencyMs() float32 {
+	if m != nil {
+		return m.P95ConsensusLatencyMs
+	}
+	return 0
+}
+
+func (m *AutobahnReport) GetThroughputTps() float32 {
+	if m != nil {
+		return m.ThroughputTps
+	}
+	return 0
+}
+
+func (m *AutobahnReport) GetAvgBatchSize() float32 {
+	if m != nil {
+		return m.AvgBatchSize
+	}
+	return 0
+}
+
+func (m *AutobahnReport) GetP95BatchSize() float32 {
+	if m != nil {
+		return m.P95BatchSize
+	}
+	return 0
+}
+
+func (m *AutobahnReport) GetLeaderChangeCount() uint32 {
+	if m != nil {
+		return m.LeaderChangeCount
+	}
+	return 0
+}
+
+func (m *AutobahnReport) GetRegencyChangeCount() uint32 {
+	if m != nil {
+		return m.RegencyChangeCount
+	}
+	return 0
+}
+
+func (m *AutobahnReport) GetTimeoutMs() uint32 {
+	if m != nil {
+		return m.TimeoutMs
+	}
+	return 0
+}
+
+func (m *AutobahnReport) GetAvgInterCommitGapMs() float32 {
+	if m != nil {
+		return m.AvgInterCommitGapMs
+	}
+	return 0
+}
+
+func (m *AutobahnReport) GetP50InterCommitGapMs() float32 {
+	if m != nil {
+		return m.P50InterCommitGapMs
+	}
+	return 0
+}
+
+func (m *AutobahnReport) GetP95InterCommitGapMs() float32 {
+	if m != nil {
+		return m.P95InterCommitGapMs
+	}
+	return 0
+}
+
+func (m *AutobahnReport) GetViewChangeCount() uint32 {
+	if m != nil {
+		return m.ViewChangeCount
+	}
+	return 0
+}
+
+func (m *AutobahnReport) GetNoProgressViewChangeCount() uint32 {
+	if m != nil {
+		return m.NoProgressViewChangeCount
+	}
+	return 0
+}
+
+// SmartBFT state report. Same layout and semantics as PbftReport. SmartBFT is
+// registered as its own protocol so its reward function and schedule can be
+// tuned independently of the Rust PBFT baseline.
+type SmartbftReport struct {
+	TotalTransactions         uint32  `protobuf:"varint,1,opt,name=total_transactions,json=totalTransactions,proto3" json:"total_transactions,omitempty"`
+	TotalConsensusInstances   uint32  `protobuf:"varint,2,opt,name=total_consensus_instances,json=totalConsensusInstances,proto3" json:"total_consensus_instances,omitempty"`
+	AvgConsensusLatencyMs     float32 `protobuf:"fixed32,3,opt,name=avg_consensus_latency_ms,json=avgConsensusLatencyMs,proto3" json:"avg_consensus_latency_ms,omitempty"`
+	P50ConsensusLatencyMs     float32 `protobuf:"fixed32,4,opt,name=p50_consensus_latency_ms,json=p50ConsensusLatencyMs,proto3" json:"p50_consensus_latency_ms,omitempty"`
+	P95ConsensusLatencyMs     float32 `protobuf:"fixed32,5,opt,name=p95_consensus_latency_ms,json=p95ConsensusLatencyMs,proto3" json:"p95_consensus_latency_ms,omitempty"`
+	ThroughputTps             float32 `protobuf:"fixed32,6,opt,name=throughput_tps,json=throughputTps,proto3" json:"throughput_tps,omitempty"`
+	AvgBatchSize              float32 `protobuf:"fixed32,7,opt,name=avg_batch_size,json=avgBatchSize,proto3" json:"avg_batch_size,omitempty"`
+	P95BatchSize              float32 `protobuf:"fixed32,8,opt,name=p95_batch_size,json=p95BatchSize,proto3" json:"p95_batch_size,omitempty"`
+	LeaderChangeCount         uint32  `protobuf:"varint,9,opt,name=leader_change_count,json=leaderChangeCount,proto3" json:"leader_change_count,omitempty"`
+	RegencyChangeCount        uint32  `protobuf:"varint,10,opt,name=regency_change_count,json=regencyChangeCount,proto3" json:"regency_change_count,omitempty"`
+	TimeoutMs                 uint32  `protobuf:"varint,11,opt,name=timeout_ms,json=timeoutMs,proto3" json:"timeout_ms,omitempty"`
+	AvgInterCommitGapMs       float32 `protobuf:"fixed32,12,opt,name=avg_inter_commit_gap_ms,json=avgInterCommitGapMs,proto3" json:"avg_inter_commit_gap_ms,omitempty"`
+	P50InterCommitGapMs       float32 `protobuf:"fixed32,13,opt,name=p50_inter_commit_gap_ms,json=p50InterCommitGapMs,proto3" json:"p50_inter_commit_gap_ms,omitempty"`
+	P95InterCommitGapMs       float32 `protobuf:"fixed32,14,opt,name=p95_inter_commit_gap_ms,json=p95InterCommitGapMs,proto3" json:"p95_inter_commit_gap_ms,omitempty"`
+	ViewChangeCount           uint32  `protobuf:"varint,15,opt,name=view_change_count,json=viewChangeCount,proto3" json:"view_change_count,omitempty"`
+	NoProgressViewChangeCount uint32  `protobuf:"varint,16,opt,name=no_progress_view_change_count,json=noProgressViewChangeCount,proto3" json:"no_progress_view_change_count,omitempty"`
+}
+
+func (m *SmartbftReport) Reset()         { *m = SmartbftReport{} }
+func (m *SmartbftReport) String() string { return proto.CompactTextString(m) }
+func (*SmartbftReport) ProtoMessage()    {}
+func (*SmartbftReport) Descriptor() ([]byte, []int) {
+	return fileDescriptor_5ce53b760672e5c1, []int{5}
+}
+func (m *SmartbftReport) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *SmartbftReport) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	if deterministic {
+		return xxx_messageInfo_SmartbftReport.Marshal(b, m, deterministic)
+	} else {
+		b = b[:cap(b)]
+		n, err := m.MarshalToSizedBuffer(b)
+		if err != nil {
+			return nil, err
+		}
+		return b[:n], nil
+	}
+}
+func (m *SmartbftReport) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_SmartbftReport.Merge(m, src)
+}
+func (m *SmartbftReport) XXX_Size() int {
+	return m.Size()
+}
+func (m *SmartbftReport) XXX_DiscardUnknown() {
+	xxx_messageInfo_SmartbftReport.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_SmartbftReport proto.InternalMessageInfo
+
+func (m *SmartbftReport) GetTotalTransactions() uint32 {
+	if m != nil {
+		return m.TotalTransactions
+	}
+	return 0
+}
+
+func (m *SmartbftReport) GetTotalConsensusInstances() uint32 {
+	if m != nil {
+		return m.TotalConsensusInstances
+	}
+	return 0
+}
+
+func (m *SmartbftReport) GetAvgConsensusLatencyMs() float32 {
+	if m != nil {
+		return m.AvgConsensusLatencyMs
+	}
+	return 0
+}
+
+func (m *SmartbftReport) GetP50ConsensusLatencyMs() float32 {
+	if m != nil {
+		return m.P50ConsensusLatencyMs
+	}
+	return 0
+}
+
+func (m *SmartbftReport) GetP95ConsensusLatencyMs() float32 {
+	if m != nil {
+		return m.P95ConsensusLatencyMs
+	}
+	return 0
+}
+
+func (m *SmartbftReport) GetThroughputTps() float32 {
+	if m != nil {
+		return m.ThroughputTps
+	}
+	return 0
+}
+
+func (m *SmartbftReport) GetAvgBatchSize() float32 {
+	if m != nil {
+		return m.AvgBatchSize
+	}
+	return 0
+}
+
+func (m *SmartbftReport) GetP95BatchSize() float32 {
+	if m != nil {
+		return m.P95BatchSize
+	}
+	return 0
+}
+
+func (m *SmartbftReport) GetLeaderChangeCount() uint32 {
+	if m != nil {
+		return m.LeaderChangeCount
+	}
+	return 0
+}
+
+func (m *SmartbftReport) GetRegencyChangeCount() uint32 {
+	if m != nil {
+		return m.RegencyChangeCount
+	}
+	return 0
+}
+
+func (m *SmartbftReport) GetTimeoutMs() uint32 {
+	if m != nil {
+		return m.TimeoutMs
+	}
+	return 0
+}
+
+func (m *SmartbftReport) GetAvgInterCommitGapMs() float32 {
+	if m != nil {
+		return m.AvgInterCommitGapMs
+	}
+	return 0
+}
+
+func (m *SmartbftReport) GetP50InterCommitGapMs() float32 {
+	if m != nil {
+		return m.P50InterCommitGapMs
+	}
+	return 0
+}
+
+func (m *SmartbftReport) GetP95InterCommitGapMs() float32 {
+	if m != nil {
+		return m.P95InterCommitGapMs
+	}
+	return 0
+}
+
+func (m *SmartbftReport) GetViewChangeCount() uint32 {
+	if m != nil {
+		return m.ViewChangeCount
+	}
+	return 0
+}
+
+func (m *SmartbftReport) GetNoProgressViewChangeCount() uint32 {
+	if m != nil {
+		return m.NoProgressViewChangeCount
+	}
+	return 0
+}
+
 // One report from a local node for one episode.
 type ReportLocal struct {
 	NodeId   uint32   `protobuf:"varint,1,opt,name=node_id,json=nodeId,proto3" json:"node_id,omitempty"`
@@ -916,22 +1227,30 @@ type ReportLocal struct {
 	StartTick uint32 `protobuf:"varint,6,opt,name=start_tick,json=startTick,proto3" json:"start_tick,omitempty"`
 	// Window end consensus tick (exclusive) used to build this report.
 	ReportSeq uint32 `protobuf:"varint,7,opt,name=report_seq,json=reportSeq,proto3" json:"report_seq,omitempty"`
+	// Number of locally delivered consensus instances in this window.
+	// PBFT and SmartBFT use zero to identify a wall-clock-bounded window; the
+	// actual delivered count remains in the report's total_consensus_instances.
+	WindowConsensusCount uint32 `protobuf:"varint,8,opt,name=window_consensus_count,json=windowConsensusCount,proto3" json:"window_consensus_count,omitempty"`
 	// Types that are valid to be assigned to State:
 	//
 	//	*ReportLocal_PbftState
-	//	*ReportLocal_TwoPcOverPbftState
 	//	*ReportLocal_SbftState
 	//	*ReportLocal_TendermintState
-	State     isReportLocal_State `protobuf_oneof:"state"`
-	Reward    *Reward             `protobuf:"bytes,4,opt,name=reward,proto3" json:"reward,omitempty"`
-	Signature []byte              `protobuf:"bytes,5,opt,name=signature,proto3" json:"signature,omitempty"`
+	//	*ReportLocal_HotstuffState
+	//	*ReportLocal_AutobahnState
+	//	*ReportLocal_SmartbftState
+	State isReportLocal_State `protobuf_oneof:"state"`
+	// Message fields carry presence in proto3, so no `optional` is needed and the
+	// gogo Go generator can consume this file.
+	Reward    *Reward `protobuf:"bytes,4,opt,name=reward,proto3" json:"reward,omitempty"`
+	Signature []byte  `protobuf:"bytes,5,opt,name=signature,proto3" json:"signature,omitempty"`
 }
 
 func (m *ReportLocal) Reset()         { *m = ReportLocal{} }
 func (m *ReportLocal) String() string { return proto.CompactTextString(m) }
 func (*ReportLocal) ProtoMessage()    {}
 func (*ReportLocal) Descriptor() ([]byte, []int) {
-	return fileDescriptor_5ce53b760672e5c1, []int{4}
+	return fileDescriptor_5ce53b760672e5c1, []int{6}
 }
 func (m *ReportLocal) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -969,20 +1288,28 @@ type isReportLocal_State interface {
 type ReportLocal_PbftState struct {
 	PbftState *PbftReport `protobuf:"bytes,10,opt,name=pbft_state,json=pbftState,proto3,oneof" json:"pbft_state,omitempty"`
 }
-type ReportLocal_TwoPcOverPbftState struct {
-	TwoPcOverPbftState *TwoPcOverPbftReport `protobuf:"bytes,11,opt,name=two_pc_over_pbft_state,json=twoPcOverPbftState,proto3,oneof" json:"two_pc_over_pbft_state,omitempty"`
-}
 type ReportLocal_SbftState struct {
 	SbftState *SbftReport `protobuf:"bytes,12,opt,name=sbft_state,json=sbftState,proto3,oneof" json:"sbft_state,omitempty"`
 }
 type ReportLocal_TendermintState struct {
 	TendermintState *TendermintReport `protobuf:"bytes,13,opt,name=tendermint_state,json=tendermintState,proto3,oneof" json:"tendermint_state,omitempty"`
 }
+type ReportLocal_HotstuffState struct {
+	HotstuffState *HotstuffReport `protobuf:"bytes,14,opt,name=hotstuff_state,json=hotstuffState,proto3,oneof" json:"hotstuff_state,omitempty"`
+}
+type ReportLocal_AutobahnState struct {
+	AutobahnState *AutobahnReport `protobuf:"bytes,15,opt,name=autobahn_state,json=autobahnState,proto3,oneof" json:"autobahn_state,omitempty"`
+}
+type ReportLocal_SmartbftState struct {
+	SmartbftState *SmartbftReport `protobuf:"bytes,16,opt,name=smartbft_state,json=smartbftState,proto3,oneof" json:"smartbft_state,omitempty"`
+}
 
-func (*ReportLocal_PbftState) isReportLocal_State()          {}
-func (*ReportLocal_TwoPcOverPbftState) isReportLocal_State() {}
-func (*ReportLocal_SbftState) isReportLocal_State()          {}
-func (*ReportLocal_TendermintState) isReportLocal_State()    {}
+func (*ReportLocal_PbftState) isReportLocal_State()       {}
+func (*ReportLocal_SbftState) isReportLocal_State()       {}
+func (*ReportLocal_TendermintState) isReportLocal_State() {}
+func (*ReportLocal_HotstuffState) isReportLocal_State()   {}
+func (*ReportLocal_AutobahnState) isReportLocal_State()   {}
+func (*ReportLocal_SmartbftState) isReportLocal_State()   {}
 
 func (m *ReportLocal) GetState() isReportLocal_State {
 	if m != nil {
@@ -1026,16 +1353,16 @@ func (m *ReportLocal) GetReportSeq() uint32 {
 	return 0
 }
 
+func (m *ReportLocal) GetWindowConsensusCount() uint32 {
+	if m != nil {
+		return m.WindowConsensusCount
+	}
+	return 0
+}
+
 func (m *ReportLocal) GetPbftState() *PbftReport {
 	if x, ok := m.GetState().(*ReportLocal_PbftState); ok {
 		return x.PbftState
-	}
-	return nil
-}
-
-func (m *ReportLocal) GetTwoPcOverPbftState() *TwoPcOverPbftReport {
-	if x, ok := m.GetState().(*ReportLocal_TwoPcOverPbftState); ok {
-		return x.TwoPcOverPbftState
 	}
 	return nil
 }
@@ -1050,6 +1377,27 @@ func (m *ReportLocal) GetSbftState() *SbftReport {
 func (m *ReportLocal) GetTendermintState() *TendermintReport {
 	if x, ok := m.GetState().(*ReportLocal_TendermintState); ok {
 		return x.TendermintState
+	}
+	return nil
+}
+
+func (m *ReportLocal) GetHotstuffState() *HotstuffReport {
+	if x, ok := m.GetState().(*ReportLocal_HotstuffState); ok {
+		return x.HotstuffState
+	}
+	return nil
+}
+
+func (m *ReportLocal) GetAutobahnState() *AutobahnReport {
+	if x, ok := m.GetState().(*ReportLocal_AutobahnState); ok {
+		return x.AutobahnState
+	}
+	return nil
+}
+
+func (m *ReportLocal) GetSmartbftState() *SmartbftReport {
+	if x, ok := m.GetState().(*ReportLocal_SmartbftState); ok {
+		return x.SmartbftState
 	}
 	return nil
 }
@@ -1072,9 +1420,11 @@ func (m *ReportLocal) GetSignature() []byte {
 func (*ReportLocal) XXX_OneofWrappers() []interface{} {
 	return []interface{}{
 		(*ReportLocal_PbftState)(nil),
-		(*ReportLocal_TwoPcOverPbftState)(nil),
 		(*ReportLocal_SbftState)(nil),
 		(*ReportLocal_TendermintState)(nil),
+		(*ReportLocal_HotstuffState)(nil),
+		(*ReportLocal_AutobahnState)(nil),
+		(*ReportLocal_SmartbftState)(nil),
 	}
 }
 
@@ -1089,7 +1439,7 @@ func (m *PbftReward) Reset()         { *m = PbftReward{} }
 func (m *PbftReward) String() string { return proto.CompactTextString(m) }
 func (*PbftReward) ProtoMessage()    {}
 func (*PbftReward) Descriptor() ([]byte, []int) {
-	return fileDescriptor_5ce53b760672e5c1, []int{5}
+	return fileDescriptor_5ce53b760672e5c1, []int{7}
 }
 func (m *PbftReward) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -1139,67 +1489,6 @@ func (m *PbftReward) GetTimeoutUsed() *PbftTimeout {
 	return nil
 }
 
-// 2PC-over-PBFT action/reward feedback.
-type TwoPcOverPbftReward struct {
-	Episode     uint32                `protobuf:"varint,1,opt,name=episode,proto3" json:"episode,omitempty"`
-	Report      *TwoPcOverPbftReport  `protobuf:"bytes,2,opt,name=report,proto3" json:"report,omitempty"`
-	TimeoutUsed *TwoPcOverPbftTimeout `protobuf:"bytes,3,opt,name=timeout_used,json=timeoutUsed,proto3" json:"timeout_used,omitempty"`
-}
-
-func (m *TwoPcOverPbftReward) Reset()         { *m = TwoPcOverPbftReward{} }
-func (m *TwoPcOverPbftReward) String() string { return proto.CompactTextString(m) }
-func (*TwoPcOverPbftReward) ProtoMessage()    {}
-func (*TwoPcOverPbftReward) Descriptor() ([]byte, []int) {
-	return fileDescriptor_5ce53b760672e5c1, []int{6}
-}
-func (m *TwoPcOverPbftReward) XXX_Unmarshal(b []byte) error {
-	return m.Unmarshal(b)
-}
-func (m *TwoPcOverPbftReward) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
-	if deterministic {
-		return xxx_messageInfo_TwoPcOverPbftReward.Marshal(b, m, deterministic)
-	} else {
-		b = b[:cap(b)]
-		n, err := m.MarshalToSizedBuffer(b)
-		if err != nil {
-			return nil, err
-		}
-		return b[:n], nil
-	}
-}
-func (m *TwoPcOverPbftReward) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_TwoPcOverPbftReward.Merge(m, src)
-}
-func (m *TwoPcOverPbftReward) XXX_Size() int {
-	return m.Size()
-}
-func (m *TwoPcOverPbftReward) XXX_DiscardUnknown() {
-	xxx_messageInfo_TwoPcOverPbftReward.DiscardUnknown(m)
-}
-
-var xxx_messageInfo_TwoPcOverPbftReward proto.InternalMessageInfo
-
-func (m *TwoPcOverPbftReward) GetEpisode() uint32 {
-	if m != nil {
-		return m.Episode
-	}
-	return 0
-}
-
-func (m *TwoPcOverPbftReward) GetReport() *TwoPcOverPbftReport {
-	if m != nil {
-		return m.Report
-	}
-	return nil
-}
-
-func (m *TwoPcOverPbftReward) GetTimeoutUsed() *TwoPcOverPbftTimeout {
-	if m != nil {
-		return m.TimeoutUsed
-	}
-	return nil
-}
-
 // SBFT action/reward feedback.
 type SbftReward struct {
 	Episode     uint32       `protobuf:"varint,1,opt,name=episode,proto3" json:"episode,omitempty"`
@@ -1211,7 +1500,7 @@ func (m *SbftReward) Reset()         { *m = SbftReward{} }
 func (m *SbftReward) String() string { return proto.CompactTextString(m) }
 func (*SbftReward) ProtoMessage()    {}
 func (*SbftReward) Descriptor() ([]byte, []int) {
-	return fileDescriptor_5ce53b760672e5c1, []int{7}
+	return fileDescriptor_5ce53b760672e5c1, []int{8}
 }
 func (m *SbftReward) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -1272,7 +1561,7 @@ func (m *TendermintReward) Reset()         { *m = TendermintReward{} }
 func (m *TendermintReward) String() string { return proto.CompactTextString(m) }
 func (*TendermintReward) ProtoMessage()    {}
 func (*TendermintReward) Descriptor() ([]byte, []int) {
-	return fileDescriptor_5ce53b760672e5c1, []int{8}
+	return fileDescriptor_5ce53b760672e5c1, []int{9}
 }
 func (m *TendermintReward) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -1322,14 +1611,199 @@ func (m *TendermintReward) GetTimeoutUsed() *TendermintTimeout {
 	return nil
 }
 
+// HotStuff action/reward feedback.
+type HotstuffReward struct {
+	Episode     uint32           `protobuf:"varint,1,opt,name=episode,proto3" json:"episode,omitempty"`
+	Report      *HotstuffReport  `protobuf:"bytes,2,opt,name=report,proto3" json:"report,omitempty"`
+	TimeoutUsed *HotstuffTimeout `protobuf:"bytes,3,opt,name=timeout_used,json=timeoutUsed,proto3" json:"timeout_used,omitempty"`
+}
+
+func (m *HotstuffReward) Reset()         { *m = HotstuffReward{} }
+func (m *HotstuffReward) String() string { return proto.CompactTextString(m) }
+func (*HotstuffReward) ProtoMessage()    {}
+func (*HotstuffReward) Descriptor() ([]byte, []int) {
+	return fileDescriptor_5ce53b760672e5c1, []int{10}
+}
+func (m *HotstuffReward) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *HotstuffReward) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	if deterministic {
+		return xxx_messageInfo_HotstuffReward.Marshal(b, m, deterministic)
+	} else {
+		b = b[:cap(b)]
+		n, err := m.MarshalToSizedBuffer(b)
+		if err != nil {
+			return nil, err
+		}
+		return b[:n], nil
+	}
+}
+func (m *HotstuffReward) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_HotstuffReward.Merge(m, src)
+}
+func (m *HotstuffReward) XXX_Size() int {
+	return m.Size()
+}
+func (m *HotstuffReward) XXX_DiscardUnknown() {
+	xxx_messageInfo_HotstuffReward.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_HotstuffReward proto.InternalMessageInfo
+
+func (m *HotstuffReward) GetEpisode() uint32 {
+	if m != nil {
+		return m.Episode
+	}
+	return 0
+}
+
+func (m *HotstuffReward) GetReport() *HotstuffReport {
+	if m != nil {
+		return m.Report
+	}
+	return nil
+}
+
+func (m *HotstuffReward) GetTimeoutUsed() *HotstuffTimeout {
+	if m != nil {
+		return m.TimeoutUsed
+	}
+	return nil
+}
+
+// Autobahn action/reward feedback.
+type AutobahnReward struct {
+	Episode     uint32           `protobuf:"varint,1,opt,name=episode,proto3" json:"episode,omitempty"`
+	Report      *AutobahnReport  `protobuf:"bytes,2,opt,name=report,proto3" json:"report,omitempty"`
+	TimeoutUsed *AutobahnTimeout `protobuf:"bytes,3,opt,name=timeout_used,json=timeoutUsed,proto3" json:"timeout_used,omitempty"`
+}
+
+func (m *AutobahnReward) Reset()         { *m = AutobahnReward{} }
+func (m *AutobahnReward) String() string { return proto.CompactTextString(m) }
+func (*AutobahnReward) ProtoMessage()    {}
+func (*AutobahnReward) Descriptor() ([]byte, []int) {
+	return fileDescriptor_5ce53b760672e5c1, []int{11}
+}
+func (m *AutobahnReward) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *AutobahnReward) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	if deterministic {
+		return xxx_messageInfo_AutobahnReward.Marshal(b, m, deterministic)
+	} else {
+		b = b[:cap(b)]
+		n, err := m.MarshalToSizedBuffer(b)
+		if err != nil {
+			return nil, err
+		}
+		return b[:n], nil
+	}
+}
+func (m *AutobahnReward) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_AutobahnReward.Merge(m, src)
+}
+func (m *AutobahnReward) XXX_Size() int {
+	return m.Size()
+}
+func (m *AutobahnReward) XXX_DiscardUnknown() {
+	xxx_messageInfo_AutobahnReward.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_AutobahnReward proto.InternalMessageInfo
+
+func (m *AutobahnReward) GetEpisode() uint32 {
+	if m != nil {
+		return m.Episode
+	}
+	return 0
+}
+
+func (m *AutobahnReward) GetReport() *AutobahnReport {
+	if m != nil {
+		return m.Report
+	}
+	return nil
+}
+
+func (m *AutobahnReward) GetTimeoutUsed() *AutobahnTimeout {
+	if m != nil {
+		return m.TimeoutUsed
+	}
+	return nil
+}
+
+// SmartBFT action/reward feedback.
+type SmartbftReward struct {
+	Episode     uint32           `protobuf:"varint,1,opt,name=episode,proto3" json:"episode,omitempty"`
+	Report      *SmartbftReport  `protobuf:"bytes,2,opt,name=report,proto3" json:"report,omitempty"`
+	TimeoutUsed *SmartbftTimeout `protobuf:"bytes,3,opt,name=timeout_used,json=timeoutUsed,proto3" json:"timeout_used,omitempty"`
+}
+
+func (m *SmartbftReward) Reset()         { *m = SmartbftReward{} }
+func (m *SmartbftReward) String() string { return proto.CompactTextString(m) }
+func (*SmartbftReward) ProtoMessage()    {}
+func (*SmartbftReward) Descriptor() ([]byte, []int) {
+	return fileDescriptor_5ce53b760672e5c1, []int{12}
+}
+func (m *SmartbftReward) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *SmartbftReward) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	if deterministic {
+		return xxx_messageInfo_SmartbftReward.Marshal(b, m, deterministic)
+	} else {
+		b = b[:cap(b)]
+		n, err := m.MarshalToSizedBuffer(b)
+		if err != nil {
+			return nil, err
+		}
+		return b[:n], nil
+	}
+}
+func (m *SmartbftReward) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_SmartbftReward.Merge(m, src)
+}
+func (m *SmartbftReward) XXX_Size() int {
+	return m.Size()
+}
+func (m *SmartbftReward) XXX_DiscardUnknown() {
+	xxx_messageInfo_SmartbftReward.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_SmartbftReward proto.InternalMessageInfo
+
+func (m *SmartbftReward) GetEpisode() uint32 {
+	if m != nil {
+		return m.Episode
+	}
+	return 0
+}
+
+func (m *SmartbftReward) GetReport() *SmartbftReport {
+	if m != nil {
+		return m.Report
+	}
+	return nil
+}
+
+func (m *SmartbftReward) GetTimeoutUsed() *SmartbftTimeout {
+	if m != nil {
+		return m.TimeoutUsed
+	}
+	return nil
+}
+
 // Reward for a prior episode, sent alongside the next report.
 type Reward struct {
 	// Types that are valid to be assigned to Value:
 	//
 	//	*Reward_Pbft
-	//	*Reward_TwoPcOverPbft
 	//	*Reward_Sbft
 	//	*Reward_Tendermint
+	//	*Reward_Hotstuff
+	//	*Reward_Autobahn
+	//	*Reward_Smartbft
 	Value isReward_Value `protobuf_oneof:"value"`
 }
 
@@ -1337,7 +1811,7 @@ func (m *Reward) Reset()         { *m = Reward{} }
 func (m *Reward) String() string { return proto.CompactTextString(m) }
 func (*Reward) ProtoMessage()    {}
 func (*Reward) Descriptor() ([]byte, []int) {
-	return fileDescriptor_5ce53b760672e5c1, []int{9}
+	return fileDescriptor_5ce53b760672e5c1, []int{13}
 }
 func (m *Reward) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -1375,20 +1849,28 @@ type isReward_Value interface {
 type Reward_Pbft struct {
 	Pbft *PbftReward `protobuf:"bytes,1,opt,name=pbft,proto3,oneof" json:"pbft,omitempty"`
 }
-type Reward_TwoPcOverPbft struct {
-	TwoPcOverPbft *TwoPcOverPbftReward `protobuf:"bytes,2,opt,name=two_pc_over_pbft,json=twoPcOverPbft,proto3,oneof" json:"two_pc_over_pbft,omitempty"`
-}
 type Reward_Sbft struct {
 	Sbft *SbftReward `protobuf:"bytes,3,opt,name=sbft,proto3,oneof" json:"sbft,omitempty"`
 }
 type Reward_Tendermint struct {
 	Tendermint *TendermintReward `protobuf:"bytes,4,opt,name=tendermint,proto3,oneof" json:"tendermint,omitempty"`
 }
+type Reward_Hotstuff struct {
+	Hotstuff *HotstuffReward `protobuf:"bytes,5,opt,name=hotstuff,proto3,oneof" json:"hotstuff,omitempty"`
+}
+type Reward_Autobahn struct {
+	Autobahn *AutobahnReward `protobuf:"bytes,6,opt,name=autobahn,proto3,oneof" json:"autobahn,omitempty"`
+}
+type Reward_Smartbft struct {
+	Smartbft *SmartbftReward `protobuf:"bytes,7,opt,name=smartbft,proto3,oneof" json:"smartbft,omitempty"`
+}
 
-func (*Reward_Pbft) isReward_Value()          {}
-func (*Reward_TwoPcOverPbft) isReward_Value() {}
-func (*Reward_Sbft) isReward_Value()          {}
-func (*Reward_Tendermint) isReward_Value()    {}
+func (*Reward_Pbft) isReward_Value()       {}
+func (*Reward_Sbft) isReward_Value()       {}
+func (*Reward_Tendermint) isReward_Value() {}
+func (*Reward_Hotstuff) isReward_Value()   {}
+func (*Reward_Autobahn) isReward_Value()   {}
+func (*Reward_Smartbft) isReward_Value()   {}
 
 func (m *Reward) GetValue() isReward_Value {
 	if m != nil {
@@ -1400,13 +1882,6 @@ func (m *Reward) GetValue() isReward_Value {
 func (m *Reward) GetPbft() *PbftReward {
 	if x, ok := m.GetValue().(*Reward_Pbft); ok {
 		return x.Pbft
-	}
-	return nil
-}
-
-func (m *Reward) GetTwoPcOverPbft() *TwoPcOverPbftReward {
-	if x, ok := m.GetValue().(*Reward_TwoPcOverPbft); ok {
-		return x.TwoPcOverPbft
 	}
 	return nil
 }
@@ -1425,13 +1900,36 @@ func (m *Reward) GetTendermint() *TendermintReward {
 	return nil
 }
 
+func (m *Reward) GetHotstuff() *HotstuffReward {
+	if x, ok := m.GetValue().(*Reward_Hotstuff); ok {
+		return x.Hotstuff
+	}
+	return nil
+}
+
+func (m *Reward) GetAutobahn() *AutobahnReward {
+	if x, ok := m.GetValue().(*Reward_Autobahn); ok {
+		return x.Autobahn
+	}
+	return nil
+}
+
+func (m *Reward) GetSmartbft() *SmartbftReward {
+	if x, ok := m.GetValue().(*Reward_Smartbft); ok {
+		return x.Smartbft
+	}
+	return nil
+}
+
 // XXX_OneofWrappers is for the internal use of the proto package.
 func (*Reward) XXX_OneofWrappers() []interface{} {
 	return []interface{}{
 		(*Reward_Pbft)(nil),
-		(*Reward_TwoPcOverPbft)(nil),
 		(*Reward_Sbft)(nil),
 		(*Reward_Tendermint)(nil),
+		(*Reward_Hotstuff)(nil),
+		(*Reward_Autobahn)(nil),
+		(*Reward_Smartbft)(nil),
 	}
 }
 
@@ -1446,7 +1944,7 @@ func (m *ReportBatch) Reset()         { *m = ReportBatch{} }
 func (m *ReportBatch) String() string { return proto.CompactTextString(m) }
 func (*ReportBatch) ProtoMessage()    {}
 func (*ReportBatch) Descriptor() ([]byte, []int) {
-	return fileDescriptor_5ce53b760672e5c1, []int{10}
+	return fileDescriptor_5ce53b760672e5c1, []int{14}
 }
 func (m *ReportBatch) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -1504,7 +2002,7 @@ func (m *PbftTimeout) Reset()         { *m = PbftTimeout{} }
 func (m *PbftTimeout) String() string { return proto.CompactTextString(m) }
 func (*PbftTimeout) ProtoMessage()    {}
 func (*PbftTimeout) Descriptor() ([]byte, []int) {
-	return fileDescriptor_5ce53b760672e5c1, []int{11}
+	return fileDescriptor_5ce53b760672e5c1, []int{15}
 }
 func (m *PbftTimeout) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -1540,69 +2038,18 @@ func (m *PbftTimeout) GetElectionTimeoutMilliseconds() uint32 {
 	return 0
 }
 
-type TwoPcOverPbftTimeout struct {
-	ElectionTimeoutMilliseconds uint32 `protobuf:"varint,1,opt,name=election_timeout_milliseconds,json=electionTimeoutMilliseconds,proto3" json:"election_timeout_milliseconds,omitempty"`
-	PrepareTimeoutMilliseconds  uint32 `protobuf:"varint,2,opt,name=prepare_timeout_milliseconds,json=prepareTimeoutMilliseconds,proto3" json:"prepare_timeout_milliseconds,omitempty"`
-}
-
-func (m *TwoPcOverPbftTimeout) Reset()         { *m = TwoPcOverPbftTimeout{} }
-func (m *TwoPcOverPbftTimeout) String() string { return proto.CompactTextString(m) }
-func (*TwoPcOverPbftTimeout) ProtoMessage()    {}
-func (*TwoPcOverPbftTimeout) Descriptor() ([]byte, []int) {
-	return fileDescriptor_5ce53b760672e5c1, []int{12}
-}
-func (m *TwoPcOverPbftTimeout) XXX_Unmarshal(b []byte) error {
-	return m.Unmarshal(b)
-}
-func (m *TwoPcOverPbftTimeout) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
-	if deterministic {
-		return xxx_messageInfo_TwoPcOverPbftTimeout.Marshal(b, m, deterministic)
-	} else {
-		b = b[:cap(b)]
-		n, err := m.MarshalToSizedBuffer(b)
-		if err != nil {
-			return nil, err
-		}
-		return b[:n], nil
-	}
-}
-func (m *TwoPcOverPbftTimeout) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_TwoPcOverPbftTimeout.Merge(m, src)
-}
-func (m *TwoPcOverPbftTimeout) XXX_Size() int {
-	return m.Size()
-}
-func (m *TwoPcOverPbftTimeout) XXX_DiscardUnknown() {
-	xxx_messageInfo_TwoPcOverPbftTimeout.DiscardUnknown(m)
-}
-
-var xxx_messageInfo_TwoPcOverPbftTimeout proto.InternalMessageInfo
-
-func (m *TwoPcOverPbftTimeout) GetElectionTimeoutMilliseconds() uint32 {
-	if m != nil {
-		return m.ElectionTimeoutMilliseconds
-	}
-	return 0
-}
-
-func (m *TwoPcOverPbftTimeout) GetPrepareTimeoutMilliseconds() uint32 {
-	if m != nil {
-		return m.PrepareTimeoutMilliseconds
-	}
-	return 0
-}
-
+// CppBedrock SBFT has no leader batching interval, so the timeout carries
+// only the election and slow-path (fast-path wait) knobs.
 type SbftTimeout struct {
 	ElectionTimeoutMilliseconds uint32 `protobuf:"varint,1,opt,name=election_timeout_milliseconds,json=electionTimeoutMilliseconds,proto3" json:"election_timeout_milliseconds,omitempty"`
 	SlowPathTimeoutMilliseconds uint32 `protobuf:"varint,2,opt,name=slow_path_timeout_milliseconds,json=slowPathTimeoutMilliseconds,proto3" json:"slow_path_timeout_milliseconds,omitempty"`
-	BatchTimeoutMilliseconds    uint32 `protobuf:"varint,3,opt,name=batch_timeout_milliseconds,json=batchTimeoutMilliseconds,proto3" json:"batch_timeout_milliseconds,omitempty"`
 }
 
 func (m *SbftTimeout) Reset()         { *m = SbftTimeout{} }
 func (m *SbftTimeout) String() string { return proto.CompactTextString(m) }
 func (*SbftTimeout) ProtoMessage()    {}
 func (*SbftTimeout) Descriptor() ([]byte, []int) {
-	return fileDescriptor_5ce53b760672e5c1, []int{13}
+	return fileDescriptor_5ce53b760672e5c1, []int{16}
 }
 func (m *SbftTimeout) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -1645,13 +2092,6 @@ func (m *SbftTimeout) GetSlowPathTimeoutMilliseconds() uint32 {
 	return 0
 }
 
-func (m *SbftTimeout) GetBatchTimeoutMilliseconds() uint32 {
-	if m != nil {
-		return m.BatchTimeoutMilliseconds
-	}
-	return 0
-}
-
 type TendermintTimeout struct {
 	ProposeTimeoutMilliseconds   uint32 `protobuf:"varint,1,opt,name=propose_timeout_milliseconds,json=proposeTimeoutMilliseconds,proto3" json:"propose_timeout_milliseconds,omitempty"`
 	PrevoteTimeoutMilliseconds   uint32 `protobuf:"varint,2,opt,name=prevote_timeout_milliseconds,json=prevoteTimeoutMilliseconds,proto3" json:"prevote_timeout_milliseconds,omitempty"`
@@ -1662,7 +2102,7 @@ func (m *TendermintTimeout) Reset()         { *m = TendermintTimeout{} }
 func (m *TendermintTimeout) String() string { return proto.CompactTextString(m) }
 func (*TendermintTimeout) ProtoMessage()    {}
 func (*TendermintTimeout) Descriptor() ([]byte, []int) {
-	return fileDescriptor_5ce53b760672e5c1, []int{14}
+	return fileDescriptor_5ce53b760672e5c1, []int{17}
 }
 func (m *TendermintTimeout) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -1712,14 +2152,164 @@ func (m *TendermintTimeout) GetPrecommitTimeoutMilliseconds() uint32 {
 	return 0
 }
 
+type HotstuffTimeout struct {
+	TimeoutDelayMilliseconds uint32 `protobuf:"varint,1,opt,name=timeout_delay_milliseconds,json=timeoutDelayMilliseconds,proto3" json:"timeout_delay_milliseconds,omitempty"`
+}
+
+func (m *HotstuffTimeout) Reset()         { *m = HotstuffTimeout{} }
+func (m *HotstuffTimeout) String() string { return proto.CompactTextString(m) }
+func (*HotstuffTimeout) ProtoMessage()    {}
+func (*HotstuffTimeout) Descriptor() ([]byte, []int) {
+	return fileDescriptor_5ce53b760672e5c1, []int{18}
+}
+func (m *HotstuffTimeout) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *HotstuffTimeout) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	if deterministic {
+		return xxx_messageInfo_HotstuffTimeout.Marshal(b, m, deterministic)
+	} else {
+		b = b[:cap(b)]
+		n, err := m.MarshalToSizedBuffer(b)
+		if err != nil {
+			return nil, err
+		}
+		return b[:n], nil
+	}
+}
+func (m *HotstuffTimeout) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_HotstuffTimeout.Merge(m, src)
+}
+func (m *HotstuffTimeout) XXX_Size() int {
+	return m.Size()
+}
+func (m *HotstuffTimeout) XXX_DiscardUnknown() {
+	xxx_messageInfo_HotstuffTimeout.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_HotstuffTimeout proto.InternalMessageInfo
+
+func (m *HotstuffTimeout) GetTimeoutDelayMilliseconds() uint32 {
+	if m != nil {
+		return m.TimeoutDelayMilliseconds
+	}
+	return 0
+}
+
+type AutobahnTimeout struct {
+	TimeoutDelayMilliseconds    uint32 `protobuf:"varint,1,opt,name=timeout_delay_milliseconds,json=timeoutDelayMilliseconds,proto3" json:"timeout_delay_milliseconds,omitempty"`
+	CarTimeoutMilliseconds      uint32 `protobuf:"varint,2,opt,name=car_timeout_milliseconds,json=carTimeoutMilliseconds,proto3" json:"car_timeout_milliseconds,omitempty"`
+	FastPathTimeoutMilliseconds uint32 `protobuf:"varint,3,opt,name=fast_path_timeout_milliseconds,json=fastPathTimeoutMilliseconds,proto3" json:"fast_path_timeout_milliseconds,omitempty"`
+}
+
+func (m *AutobahnTimeout) Reset()         { *m = AutobahnTimeout{} }
+func (m *AutobahnTimeout) String() string { return proto.CompactTextString(m) }
+func (*AutobahnTimeout) ProtoMessage()    {}
+func (*AutobahnTimeout) Descriptor() ([]byte, []int) {
+	return fileDescriptor_5ce53b760672e5c1, []int{19}
+}
+func (m *AutobahnTimeout) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *AutobahnTimeout) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	if deterministic {
+		return xxx_messageInfo_AutobahnTimeout.Marshal(b, m, deterministic)
+	} else {
+		b = b[:cap(b)]
+		n, err := m.MarshalToSizedBuffer(b)
+		if err != nil {
+			return nil, err
+		}
+		return b[:n], nil
+	}
+}
+func (m *AutobahnTimeout) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_AutobahnTimeout.Merge(m, src)
+}
+func (m *AutobahnTimeout) XXX_Size() int {
+	return m.Size()
+}
+func (m *AutobahnTimeout) XXX_DiscardUnknown() {
+	xxx_messageInfo_AutobahnTimeout.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_AutobahnTimeout proto.InternalMessageInfo
+
+func (m *AutobahnTimeout) GetTimeoutDelayMilliseconds() uint32 {
+	if m != nil {
+		return m.TimeoutDelayMilliseconds
+	}
+	return 0
+}
+
+func (m *AutobahnTimeout) GetCarTimeoutMilliseconds() uint32 {
+	if m != nil {
+		return m.CarTimeoutMilliseconds
+	}
+	return 0
+}
+
+func (m *AutobahnTimeout) GetFastPathTimeoutMilliseconds() uint32 {
+	if m != nil {
+		return m.FastPathTimeoutMilliseconds
+	}
+	return 0
+}
+
+type SmartbftTimeout struct {
+	ElectionTimeoutMilliseconds uint32 `protobuf:"varint,1,opt,name=election_timeout_milliseconds,json=electionTimeoutMilliseconds,proto3" json:"election_timeout_milliseconds,omitempty"`
+}
+
+func (m *SmartbftTimeout) Reset()         { *m = SmartbftTimeout{} }
+func (m *SmartbftTimeout) String() string { return proto.CompactTextString(m) }
+func (*SmartbftTimeout) ProtoMessage()    {}
+func (*SmartbftTimeout) Descriptor() ([]byte, []int) {
+	return fileDescriptor_5ce53b760672e5c1, []int{20}
+}
+func (m *SmartbftTimeout) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *SmartbftTimeout) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	if deterministic {
+		return xxx_messageInfo_SmartbftTimeout.Marshal(b, m, deterministic)
+	} else {
+		b = b[:cap(b)]
+		n, err := m.MarshalToSizedBuffer(b)
+		if err != nil {
+			return nil, err
+		}
+		return b[:n], nil
+	}
+}
+func (m *SmartbftTimeout) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_SmartbftTimeout.Merge(m, src)
+}
+func (m *SmartbftTimeout) XXX_Size() int {
+	return m.Size()
+}
+func (m *SmartbftTimeout) XXX_DiscardUnknown() {
+	xxx_messageInfo_SmartbftTimeout.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_SmartbftTimeout proto.InternalMessageInfo
+
+func (m *SmartbftTimeout) GetElectionTimeoutMilliseconds() uint32 {
+	if m != nil {
+		return m.ElectionTimeoutMilliseconds
+	}
+	return 0
+}
+
 // Timeout recommendation.
 type Timeout struct {
 	// Types that are valid to be assigned to Value:
 	//
 	//	*Timeout_Pbft
-	//	*Timeout_TwoPcOverPbft
 	//	*Timeout_Sbft
 	//	*Timeout_Tendermint
+	//	*Timeout_Hotstuff
+	//	*Timeout_Autobahn
+	//	*Timeout_Smartbft
 	Value isTimeout_Value `protobuf_oneof:"value"`
 }
 
@@ -1727,7 +2317,7 @@ func (m *Timeout) Reset()         { *m = Timeout{} }
 func (m *Timeout) String() string { return proto.CompactTextString(m) }
 func (*Timeout) ProtoMessage()    {}
 func (*Timeout) Descriptor() ([]byte, []int) {
-	return fileDescriptor_5ce53b760672e5c1, []int{15}
+	return fileDescriptor_5ce53b760672e5c1, []int{21}
 }
 func (m *Timeout) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -1765,20 +2355,28 @@ type isTimeout_Value interface {
 type Timeout_Pbft struct {
 	Pbft *PbftTimeout `protobuf:"bytes,1,opt,name=pbft,proto3,oneof" json:"pbft,omitempty"`
 }
-type Timeout_TwoPcOverPbft struct {
-	TwoPcOverPbft *TwoPcOverPbftTimeout `protobuf:"bytes,2,opt,name=two_pc_over_pbft,json=twoPcOverPbft,proto3,oneof" json:"two_pc_over_pbft,omitempty"`
-}
 type Timeout_Sbft struct {
 	Sbft *SbftTimeout `protobuf:"bytes,3,opt,name=sbft,proto3,oneof" json:"sbft,omitempty"`
 }
 type Timeout_Tendermint struct {
 	Tendermint *TendermintTimeout `protobuf:"bytes,4,opt,name=tendermint,proto3,oneof" json:"tendermint,omitempty"`
 }
+type Timeout_Hotstuff struct {
+	Hotstuff *HotstuffTimeout `protobuf:"bytes,5,opt,name=hotstuff,proto3,oneof" json:"hotstuff,omitempty"`
+}
+type Timeout_Autobahn struct {
+	Autobahn *AutobahnTimeout `protobuf:"bytes,6,opt,name=autobahn,proto3,oneof" json:"autobahn,omitempty"`
+}
+type Timeout_Smartbft struct {
+	Smartbft *SmartbftTimeout `protobuf:"bytes,7,opt,name=smartbft,proto3,oneof" json:"smartbft,omitempty"`
+}
 
-func (*Timeout_Pbft) isTimeout_Value()          {}
-func (*Timeout_TwoPcOverPbft) isTimeout_Value() {}
-func (*Timeout_Sbft) isTimeout_Value()          {}
-func (*Timeout_Tendermint) isTimeout_Value()    {}
+func (*Timeout_Pbft) isTimeout_Value()       {}
+func (*Timeout_Sbft) isTimeout_Value()       {}
+func (*Timeout_Tendermint) isTimeout_Value() {}
+func (*Timeout_Hotstuff) isTimeout_Value()   {}
+func (*Timeout_Autobahn) isTimeout_Value()   {}
+func (*Timeout_Smartbft) isTimeout_Value()   {}
 
 func (m *Timeout) GetValue() isTimeout_Value {
 	if m != nil {
@@ -1790,13 +2388,6 @@ func (m *Timeout) GetValue() isTimeout_Value {
 func (m *Timeout) GetPbft() *PbftTimeout {
 	if x, ok := m.GetValue().(*Timeout_Pbft); ok {
 		return x.Pbft
-	}
-	return nil
-}
-
-func (m *Timeout) GetTwoPcOverPbft() *TwoPcOverPbftTimeout {
-	if x, ok := m.GetValue().(*Timeout_TwoPcOverPbft); ok {
-		return x.TwoPcOverPbft
 	}
 	return nil
 }
@@ -1815,13 +2406,36 @@ func (m *Timeout) GetTendermint() *TendermintTimeout {
 	return nil
 }
 
+func (m *Timeout) GetHotstuff() *HotstuffTimeout {
+	if x, ok := m.GetValue().(*Timeout_Hotstuff); ok {
+		return x.Hotstuff
+	}
+	return nil
+}
+
+func (m *Timeout) GetAutobahn() *AutobahnTimeout {
+	if x, ok := m.GetValue().(*Timeout_Autobahn); ok {
+		return x.Autobahn
+	}
+	return nil
+}
+
+func (m *Timeout) GetSmartbft() *SmartbftTimeout {
+	if x, ok := m.GetValue().(*Timeout_Smartbft); ok {
+		return x.Smartbft
+	}
+	return nil
+}
+
 // XXX_OneofWrappers is for the internal use of the proto package.
 func (*Timeout) XXX_OneofWrappers() []interface{} {
 	return []interface{}{
 		(*Timeout_Pbft)(nil),
-		(*Timeout_TwoPcOverPbft)(nil),
 		(*Timeout_Sbft)(nil),
 		(*Timeout_Tendermint)(nil),
+		(*Timeout_Hotstuff)(nil),
+		(*Timeout_Autobahn)(nil),
+		(*Timeout_Smartbft)(nil),
 	}
 }
 
@@ -1835,7 +2449,7 @@ func (m *TimeoutRequest) Reset()         { *m = TimeoutRequest{} }
 func (m *TimeoutRequest) String() string { return proto.CompactTextString(m) }
 func (*TimeoutRequest) ProtoMessage()    {}
 func (*TimeoutRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_5ce53b760672e5c1, []int{16}
+	return fileDescriptor_5ce53b760672e5c1, []int{22}
 }
 func (m *TimeoutRequest) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -1884,15 +2498,16 @@ type TimeoutStatus struct {
 	Status  TimeoutStatus_Status `protobuf:"varint,2,opt,name=status,proto3,enum=TimeoutStatus_Status" json:"status,omitempty"`
 	Timeout *Timeout             `protobuf:"bytes,3,opt,name=timeout,proto3" json:"timeout,omitempty"`
 	// Echoes the report window selected for this episode.
-	StartTick uint32 `protobuf:"varint,4,opt,name=start_tick,json=startTick,proto3" json:"start_tick,omitempty"`
-	ReportSeq uint32 `protobuf:"varint,5,opt,name=report_seq,json=reportSeq,proto3" json:"report_seq,omitempty"`
+	StartTick            uint32 `protobuf:"varint,4,opt,name=start_tick,json=startTick,proto3" json:"start_tick,omitempty"`
+	ReportSeq            uint32 `protobuf:"varint,5,opt,name=report_seq,json=reportSeq,proto3" json:"report_seq,omitempty"`
+	WindowConsensusCount uint32 `protobuf:"varint,6,opt,name=window_consensus_count,json=windowConsensusCount,proto3" json:"window_consensus_count,omitempty"`
 }
 
 func (m *TimeoutStatus) Reset()         { *m = TimeoutStatus{} }
 func (m *TimeoutStatus) String() string { return proto.CompactTextString(m) }
 func (*TimeoutStatus) ProtoMessage()    {}
 func (*TimeoutStatus) Descriptor() ([]byte, []int) {
-	return fileDescriptor_5ce53b760672e5c1, []int{17}
+	return fileDescriptor_5ce53b760672e5c1, []int{23}
 }
 func (m *TimeoutStatus) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -1956,24 +2571,37 @@ func (m *TimeoutStatus) GetReportSeq() uint32 {
 	return 0
 }
 
+func (m *TimeoutStatus) GetWindowConsensusCount() uint32 {
+	if m != nil {
+		return m.WindowConsensusCount
+	}
+	return 0
+}
+
 func init() {
 	proto.RegisterEnum("Protocol", Protocol_name, Protocol_value)
 	proto.RegisterEnum("TimeoutStatus_Status", TimeoutStatus_Status_name, TimeoutStatus_Status_value)
 	proto.RegisterType((*PbftReport)(nil), "PbftReport")
-	proto.RegisterType((*TwoPcOverPbftReport)(nil), "TwoPcOverPbftReport")
 	proto.RegisterType((*SbftReport)(nil), "SbftReport")
 	proto.RegisterType((*TendermintReport)(nil), "TendermintReport")
+	proto.RegisterType((*HotstuffReport)(nil), "HotstuffReport")
+	proto.RegisterType((*AutobahnReport)(nil), "AutobahnReport")
+	proto.RegisterType((*SmartbftReport)(nil), "SmartbftReport")
 	proto.RegisterType((*ReportLocal)(nil), "ReportLocal")
 	proto.RegisterType((*PbftReward)(nil), "PbftReward")
-	proto.RegisterType((*TwoPcOverPbftReward)(nil), "TwoPcOverPbftReward")
 	proto.RegisterType((*SbftReward)(nil), "SbftReward")
 	proto.RegisterType((*TendermintReward)(nil), "TendermintReward")
+	proto.RegisterType((*HotstuffReward)(nil), "HotstuffReward")
+	proto.RegisterType((*AutobahnReward)(nil), "AutobahnReward")
+	proto.RegisterType((*SmartbftReward)(nil), "SmartbftReward")
 	proto.RegisterType((*Reward)(nil), "Reward")
 	proto.RegisterType((*ReportBatch)(nil), "ReportBatch")
 	proto.RegisterType((*PbftTimeout)(nil), "PbftTimeout")
-	proto.RegisterType((*TwoPcOverPbftTimeout)(nil), "TwoPcOverPbftTimeout")
 	proto.RegisterType((*SbftTimeout)(nil), "SbftTimeout")
 	proto.RegisterType((*TendermintTimeout)(nil), "TendermintTimeout")
+	proto.RegisterType((*HotstuffTimeout)(nil), "HotstuffTimeout")
+	proto.RegisterType((*AutobahnTimeout)(nil), "AutobahnTimeout")
+	proto.RegisterType((*SmartbftTimeout)(nil), "SmartbftTimeout")
 	proto.RegisterType((*Timeout)(nil), "Timeout")
 	proto.RegisterType((*TimeoutRequest)(nil), "TimeoutRequest")
 	proto.RegisterType((*TimeoutStatus)(nil), "TimeoutStatus")
@@ -1982,146 +2610,132 @@ func init() {
 func init() { proto.RegisterFile("adaptive_timers/agent.proto", fileDescriptor_5ce53b760672e5c1) }
 
 var fileDescriptor_5ce53b760672e5c1 = []byte{
-	// 2211 bytes of a gzipped FileDescriptorProto
-	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xec, 0x59, 0x5b, 0x6f, 0xdb, 0xc8,
-	0x15, 0xb6, 0x7c, 0xf7, 0x91, 0xe5, 0xc8, 0xf4, 0x25, 0xb2, 0x9d, 0xd8, 0x59, 0x6d, 0x36, 0x4d,
-	0xdb, 0x44, 0x76, 0x9d, 0x55, 0x13, 0xed, 0x16, 0xdd, 0xb5, 0x2d, 0x65, 0xe3, 0x45, 0x62, 0x29,
-	0x94, 0x92, 0xa0, 0xdd, 0x07, 0x82, 0x22, 0xc7, 0x12, 0x61, 0x8a, 0xc3, 0x70, 0x46, 0x32, 0xbc,
-	0xd8, 0xa7, 0x3e, 0xf4, 0xb1, 0xe8, 0xdb, 0x02, 0x45, 0xff, 0x42, 0xff, 0x47, 0x5f, 0x0a, 0x2c,
-	0x7a, 0x01, 0xfa, 0x52, 0xa0, 0x48, 0x1e, 0xfa, 0x37, 0x8a, 0xb9, 0x90, 0xe2, 0x50, 0x94, 0x9d,
-	0x45, 0x17, 0x45, 0x0b, 0xec, 0x93, 0xcd, 0xf9, 0xbe, 0xef, 0xcc, 0x99, 0xc3, 0x73, 0xce, 0xcc,
-	0x50, 0xb0, 0x65, 0xda, 0xa6, 0x4f, 0x9d, 0x01, 0x32, 0xa8, 0xd3, 0x43, 0x01, 0xd9, 0x35, 0x3b,
-	0xc8, 0xa3, 0x25, 0x3f, 0xc0, 0x14, 0x6f, 0x6e, 0x75, 0x30, 0xee, 0xb8, 0x68, 0x97, 0x3f, 0xb5,
-	0xfb, 0xa7, 0xbb, 0xa8, 0xe7, 0xd3, 0x0b, 0x01, 0x16, 0xbf, 0x9e, 0x07, 0x68, 0xb4, 0x4f, 0xa9,
-	0x8e, 0x7c, 0x1c, 0x50, 0xed, 0x3e, 0x68, 0x14, 0x53, 0xd3, 0x35, 0x68, 0x60, 0x7a, 0xc4, 0xb4,
-	0xa8, 0x83, 0x3d, 0x52, 0xc8, 0xdc, 0xca, 0xdc, 0xcd, 0xe9, 0xcb, 0x1c, 0x69, 0xc5, 0x00, 0xed,
-	0x23, 0xd8, 0x10, 0x74, 0x0b, 0x7b, 0x04, 0x79, 0xa4, 0x4f, 0x0c, 0xc7, 0x23, 0xd4, 0xf4, 0x2c,
-	0x44, 0x0a, 0x93, 0x5c, 0x75, 0x9d, 0x13, 0x8e, 0x42, 0xfc, 0x38, 0x84, 0xb5, 0x87, 0x50, 0x30,
-	0x07, 0x9d, 0x98, 0xd2, 0x35, 0x29, 0xf2, 0xac, 0x0b, 0xa3, 0x47, 0x0a, 0x53, 0xb7, 0x32, 0x77,
-	0x27, 0xf5, 0x35, 0x73, 0xd0, 0x89, 0x84, 0x4f, 0x05, 0xfa, 0x8c, 0x0b, 0xfd, 0x4a, 0x39, 0x5d,
-	0x38, 0x2d, 0x84, 0x7e, 0xa5, 0x3c, 0x4e, 0x58, 0x49, 0x17, 0xce, 0x84, 0xc2, 0x4a, 0x8a, 0xf0,
-	0x03, 0x58, 0xa2, 0xdd, 0x00, 0xf7, 0x3b, 0x5d, 0xbf, 0x4f, 0x0d, 0xea, 0x93, 0xc2, 0x2c, 0xa7,
-	0xe7, 0x86, 0xa3, 0x2d, 0x9f, 0x68, 0x1f, 0xc2, 0x3a, 0x0b, 0x3f, 0xee, 0x53, 0x63, 0xe0, 0x60,
-	0xd7, 0x64, 0x31, 0x32, 0x02, 0x93, 0xa2, 0xc2, 0x1c, 0xa7, 0xaf, 0x4a, 0xf4, 0x65, 0x08, 0xea,
-	0x26, 0x45, 0xda, 0x6d, 0x58, 0x62, 0x71, 0x68, 0x9b, 0xd4, 0xea, 0x1a, 0xc4, 0xf9, 0x12, 0x15,
-	0xe6, 0x39, 0x7b, 0xd1, 0x1c, 0x74, 0x0e, 0xd9, 0x60, 0xd3, 0xf9, 0x92, 0xb3, 0xd8, 0xa2, 0x63,
-	0xac, 0x05, 0xc1, 0xf2, 0x2b, 0xe5, 0x21, 0xab, 0x04, 0x2b, 0x2e, 0x32, 0x6d, 0x14, 0x18, 0x56,
-	0xd7, 0xf4, 0x3a, 0xc8, 0xb0, 0x70, 0xdf, 0xa3, 0x05, 0x10, 0xef, 0x4f, 0x40, 0x47, 0x1c, 0x39,
-	0x62, 0x80, 0xb6, 0x07, 0xab, 0x01, 0xea, 0xf0, 0x18, 0x28, 0x82, 0x2c, 0x17, 0x68, 0x12, 0x8b,
-	0x2b, 0x3e, 0x82, 0x4d, 0xbf, 0x6b, 0x12, 0x64, 0xf8, 0x01, 0xf6, 0x31, 0x41, 0x06, 0xf3, 0xdd,
-	0x46, 0xae, 0xc9, 0xa3, 0xb8, 0xc8, 0x7d, 0x5a, 0xe7, 0x8c, 0x86, 0x20, 0x1c, 0x0c, 0x3a, 0x55,
-	0x06, 0x3f, 0x23, 0xa3, 0x5a, 0xb6, 0xa2, 0x48, 0x9b, 0x1b, 0xd5, 0x36, 0x2a, 0xe5, 0x50, 0xfb,
-	0x53, 0x28, 0x08, 0xed, 0x79, 0xe0, 0xd0, 0xc4, 0xac, 0x4b, 0x22, 0xba, 0x1c, 0x7f, 0xc5, 0xe0,
-	0xd8, 0x9c, 0x09, 0x9d, 0x32, 0xe3, 0xb5, 0xa4, 0x2e, 0x36, 0xdf, 0x23, 0xd8, 0x10, 0x3a, 0xd3,
-	0xb2, 0x90, 0x4f, 0xd5, 0x09, 0xf3, 0x32, 0x59, 0x18, 0xe1, 0x80, 0xe3, 0xb1, 0x19, 0x93, 0x4a,
-	0x65, 0xca, 0xe5, 0x11, 0x65, 0x6c, 0xce, 0x1a, 0xdc, 0x92, 0xf1, 0xc1, 0x84, 0x1a, 0x36, 0xb2,
-	0x1c, 0xc2, 0x32, 0x48, 0x99, 0x5a, 0xe3, 0x06, 0xb6, 0x44, 0x94, 0x30, 0xa1, 0x55, 0xc9, 0x8a,
-	0x39, 0x30, 0xc6, 0x8c, 0xe2, 0xc7, 0xca, 0x18, 0x33, 0x43, 0x6f, 0x8a, 0x7f, 0x59, 0x82, 0x95,
-	0xd6, 0x39, 0x6e, 0x58, 0xf5, 0x01, 0x0a, 0x62, 0x2d, 0x62, 0x07, 0xa6, 0xfd, 0xf6, 0x29, 0xe5,
-	0x4d, 0x21, 0xbb, 0x9f, 0x2d, 0x0d, 0x21, 0x9d, 0x03, 0x63, 0x7a, 0xc8, 0xe4, 0x25, 0x3d, 0x84,
-	0x38, 0x5e, 0xc7, 0x45, 0x06, 0xe9, 0x9a, 0x81, 0xad, 0xaa, 0xa6, 0x44, 0x0f, 0x11, 0x84, 0x26,
-	0xc3, 0x15, 0xed, 0x23, 0x28, 0x58, 0x01, 0x26, 0x24, 0x4d, 0x3a, 0xcd, 0xa5, 0xeb, 0x1c, 0x1f,
-	0x55, 0xde, 0x85, 0xbc, 0x1f, 0x20, 0xdf, 0x0c, 0x90, 0x81, 0xcf, 0x64, 0xd6, 0xcf, 0x70, 0xc5,
-	0x92, 0x1c, 0xaf, 0x9f, 0x89, 0x8c, 0xbf, 0x07, 0x5a, 0xc8, 0x3c, 0x35, 0x1d, 0x57, 0x72, 0x67,
-	0x39, 0x37, 0xb4, 0xf1, 0xd8, 0x74, 0x5c, 0xc1, 0xbe, 0x03, 0xd7, 0x2c, 0xdc, 0xeb, 0x39, 0x74,
-	0x68, 0x76, 0x8e, 0x53, 0x73, 0x62, 0x38, 0xb4, 0xba, 0x03, 0x59, 0xb3, 0x8d, 0x03, 0x2a, 0x39,
-	0xf3, 0x9c, 0x03, 0x7c, 0x48, 0x10, 0x6e, 0xc3, 0x92, 0xe3, 0x19, 0x36, 0xee, 0xb7, 0x43, 0xce,
-	0x02, 0xe7, 0x2c, 0x3a, 0x5e, 0x95, 0x0d, 0x0a, 0xd6, 0x3e, 0xac, 0x85, 0xce, 0x85, 0xad, 0x27,
-	0x5e, 0xf2, 0x2b, 0x12, 0x6c, 0x09, 0x4c, 0x68, 0x4e, 0xe0, 0xb6, 0x74, 0x31, 0x94, 0xf4, 0xbd,
-	0x33, 0x0f, 0x9f, 0x7b, 0x06, 0xee, 0x53, 0x0b, 0xf7, 0xd4, 0x26, 0x70, 0x4b, 0x70, 0xa5, 0x85,
-	0x17, 0x82, 0x59, 0x17, 0x44, 0x61, 0xaf, 0x0a, 0x3b, 0x62, 0x29, 0x6d, 0x44, 0xa8, 0x81, 0x4e,
-	0x4f, 0xd9, 0xff, 0xaa, 0x37, 0x8b, 0xdc, 0xd4, 0x16, 0xa7, 0x1d, 0x22, 0x42, 0x6b, 0x9c, 0xa4,
-	0x78, 0xb5, 0x0f, 0x6b, 0x2e, 0xb6, 0x58, 0xcc, 0x3c, 0x8a, 0x3c, 0xde, 0x3a, 0x85, 0x36, 0x27,
-	0x56, 0xc2, 0xc0, 0xa3, 0x08, 0x8b, 0xda, 0x57, 0x72, 0xf5, 0xbc, 0xdd, 0x8a, 0x86, 0xa0, 0xa9,
-	0x8b, 0xe7, 0xcd, 0xf6, 0x26, 0x88, 0x18, 0x0b, 0x9e, 0x68, 0x00, 0x0b, 0x7c, 0x84, 0xc3, 0x3b,
-	0x90, 0x95, 0xa1, 0xe1, 0xb8, 0xa8, 0x73, 0x10, 0x43, 0x9c, 0xb0, 0x07, 0xab, 0x49, 0x2f, 0x39,
-	0x53, 0xd4, 0xb5, 0xa6, 0x3a, 0xc9, 0x15, 0x0f, 0x61, 0x83, 0x15, 0x30, 0xf2, 0x6c, 0x83, 0x62,
-	0xfe, 0x27, 0xb6, 0xeb, 0x88, 0x6a, 0x5e, 0x35, 0x07, 0x9d, 0x9a, 0x67, 0xb7, 0x70, 0xcd, 0xb3,
-	0xe3, 0xbb, 0xd5, 0x06, 0x2b, 0xd9, 0x74, 0xe1, 0x8a, 0x6c, 0x5d, 0x95, 0xf2, 0x18, 0x61, 0x65,
-	0x8c, 0x70, 0x35, 0x14, 0x56, 0x46, 0x85, 0x0f, 0x60, 0x9d, 0xb9, 0x1a, 0x86, 0x34, 0xa6, 0x5a,
-	0xe3, 0xaa, 0x15, 0x73, 0xd0, 0x69, 0x08, 0x50, 0x11, 0x31, 0x37, 0x53, 0x44, 0xeb, 0x42, 0xe4,
-	0x57, 0xca, 0x23, 0xa2, 0x9f, 0xc0, 0x9a, 0xd8, 0xfb, 0x79, 0xac, 0x63, 0x9a, 0xeb, 0x22, 0x8e,
-	0x7c, 0xe3, 0x67, 0x98, 0x22, 0x11, 0xbb, 0x7e, 0x52, 0x52, 0x90, 0x2f, 0x9b, 0x6d, 0xf9, 0xaa,
-	0xe4, 0x07, 0x90, 0x67, 0xb3, 0xf0, 0x17, 0x76, 0x6e, 0x3a, 0x94, 0xb1, 0x37, 0xc4, 0xc6, 0x6d,
-	0x0e, 0x3a, 0x4f, 0xb1, 0x75, 0xf6, 0xca, 0x74, 0xa8, 0x20, 0x32, 0xdb, 0x0a, 0x71, 0x53, 0x10,
-	0xfd, 0x4a, 0x59, 0x25, 0x46, 0x16, 0xbb, 0xd8, 0xb5, 0x19, 0x71, 0x4b, 0xb1, 0xf8, 0x04, 0xbb,
-	0x76, 0xc2, 0x62, 0x48, 0xbc, 0xa1, 0x58, 0x94, 0xc4, 0x43, 0xd8, 0x0e, 0x90, 0x49, 0x58, 0x7f,
-	0x0e, 0x23, 0xc8, 0x34, 0xed, 0x3e, 0xb9, 0x90, 0xf9, 0x7f, 0x93, 0xe7, 0xff, 0xa6, 0x60, 0x85,
-	0x91, 0xc4, 0xd6, 0xd9, 0x61, 0x9f, 0x5c, 0x44, 0x05, 0x9d, 0xb0, 0x31, 0x30, 0x5d, 0xc7, 0x16,
-	0xe7, 0x8f, 0x58, 0xcf, 0xda, 0x16, 0x05, 0xad, 0x58, 0x7a, 0x19, 0x31, 0x87, 0x3d, 0xec, 0x13,
-	0xb8, 0x91, 0xb0, 0xa7, 0x56, 0xf3, 0x0e, 0xb7, 0xb3, 0xa1, 0xd8, 0x51, 0x6a, 0xf9, 0x63, 0xd8,
-	0x4c, 0x18, 0xc0, 0xb4, 0xcb, 0x0e, 0x25, 0x5c, 0x7e, 0x4b, 0xf4, 0x74, 0x45, 0x5e, 0x67, 0xb8,
-	0x10, 0x7f, 0x01, 0x3f, 0x96, 0xe2, 0x77, 0xea, 0x52, 0xef, 0x71, 0x6b, 0x77, 0x84, 0xe4, 0xe8,
-	0xaa, 0x5e, 0xf5, 0x1c, 0x24, 0xd3, 0xb8, 0xaa, 0x65, 0x15, 0xb9, 0xdd, 0xf7, 0x04, 0xfb, 0xe0,
-	0x92, 0xc6, 0x75, 0x0f, 0x34, 0x69, 0x32, 0xbe, 0xc8, 0xf7, 0xc5, 0xfe, 0x20, 0x90, 0xe1, 0xea,
-	0x8a, 0x7f, 0x98, 0x06, 0x68, 0x7e, 0x7f, 0xde, 0xfe, 0xfe, 0xbc, 0xfd, 0x6e, 0xe7, 0xed, 0xe2,
-	0xbf, 0x66, 0x20, 0xdf, 0x42, 0x9e, 0x8d, 0x82, 0x9e, 0xe3, 0xfd, 0xbf, 0x65, 0x4d, 0x79, 0xef,
-	0xf2, 0xac, 0x29, 0xef, 0x8d, 0xcb, 0x9a, 0xbd, 0x2b, 0xb2, 0x66, 0xef, 0x7f, 0x37, 0x6b, 0xca,
-	0x7b, 0x69, 0x59, 0x53, 0xde, 0x4b, 0xe4, 0x96, 0xc2, 0xba, 0x16, 0xe6, 0xd6, 0xde, 0x7f, 0xf3,
-	0x2e, 0xc7, 0x4f, 0xb6, 0xe2, 0x26, 0x16, 0x8b, 0xb1, 0xb8, 0xc3, 0xe5, 0x25, 0x32, 0x0c, 0xaf,
-	0x38, 0x07, 0x0f, 0x30, 0x55, 0xd8, 0xb9, 0x90, 0xcd, 0x91, 0x21, 0x5b, 0x1c, 0xcd, 0x46, 0x77,
-	0xeb, 0xe1, 0xd1, 0xcc, 0x52, 0x77, 0xeb, 0xe2, 0xdf, 0xa6, 0x20, 0x2b, 0xf2, 0xfb, 0x29, 0xb6,
-	0x4c, 0x57, 0xbb, 0x0e, 0x73, 0x1e, 0xb6, 0x91, 0xe1, 0xd8, 0x32, 0xb3, 0x67, 0xd9, 0xe3, 0xb1,
-	0xad, 0x15, 0x60, 0x0e, 0xf9, 0x0e, 0xc1, 0x36, 0x92, 0xc9, 0x1b, 0x3e, 0x6a, 0x1f, 0xc0, 0x3c,
-	0xff, 0xaa, 0x61, 0x61, 0x97, 0x27, 0xe7, 0xd2, 0xfe, 0x42, 0xa9, 0x21, 0x07, 0xf4, 0x08, 0x62,
-	0x87, 0x40, 0x42, 0x4d, 0xde, 0xf1, 0xad, 0x33, 0x79, 0x92, 0x5f, 0xe0, 0x23, 0x2d, 0xc7, 0x3a,
-	0x63, 0x70, 0xc0, 0xfd, 0x30, 0x08, 0x7a, 0x2d, 0x4f, 0xef, 0x0b, 0x62, 0xa4, 0x89, 0x5e, 0x6b,
-	0xf7, 0x00, 0xd8, 0x35, 0xc7, 0x20, 0x94, 0xe5, 0x0c, 0x8c, 0xdc, 0x82, 0x9e, 0x4c, 0xe8, 0x0b,
-	0x8c, 0xd0, 0x64, 0xb8, 0xf6, 0x39, 0xac, 0xd3, 0x73, 0x6c, 0xf8, 0x96, 0x81, 0x07, 0x28, 0x30,
-	0x62, 0xca, 0x2c, 0x57, 0xae, 0x96, 0x52, 0xee, 0x58, 0x4f, 0x26, 0x74, 0x8d, 0xc6, 0x87, 0x85,
-	0xad, 0x7b, 0x00, 0x64, 0xa8, 0x5f, 0x94, 0x33, 0x37, 0x95, 0x99, 0x49, 0xc4, 0xfe, 0x39, 0xe4,
-	0x69, 0xd4, 0x38, 0xa4, 0x26, 0xc7, 0x35, 0xcb, 0xa5, 0x64, 0x47, 0x79, 0x32, 0xa1, 0x5f, 0x1b,
-	0x92, 0x85, 0x7e, 0x07, 0x66, 0x03, 0x74, 0x6e, 0x06, 0x36, 0x2f, 0xd7, 0xec, 0xfe, 0x5c, 0x49,
-	0xe7, 0x8f, 0xba, 0x1c, 0xd6, 0x6e, 0xc0, 0x02, 0x71, 0x3a, 0x9e, 0x49, 0xfb, 0x01, 0xe2, 0x95,
-	0xb9, 0xa8, 0x0f, 0x07, 0x0e, 0xe7, 0x60, 0x86, 0xcf, 0x59, 0xfc, 0x2a, 0xfc, 0xc0, 0xc4, 0x45,
-	0xb1, 0x97, 0x97, 0x51, 0x5f, 0xde, 0xfb, 0x6c, 0x3e, 0xe6, 0x0c, 0x7f, 0xab, 0x89, 0x9b, 0xa5,
-	0x84, 0xb4, 0x5d, 0x58, 0x8c, 0x8e, 0x03, 0x04, 0xd9, 0xfc, 0x2d, 0x67, 0xf7, 0x17, 0x39, 0x35,
-	0x3c, 0xe7, 0x67, 0x25, 0xe3, 0x05, 0x41, 0x76, 0xf1, 0xeb, 0xcc, 0xc8, 0x2d, 0xf6, 0x0a, 0x3f,
-	0xee, 0x25, 0xfc, 0x48, 0x7d, 0x43, 0x91, 0x43, 0x8f, 0x52, 0x1d, 0x5a, 0x53, 0x35, 0xa9, 0x9e,
-	0x7d, 0x15, 0x1e, 0x04, 0xbe, 0x75, 0x5c, 0x9a, 0xef, 0x1e, 0x97, 0xe6, 0xb8, 0xd9, 0x7f, 0x93,
-	0x51, 0xf7, 0x95, 0x2b, 0x9c, 0xf8, 0x61, 0xc2, 0x89, 0xd1, 0x14, 0x8a, 0x5c, 0x29, 0xa7, 0xba,
-	0xa2, 0xc5, 0x04, 0xa9, 0x0e, 0xfd, 0x29, 0x03, 0xb3, 0xd2, 0x8d, 0xf7, 0x52, 0xbf, 0x30, 0x30,
-	0xe8, 0xc9, 0x84, 0xfc, 0xc6, 0xf0, 0x09, 0xe4, 0x93, 0x65, 0x35, 0xee, 0x75, 0x49, 0x5d, 0x4e,
-	0x29, 0x28, 0x36, 0x07, 0x2b, 0x15, 0xe9, 0x5d, 0x18, 0xd3, 0x70, 0x0e, 0x06, 0x69, 0x0f, 0x00,
-	0x86, 0x35, 0x21, 0x8b, 0x40, 0x5d, 0xb7, 0xa4, 0xc7, 0x68, 0x2c, 0xed, 0x07, 0xa6, 0xdb, 0x47,
-	0xc5, 0x41, 0xd8, 0xcd, 0x78, 0x47, 0xbf, 0x24, 0xb4, 0xf1, 0xa6, 0x35, 0x39, 0xbe, 0x69, 0xdd,
-	0x81, 0x39, 0x11, 0x60, 0xb6, 0xef, 0x4e, 0xf1, 0x97, 0x1b, 0xeb, 0x96, 0x7a, 0x08, 0x16, 0x9f,
-	0x43, 0x36, 0x96, 0x72, 0xda, 0x21, 0xdc, 0x44, 0x2e, 0xe2, 0x07, 0x81, 0xe8, 0x80, 0xdb, 0x73,
-	0x5c, 0xd7, 0x21, 0xc8, 0xc2, 0x9e, 0x1d, 0x9e, 0x1a, 0xb6, 0x42, 0x92, 0xd4, 0x3d, 0x8b, 0x51,
-	0x8a, 0xbf, 0xcf, 0xc0, 0x6a, 0x5a, 0x3e, 0x7f, 0x17, 0xc6, 0xb5, 0x4f, 0xe1, 0x46, 0xf2, 0x96,
-	0xa1, 0x98, 0x10, 0x2d, 0x7e, 0x53, 0xbd, 0xcb, 0x2b, 0xee, 0xfd, 0x35, 0x03, 0xd9, 0xe6, 0x77,
-	0xec, 0xd5, 0x11, 0x6c, 0x13, 0x17, 0x9f, 0x1b, 0xbe, 0x49, 0xbb, 0x97, 0xf9, 0xb5, 0xc5, 0x58,
-	0x0d, 0x93, 0x76, 0xd3, 0x8c, 0xfc, 0x0c, 0x36, 0xc5, 0x1e, 0x9f, 0x6a, 0x40, 0x7c, 0xda, 0x2a,
-	0x70, 0x46, 0xda, 0xb2, 0xfe, 0x91, 0x81, 0xe5, 0x91, 0x9a, 0x11, 0xe1, 0x12, 0x7b, 0xf6, 0x25,
-	0x6b, 0xdb, 0x94, 0x9c, 0xf1, 0x01, 0xe7, 0xfb, 0xf8, 0x15, 0x01, 0x67, 0x9c, 0x34, 0x0b, 0x55,
-	0xd8, 0x1e, 0xee, 0xed, 0x97, 0xac, 0xed, 0x46, 0xc4, 0x4a, 0x5b, 0xdf, 0x9f, 0x33, 0x30, 0x17,
-	0xae, 0xaa, 0xa8, 0x54, 0xbc, 0xd2, 0xce, 0xa3, 0x92, 0xff, 0x74, 0x6c, 0xc9, 0xa7, 0x77, 0xdb,
-	0xd1, 0x9a, 0x2f, 0x2a, 0x35, 0xaf, 0x34, 0xc7, 0xa8, 0xe8, 0x3f, 0x4c, 0x29, 0xfa, 0x94, 0xde,
-	0x35, 0xae, 0xea, 0x9f, 0xc3, 0x52, 0xd8, 0xdd, 0xd0, 0xeb, 0x3e, 0x22, 0xf4, 0x3f, 0x2e, 0xfc,
-	0xe2, 0xaf, 0x27, 0x21, 0x27, 0x6d, 0xb2, 0x8d, 0xb9, 0x4f, 0x2e, 0x31, 0x79, 0x1f, 0x66, 0x09,
-	0xe7, 0x48, 0x83, 0x6b, 0x25, 0x45, 0x59, 0x12, 0x7f, 0x74, 0x49, 0xd2, 0x8a, 0x30, 0x27, 0x5f,
-	0x9f, 0x8c, 0xc9, 0x7c, 0xc8, 0xd7, 0x43, 0x20, 0x71, 0x58, 0x9a, 0xbe, 0xfc, 0xb0, 0x34, 0x93,
-	0x38, 0x2c, 0x15, 0x3f, 0x87, 0x59, 0xe9, 0xf4, 0x3a, 0x68, 0xcd, 0xd6, 0x41, 0xeb, 0x45, 0xd3,
-	0x78, 0x71, 0xd2, 0x6c, 0xd4, 0x8e, 0x8e, 0x1f, 0x1f, 0xd7, 0xaa, 0xf9, 0x09, 0x2d, 0x0f, 0x8b,
-	0x27, 0xf5, 0x96, 0xa1, 0xd7, 0x8e, 0x6a, 0xc7, 0x2f, 0x6b, 0xd5, 0x7c, 0x46, 0xcb, 0xc2, 0x5c,
-	0xa3, 0x76, 0x52, 0x3d, 0x3e, 0xf9, 0x2c, 0x3f, 0xa9, 0x2d, 0xc0, 0x8c, 0x5e, 0x3b, 0xa8, 0xfe,
-	0x22, 0x3f, 0xf5, 0xa3, 0x5f, 0x65, 0x60, 0x3e, 0x8c, 0x8f, 0x56, 0x80, 0xd5, 0x86, 0x5e, 0x6f,
-	0xd5, 0x8f, 0xea, 0x4f, 0x13, 0x06, 0x97, 0x21, 0x17, 0x21, 0x8d, 0xc3, 0xc7, 0xad, 0x7c, 0x46,
-	0xbb, 0x09, 0x1b, 0xd1, 0x50, 0xeb, 0x55, 0xdd, 0x68, 0x1c, 0x19, 0xf5, 0x97, 0x35, 0x5d, 0xc0,
-	0x93, 0x8a, 0xa2, 0xc9, 0x86, 0xa6, 0xb4, 0xeb, 0xb0, 0x32, 0x54, 0xd4, 0x4e, 0xaa, 0x35, 0xfd,
-	0xd9, 0xf1, 0x49, 0x2b, 0x3f, 0xbd, 0xff, 0x18, 0x16, 0xa2, 0xab, 0x87, 0x56, 0x81, 0xe5, 0x66,
-	0xbf, 0xdd, 0x73, 0x68, 0xbc, 0xd3, 0x87, 0x7d, 0x99, 0x3f, 0x6d, 0xae, 0x97, 0xc4, 0xaf, 0x6f,
-	0xa5, 0xf0, 0xd7, 0xb7, 0x52, 0xad, 0xe7, 0xd3, 0x8b, 0xfd, 0xdf, 0x4d, 0x42, 0xee, 0x29, 0x32,
-	0x03, 0xcf, 0xf1, 0x3a, 0x07, 0x1d, 0xc4, 0x3f, 0x80, 0x42, 0x13, 0x79, 0xb6, 0xbc, 0xe2, 0x29,
-	0xdd, 0x7d, 0x9c, 0x15, 0xed, 0x3e, 0xc0, 0x67, 0x28, 0xea, 0x0d, 0xd7, 0x4a, 0x6a, 0xee, 0x6d,
-	0x2e, 0xa9, 0xaf, 0x5f, 0x7b, 0x00, 0xd9, 0x66, 0xd7, 0x0c, 0xd0, 0xb7, 0x9a, 0xe3, 0x11, 0xe4,
-	0xab, 0xc8, 0x75, 0x06, 0x28, 0x18, 0x2e, 0xfc, 0x9d, 0xd6, 0xa8, 0x3d, 0x84, 0x19, 0x1d, 0x11,
-	0x44, 0xb5, 0x31, 0x84, 0x71, 0xc2, 0xc3, 0x2f, 0xfe, 0xf8, 0x66, 0x3b, 0xf3, 0xcd, 0x9b, 0xed,
-	0xcc, 0x3f, 0xdf, 0x6c, 0x67, 0x7e, 0xfb, 0x76, 0x7b, 0xe2, 0x9b, 0xb7, 0xdb, 0x13, 0x7f, 0x7f,
-	0xbb, 0x3d, 0xf1, 0xcb, 0x83, 0x8e, 0x43, 0xbb, 0xfd, 0x76, 0xc9, 0xc2, 0xbd, 0x5d, 0x0b, 0xf7,
-	0x10, 0x6d, 0x9f, 0xd2, 0xe1, 0x3f, 0xdc, 0xcc, 0x6e, 0xe2, 0xb7, 0xd0, 0x8f, 0xc3, 0x67, 0xf1,
-	0xd8, 0x9e, 0xe5, 0xac, 0x07, 0xff, 0x0e, 0x00, 0x00, 0xff, 0xff, 0xea, 0x72, 0x46, 0xc7, 0x34,
-	0x1d, 0x00, 0x00,
+	// 1995 bytes of a gzipped FileDescriptorProto
+	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xec, 0x5a, 0xcd, 0x6e, 0x1b, 0xc9,
+	0x11, 0x16, 0x29, 0x89, 0x14, 0x8b, 0x7f, 0xc3, 0xb6, 0x7e, 0x68, 0xc9, 0x56, 0x36, 0x4c, 0xd6,
+	0xd9, 0x38, 0x31, 0x45, 0x48, 0x26, 0x6c, 0x25, 0x41, 0xb0, 0xfa, 0xa1, 0x2c, 0x19, 0xb6, 0xc4,
+	0x9d, 0xa1, 0x0c, 0x24, 0x39, 0x0c, 0x5a, 0x64, 0x8b, 0x1c, 0x2c, 0x39, 0x33, 0x9e, 0x69, 0x52,
+	0xf0, 0x22, 0x0f, 0x90, 0x53, 0x90, 0x73, 0x2e, 0xb9, 0xe5, 0x90, 0x43, 0x6e, 0x01, 0x72, 0xc8,
+	0x03, 0xe4, 0x14, 0x6c, 0x6e, 0xb9, 0x04, 0x08, 0xec, 0x43, 0x1e, 0x20, 0x2f, 0x10, 0x74, 0x4f,
+	0xf7, 0xfc, 0x90, 0x43, 0xca, 0xde, 0xdd, 0x4b, 0x10, 0x9e, 0xa4, 0xe9, 0xfa, 0xbe, 0x9a, 0xea,
+	0xe9, 0xaa, 0xaf, 0xba, 0x1b, 0x84, 0x2d, 0xdc, 0xc1, 0x36, 0x35, 0x46, 0x44, 0xa7, 0xc6, 0x80,
+	0x38, 0xee, 0x0e, 0xee, 0x12, 0x93, 0x56, 0x6d, 0xc7, 0xa2, 0xd6, 0xe6, 0x56, 0xd7, 0xb2, 0xba,
+	0x7d, 0xb2, 0xc3, 0x9f, 0xae, 0x86, 0xd7, 0x3b, 0x64, 0x60, 0xd3, 0x37, 0x9e, 0xb1, 0xf2, 0xa7,
+	0x34, 0x40, 0xf3, 0xea, 0x9a, 0xaa, 0xc4, 0xb6, 0x1c, 0x8a, 0x1e, 0x01, 0xa2, 0x16, 0xc5, 0x7d,
+	0x9d, 0x3a, 0xd8, 0x74, 0x71, 0x9b, 0x1a, 0x96, 0xe9, 0x96, 0x13, 0x1f, 0x25, 0x3e, 0xc9, 0xab,
+	0x25, 0x6e, 0x69, 0x85, 0x0c, 0xe8, 0x47, 0x70, 0xd7, 0x83, 0xb7, 0x2d, 0xd3, 0x25, 0xa6, 0x3b,
+	0x74, 0x75, 0xc3, 0x74, 0x29, 0x36, 0xdb, 0xc4, 0x2d, 0x27, 0x39, 0x6b, 0x83, 0x03, 0x8e, 0xa4,
+	0xfd, 0x4c, 0x9a, 0xd1, 0x13, 0x28, 0xe3, 0x51, 0x37, 0xc4, 0xec, 0x63, 0x4a, 0xcc, 0xf6, 0x1b,
+	0x7d, 0xe0, 0x96, 0x17, 0x3f, 0x4a, 0x7c, 0x92, 0x54, 0xd7, 0xf0, 0xa8, 0xeb, 0x13, 0x5f, 0x78,
+	0xd6, 0x97, 0x9c, 0x68, 0xd7, 0x6b, 0xf1, 0xc4, 0x25, 0x8f, 0x68, 0xd7, 0x6b, 0x53, 0x88, 0xfb,
+	0xf5, 0x78, 0xe2, 0xb2, 0x20, 0xee, 0xd7, 0x63, 0x88, 0x1f, 0x43, 0x81, 0xf6, 0x1c, 0x6b, 0xd8,
+	0xed, 0xd9, 0x43, 0xaa, 0x53, 0xdb, 0x2d, 0xa7, 0x38, 0x3c, 0x1f, 0x8c, 0xb6, 0x6c, 0x17, 0x7d,
+	0x17, 0x0a, 0x6c, 0x46, 0x57, 0x98, 0xb6, 0x7b, 0xba, 0x6b, 0x7c, 0x41, 0xca, 0x69, 0x0e, 0xcb,
+	0xe1, 0x51, 0xf7, 0x90, 0x0d, 0x6a, 0xc6, 0x17, 0x84, 0xa1, 0x58, 0x14, 0x21, 0xd4, 0x8a, 0x87,
+	0xb2, 0xf7, 0xeb, 0x01, 0xaa, 0x0a, 0x77, 0xfa, 0x04, 0x77, 0x88, 0xa3, 0xb7, 0x7b, 0xd8, 0xec,
+	0x12, 0xbd, 0x6d, 0x0d, 0x4d, 0x5a, 0xce, 0x78, 0x2b, 0xe1, 0x99, 0x8e, 0xb8, 0xe5, 0x88, 0x19,
+	0x50, 0x0d, 0x56, 0x1d, 0xd2, 0xe5, 0xb3, 0x89, 0x10, 0x80, 0x13, 0x90, 0xb0, 0x85, 0x19, 0xf7,
+	0x01, 0x58, 0xb2, 0x58, 0x43, 0xca, 0xe6, 0x9f, 0xe5, 0xb8, 0x8c, 0x18, 0x79, 0xe9, 0xa2, 0xc7,
+	0xb0, 0xc1, 0x26, 0x63, 0x98, 0x94, 0xc5, 0x60, 0x0d, 0x06, 0x06, 0xd5, 0xbb, 0xd8, 0x66, 0xd8,
+	0x1c, 0x8f, 0xf7, 0x0e, 0x1e, 0x75, 0xcf, 0x98, 0xf5, 0x88, 0x1b, 0x9f, 0x61, 0xdb, 0x63, 0xb1,
+	0xb5, 0x89, 0x63, 0xe5, 0x3d, 0x96, 0x5d, 0xaf, 0xc5, 0xb2, 0xf6, 0xeb, 0xb1, 0xac, 0x82, 0x60,
+	0xed, 0xd7, 0x27, 0x58, 0x0f, 0xa1, 0x34, 0x32, 0xc8, 0x4d, 0x74, 0xbe, 0x45, 0x3e, 0x8f, 0x22,
+	0x33, 0x84, 0x27, 0xfb, 0x29, 0xdc, 0x37, 0x2d, 0xdd, 0x76, 0xac, 0xae, 0x43, 0x5c, 0x57, 0x9f,
+	0xe4, 0x29, 0x9c, 0x77, 0xd7, 0xb4, 0x9a, 0x02, 0xf3, 0x6a, 0xcc, 0xc3, 0x1e, 0xac, 0xdb, 0x0e,
+	0xd1, 0x6d, 0x87, 0xd8, 0xd8, 0x21, 0xe1, 0xd4, 0x29, 0x89, 0x10, 0x1d, 0xd2, 0xf4, 0x8c, 0x41,
+	0xe2, 0xfc, 0x10, 0x50, 0x0c, 0x01, 0x71, 0x82, 0x62, 0x8f, 0xa3, 0x1f, 0x42, 0x49, 0x4c, 0x3e,
+	0x04, 0xbe, 0xc3, 0xc1, 0x45, 0xcf, 0xe0, 0x63, 0x2b, 0x7f, 0xcf, 0x00, 0x68, 0xf3, 0xba, 0x9d,
+	0xd7, 0xed, 0xbc, 0x6e, 0xff, 0x97, 0xea, 0x16, 0xed, 0xc0, 0xaa, 0xdb, 0xb7, 0x6e, 0x74, 0x1b,
+	0xd3, 0x9e, 0x1e, 0x5a, 0xc7, 0x55, 0x2f, 0x41, 0x98, 0xad, 0x89, 0x69, 0xaf, 0xe5, 0xaf, 0xe7,
+	0x03, 0x28, 0x5e, 0x63, 0x97, 0x7a, 0x04, 0x6f, 0xce, 0x6b, 0x1c, 0x9b, 0x67, 0xc3, 0x0c, 0xeb,
+	0xcd, 0xf3, 0x01, 0x14, 0x03, 0xc7, 0x1e, 0x6e, 0xdd, 0xc3, 0x49, 0x9f, 0x1e, 0xee, 0x07, 0x80,
+	0x4c, 0xda, 0xf3, 0xbf, 0x87, 0x58, 0xae, 0x0d, 0x2f, 0x5a, 0x93, 0xf6, 0xc4, 0xb7, 0xf0, 0x96,
+	0x6a, 0x0f, 0xd6, 0xc3, 0x60, 0x97, 0x10, 0x53, 0xf8, 0x2e, 0x73, 0xdf, 0x77, 0x02, 0x82, 0x46,
+	0x88, 0xe9, 0xbd, 0xe1, 0x09, 0x94, 0xc3, 0xa4, 0xa1, 0x19, 0xa2, 0xdd, 0xe5, 0xb4, 0xb5, 0x80,
+	0x76, 0xc9, 0xad, 0x9c, 0x58, 0xf9, 0xf7, 0x32, 0x28, 0x2d, 0x62, 0x76, 0x88, 0x33, 0x30, 0xcc,
+	0xff, 0x1f, 0x65, 0xab, 0xdd, 0xa2, 0x6c, 0xb5, 0xaf, 0xae, 0x6c, 0x8f, 0x61, 0x5d, 0xe6, 0xd8,
+	0xc8, 0xb0, 0xfa, 0x98, 0x7d, 0x23, 0xdd, 0xc1, 0x54, 0x2a, 0xdc, 0xaa, 0xb0, 0xbe, 0x92, 0x46,
+	0x15, 0x53, 0x12, 0xa3, 0x87, 0x2b, 0x53, 0xf4, 0xb0, 0x5e, 0x0b, 0xa3, 0x32, 0x42, 0x0f, 0xeb,
+	0xb5, 0x31, 0xd5, 0x8c, 0xa0, 0x8a, 0x52, 0x35, 0x6b, 0xb7, 0xaa, 0x26, 0x7c, 0xa8, 0x6a, 0x66,
+	0xa7, 0xaa, 0x26, 0xaf, 0x68, 0xcb, 0xb6, 0xdc, 0x48, 0x45, 0xe7, 0x64, 0x45, 0x73, 0xcb, 0x78,
+	0xfd, 0x8f, 0x2c, 0x1a, 0x41, 0xe7, 0xfd, 0xfa, 0x67, 0x96, 0x00, 0x5d, 0x83, 0x55, 0xdb, 0x21,
+	0x93, 0x12, 0xe0, 0x69, 0x20, 0xf2, 0x6d, 0x41, 0xf7, 0xfe, 0x43, 0x0a, 0x0a, 0xa7, 0x16, 0x75,
+	0xe9, 0xf0, 0xfa, 0x7a, 0xde, 0xc1, 0xe7, 0x1d, 0x7c, 0xde, 0xc1, 0xa7, 0x77, 0x70, 0x5e, 0x2c,
+	0x07, 0x43, 0x6a, 0x5d, 0xe1, 0x9e, 0x39, 0x2f, 0x96, 0x79, 0xb1, 0xcc, 0x8b, 0xe5, 0x96, 0x62,
+	0xd1, 0x06, 0xd8, 0xa1, 0xf3, 0xb3, 0xe1, 0xbc, 0x58, 0xe6, 0xc5, 0x32, 0xbb, 0x58, 0xfe, 0xb3,
+	0x04, 0x59, 0xaf, 0x48, 0x5e, 0x58, 0x6d, 0xdc, 0x47, 0x1b, 0x90, 0x36, 0xad, 0x0e, 0xd1, 0x8d,
+	0x8e, 0x28, 0x8f, 0x14, 0x7b, 0x3c, 0xeb, 0xa0, 0x32, 0xa4, 0x89, 0x6d, 0xb8, 0x56, 0x87, 0x88,
+	0x0a, 0x90, 0x8f, 0xe8, 0x63, 0x58, 0xe1, 0x17, 0xa9, 0x6d, 0xab, 0xcf, 0x33, 0xbc, 0xb0, 0x9b,
+	0xa9, 0x36, 0xc5, 0x80, 0xea, 0x9b, 0xd8, 0xc2, 0xb8, 0x14, 0x3b, 0x54, 0xa7, 0x46, 0xfb, 0x73,
+	0x9e, 0x69, 0x79, 0x35, 0xc3, 0x47, 0x5a, 0x46, 0xfb, 0x73, 0x66, 0x76, 0x78, 0x1c, 0xba, 0x4b,
+	0x5e, 0xf3, 0x0c, 0xcb, 0xab, 0x19, 0x6f, 0x44, 0x23, 0xaf, 0xd9, 0x36, 0xfe, 0xc6, 0x30, 0x3b,
+	0xd6, 0x4d, 0x28, 0xcf, 0xbd, 0x29, 0xae, 0x70, 0xe8, 0xaa, 0x67, 0xf5, 0xb3, 0x5c, 0x6e, 0x79,
+	0xc1, 0xbe, 0xba, 0xa6, 0xba, 0x4b, 0xd9, 0x86, 0x9f, 0x25, 0x4d, 0x76, 0x37, 0x5b, 0x0d, 0x2e,
+	0x7b, 0x4f, 0x17, 0xd4, 0x0c, 0x03, 0x68, 0xcc, 0xce, 0xd0, 0x6e, 0x80, 0xce, 0x09, 0xb4, 0x16,
+	0x41, 0xbb, 0x3e, 0xfa, 0xa7, 0xa0, 0x50, 0xff, 0xa4, 0x26, 0x38, 0x79, 0xce, 0x29, 0x55, 0xc7,
+	0x8f, 0x70, 0xa7, 0x0b, 0x6a, 0x31, 0x00, 0x7b, 0xfc, 0xa7, 0x50, 0xe8, 0x89, 0xfd, 0xaf, 0x60,
+	0x17, 0x38, 0xbb, 0x58, 0x8d, 0x6e, 0x8b, 0x4f, 0x17, 0xd4, 0xbc, 0x04, 0xfa, 0x4c, 0x2c, 0x36,
+	0x03, 0x82, 0x59, 0x14, 0xcc, 0xe8, 0x1e, 0x81, 0x31, 0x25, 0xd0, 0x67, 0xba, 0x42, 0x19, 0x05,
+	0x53, 0x11, 0xcc, 0xa8, 0x60, 0x32, 0xa6, 0x04, 0x7a, 0xcc, 0x6f, 0x41, 0xca, 0x21, 0x37, 0xd8,
+	0xe9, 0x70, 0x2d, 0xca, 0xee, 0xa6, 0xab, 0x2a, 0x7f, 0x54, 0xc5, 0x30, 0xba, 0x07, 0x19, 0xd7,
+	0xe8, 0x9a, 0x98, 0x0e, 0x1d, 0xc2, 0x65, 0x27, 0xa7, 0x06, 0x03, 0x87, 0x69, 0x58, 0xe6, 0xef,
+	0x7b, 0xbe, 0xb4, 0x92, 0x55, 0x72, 0x95, 0x5f, 0xca, 0x1b, 0x77, 0x4e, 0x0d, 0xa5, 0x56, 0x22,
+	0x9a, 0x5a, 0xdf, 0x61, 0x6f, 0x65, 0x01, 0xf1, 0x9c, 0x8b, 0xae, 0x9d, 0x2a, 0x4c, 0x68, 0x07,
+	0x72, 0xb2, 0xe2, 0x87, 0x2e, 0xe9, 0xf0, 0x1c, 0xcc, 0xee, 0xe6, 0x38, 0x54, 0x5c, 0x22, 0xa8,
+	0x59, 0x81, 0xb8, 0x74, 0x49, 0x87, 0xbd, 0x5d, 0xfb, 0x6a, 0x6f, 0xd7, 0xde, 0xff, 0xed, 0xda,
+	0xb4, 0xb7, 0xff, 0x3a, 0x11, 0x3d, 0xe2, 0xdf, 0x12, 0xc4, 0xf7, 0xc7, 0x82, 0x98, 0x4c, 0x2e,
+	0x3f, 0x94, 0x7a, 0x6c, 0x28, 0x28, 0x44, 0x88, 0x0d, 0xe8, 0x57, 0x89, 0xf0, 0x49, 0xec, 0x96,
+	0x70, 0xbe, 0x37, 0x16, 0xce, 0x78, 0xb6, 0xfa, 0xc1, 0xec, 0xc5, 0x06, 0xa3, 0xf8, 0xf0, 0xa9,
+	0xa1, 0x04, 0x39, 0xfc, 0xc1, 0xa1, 0x44, 0xd3, 0xff, 0xd6, 0x50, 0x24, 0x7c, 0x6a, 0x28, 0x41,
+	0x51, 0x7c, 0x70, 0x28, 0xd1, 0x7a, 0xba, 0x35, 0x14, 0x09, 0x8f, 0x0d, 0xe5, 0x77, 0x49, 0x48,
+	0x89, 0x10, 0xbe, 0x0d, 0x4b, 0x4c, 0xaf, 0xf8, 0xfb, 0x83, 0x72, 0x60, 0xa6, 0xd3, 0x05, 0x95,
+	0x9b, 0x18, 0x84, 0x89, 0x94, 0x70, 0x2d, 0x73, 0x56, 0x42, 0x98, 0x09, 0xed, 0x01, 0x04, 0x6a,
+	0x24, 0x0a, 0x3a, 0x9a, 0x57, 0x02, 0x1e, 0x82, 0xa1, 0x47, 0xb0, 0x22, 0x65, 0x88, 0xd7, 0x77,
+	0x74, 0xed, 0x05, 0xc1, 0x87, 0x30, 0xb8, 0xd4, 0x1e, 0x2e, 0xf6, 0xd1, 0xf5, 0x91, 0x70, 0x09,
+	0x61, 0x70, 0x29, 0x38, 0x5c, 0xfc, 0xa3, 0xdf, 0x50, 0xc2, 0x25, 0x84, 0xe9, 0xc9, 0x08, 0xf7,
+	0x87, 0x4c, 0x4f, 0x92, 0xca, 0x62, 0x65, 0x24, 0x9b, 0x18, 0xdf, 0x69, 0xcc, 0x58, 0xa8, 0x70,
+	0xaf, 0x4a, 0x4e, 0xef, 0x55, 0x0f, 0x20, 0xed, 0x2d, 0x18, 0xdb, 0xb3, 0x2d, 0xf2, 0x7a, 0x0e,
+	0x35, 0x49, 0x55, 0x1a, 0x2b, 0x9f, 0x41, 0x36, 0xa4, 0x32, 0xe8, 0x10, 0xee, 0x93, 0x3e, 0xe1,
+	0x9b, 0xc8, 0xe0, 0x62, 0xd3, 0xe8, 0xf7, 0x0d, 0x97, 0xb4, 0x2d, 0xb3, 0x23, 0x77, 0x9c, 0x5b,
+	0x12, 0x24, 0xaf, 0x38, 0x43, 0x90, 0xca, 0x9f, 0x13, 0x90, 0xd5, 0xbe, 0x59, 0x9f, 0xe8, 0x08,
+	0xb6, 0x63, 0x6e, 0x5c, 0xc3, 0x4e, 0xbc, 0x96, 0xbe, 0x35, 0x7e, 0xf7, 0x1a, 0x82, 0x3c, 0x5f,
+	0x5a, 0x59, 0x54, 0x96, 0xd4, 0x4d, 0x6f, 0x83, 0x17, 0xe7, 0xa4, 0xf2, 0xcf, 0x04, 0x94, 0x26,
+	0xb4, 0x06, 0x7d, 0x0a, 0xf7, 0xe4, 0xb5, 0xd3, 0x8c, 0xf8, 0x37, 0x05, 0x26, 0x2e, 0x7c, 0xee,
+	0xc1, 0xbb, 0x8a, 0x9a, 0x11, 0xfc, 0xa6, 0xc0, 0xc4, 0x79, 0x38, 0x86, 0xed, 0xe0, 0x7a, 0x2a,
+	0xd6, 0xc7, 0x22, 0xf7, 0x71, 0xcf, 0x47, 0xc5, 0x2d, 0xcd, 0x05, 0x14, 0xc7, 0xd4, 0x0b, 0xfd,
+	0x04, 0x36, 0xa5, 0xbb, 0x0e, 0xe9, 0xe3, 0x37, 0x71, 0x53, 0x2b, 0x0b, 0xc4, 0x31, 0x03, 0x44,
+	0x1c, 0xfe, 0x2d, 0x01, 0xc5, 0x31, 0x11, 0xfa, 0x7a, 0x1e, 0xd1, 0x53, 0x28, 0xb7, 0xb1, 0x33,
+	0xeb, 0x33, 0xad, 0xb7, 0xb1, 0x33, 0x25, 0x47, 0x82, 0x4b, 0xf6, 0x19, 0x9f, 0x68, 0x4b, 0xde,
+	0xb9, 0xc7, 0x7d, 0xa1, 0x4b, 0x28, 0x8e, 0x29, 0xd9, 0x37, 0x52, 0x13, 0xbf, 0x4f, 0x42, 0x5a,
+	0xfa, 0xab, 0x44, 0x14, 0x30, 0xd2, 0xe5, 0x7d, 0x09, 0xac, 0x44, 0x24, 0x30, 0xd2, 0x8b, 0x7d,
+	0x0d, 0x7c, 0x1c, 0xa3, 0x81, 0x31, 0xad, 0x72, 0x4c, 0x04, 0xab, 0x13, 0x22, 0x38, 0xd1, 0xd1,
+	0x22, 0x2a, 0x58, 0x9d, 0x50, 0xc1, 0x89, 0xb6, 0x13, 0x91, 0xc1, 0xea, 0x84, 0x0c, 0x4e, 0xf4,
+	0x86, 0x59, 0x3a, 0xf8, 0x19, 0x14, 0x64, 0x07, 0x21, 0xaf, 0x87, 0xc4, 0xa5, 0x5f, 0x5b, 0x0a,
+	0x2b, 0x7f, 0x49, 0x42, 0x5e, 0xf8, 0x64, 0x3b, 0xc1, 0xa1, 0x3b, 0xc3, 0xe5, 0x23, 0x48, 0xb9,
+	0x1c, 0x23, 0x1c, 0xae, 0x55, 0x23, 0xcc, 0xaa, 0xf7, 0x47, 0x15, 0x20, 0x54, 0x81, 0xb4, 0xc8,
+	0x08, 0xb1, 0x52, 0x2b, 0x12, 0xaf, 0x4a, 0xc3, 0xd8, 0xa9, 0x61, 0x69, 0xf6, 0xa9, 0x61, 0xf9,
+	0xfd, 0x4f, 0x0d, 0xa9, 0xe9, 0xa7, 0x86, 0xca, 0x73, 0x48, 0x89, 0xa9, 0xae, 0x03, 0xd2, 0x5a,
+	0x07, 0xad, 0x4b, 0x4d, 0xbf, 0x3c, 0xd7, 0x9a, 0x8d, 0xa3, 0xb3, 0x93, 0xb3, 0xc6, 0xb1, 0xb2,
+	0x80, 0x14, 0xc8, 0x9d, 0x5f, 0xb4, 0x74, 0xb5, 0x71, 0xd4, 0x38, 0x7b, 0xd5, 0x38, 0x56, 0x12,
+	0x28, 0x0b, 0xe9, 0x66, 0xe3, 0xfc, 0xf8, 0xec, 0xfc, 0x99, 0x92, 0x44, 0x19, 0x58, 0x56, 0x1b,
+	0x07, 0xc7, 0x3f, 0x53, 0x16, 0x1f, 0xfe, 0x31, 0x01, 0x2b, 0xf2, 0xab, 0xa2, 0x32, 0xac, 0x36,
+	0xd5, 0x8b, 0xd6, 0xc5, 0xd1, 0xc5, 0x8b, 0x31, 0x87, 0x25, 0xc8, 0xfb, 0x96, 0xe6, 0xe1, 0x49,
+	0x4b, 0x49, 0x44, 0x86, 0x34, 0x36, 0xb4, 0x88, 0x36, 0xe0, 0x8e, 0x3f, 0xd4, 0x6a, 0x9c, 0x1f,
+	0x37, 0xd4, 0x97, 0x67, 0xe7, 0x2d, 0x65, 0x09, 0xad, 0x41, 0xc9, 0x37, 0x9c, 0x5e, 0xb4, 0xb4,
+	0xd6, 0xe5, 0xc9, 0x89, 0xb2, 0x1c, 0x19, 0x3e, 0xb8, 0x6c, 0x5d, 0x1c, 0x1e, 0x9c, 0x9e, 0x2b,
+	0xa9, 0xc8, 0xb0, 0xf6, 0xf2, 0x40, 0x6d, 0x31, 0xef, 0xe9, 0x0a, 0x4b, 0xa1, 0xe4, 0xee, 0x09,
+	0x64, 0xfc, 0xcf, 0x81, 0xf6, 0xa1, 0xa4, 0x0d, 0xaf, 0x06, 0x06, 0x0d, 0x77, 0x57, 0xd9, 0x0b,
+	0xf9, 0xd3, 0xe6, 0x7a, 0xd5, 0xfb, 0x6d, 0x4d, 0x55, 0xfe, 0xb6, 0xa6, 0xda, 0x18, 0xd8, 0xf4,
+	0xcd, 0xee, 0x6f, 0x93, 0x90, 0x7f, 0x41, 0xb0, 0x63, 0x1a, 0x66, 0xf7, 0xa0, 0x4b, 0x4c, 0x8a,
+	0x76, 0x01, 0x34, 0x62, 0x76, 0xc4, 0x95, 0x4c, 0xa4, 0xa3, 0x4e, 0xf3, 0x82, 0x1e, 0x01, 0x3c,
+	0x23, 0xbe, 0x96, 0x14, 0xab, 0xd1, 0xec, 0xde, 0x2c, 0x44, 0x13, 0x0c, 0xed, 0x41, 0x56, 0xeb,
+	0x61, 0x87, 0x7c, 0xd0, 0x3b, 0x9e, 0x82, 0x72, 0x4c, 0xfa, 0xc6, 0x88, 0x1d, 0xc3, 0xe5, 0xc4,
+	0xdf, 0x6b, 0x8e, 0xe8, 0x09, 0x2c, 0xab, 0xc4, 0x25, 0x14, 0x4d, 0x01, 0x4c, 0x23, 0x1e, 0xfe,
+	0xe2, 0xaf, 0x6f, 0xb7, 0x13, 0x5f, 0xbe, 0xdd, 0x4e, 0xfc, 0xeb, 0xed, 0x76, 0xe2, 0x37, 0xef,
+	0xb6, 0x17, 0xbe, 0x7c, 0xb7, 0xbd, 0xf0, 0x8f, 0x77, 0xdb, 0x0b, 0x3f, 0x3f, 0xe8, 0x1a, 0xb4,
+	0x37, 0xbc, 0xaa, 0xb6, 0xad, 0xc1, 0x4e, 0xdb, 0x1a, 0x10, 0x56, 0xe5, 0xc1, 0x3f, 0xdc, 0xcd,
+	0xce, 0xd8, 0x2f, 0x9d, 0x7e, 0x2c, 0x9f, 0xbd, 0xc7, 0xab, 0x14, 0x47, 0xed, 0xfd, 0x37, 0x00,
+	0x00, 0xff, 0xff, 0x1c, 0xa4, 0x00, 0xb0, 0x12, 0x25, 0x00, 0x00,
 }
 
 // Reference imports to suppress errors if they are not otherwise used.
@@ -2452,87 +3066,84 @@ func (m *PbftReport) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	_ = i
 	var l int
 	_ = l
-	if m.PhasePostDecisionP95DelayMs != 0 {
+	if m.CommitLatencyMs != 0 {
 		i -= 4
-		encoding_binary.LittleEndian.PutUint32(dAtA[i:], uint32(math.Float32bits(float32(m.PhasePostDecisionP95DelayMs))))
+		encoding_binary.LittleEndian.PutUint32(dAtA[i:], uint32(math.Float32bits(float32(m.CommitLatencyMs))))
 		i--
 		dAtA[i] = 0x1
 		i--
 		dAtA[i] = 0x9d
 	}
-	if m.PhasePostDecisionAvgDelayMs != 0 {
+	if m.PrepareLatencyMs != 0 {
 		i -= 4
-		encoding_binary.LittleEndian.PutUint32(dAtA[i:], uint32(math.Float32bits(float32(m.PhasePostDecisionAvgDelayMs))))
+		encoding_binary.LittleEndian.PutUint32(dAtA[i:], uint32(math.Float32bits(float32(m.PrepareLatencyMs))))
 		i--
 		dAtA[i] = 0x1
 		i--
 		dAtA[i] = 0x95
 	}
-	if m.PhaseAcceptP95DelayMs != 0 {
+	if m.PrePrepareLatencyMs != 0 {
 		i -= 4
-		encoding_binary.LittleEndian.PutUint32(dAtA[i:], uint32(math.Float32bits(float32(m.PhaseAcceptP95DelayMs))))
+		encoding_binary.LittleEndian.PutUint32(dAtA[i:], uint32(math.Float32bits(float32(m.PrePrepareLatencyMs))))
 		i--
 		dAtA[i] = 0x1
 		i--
 		dAtA[i] = 0x8d
 	}
-	if m.PhaseAcceptAvgDelayMs != 0 {
-		i -= 4
-		encoding_binary.LittleEndian.PutUint32(dAtA[i:], uint32(math.Float32bits(float32(m.PhaseAcceptAvgDelayMs))))
+	if m.NoProgressViewChangeCount != 0 {
+		i = encodeVarintAgent(dAtA, i, uint64(m.NoProgressViewChangeCount))
 		i--
 		dAtA[i] = 0x1
 		i--
-		dAtA[i] = 0x85
+		dAtA[i] = 0x80
 	}
-	if m.PhaseWriteP95DelayMs != 0 {
-		i -= 4
-		encoding_binary.LittleEndian.PutUint32(dAtA[i:], uint32(math.Float32bits(float32(m.PhaseWriteP95DelayMs))))
+	if m.ViewChangeCount != 0 {
+		i = encodeVarintAgent(dAtA, i, uint64(m.ViewChangeCount))
 		i--
-		dAtA[i] = 0x7d
+		dAtA[i] = 0x78
 	}
-	if m.PhaseWriteAvgDelayMs != 0 {
+	if m.P95InterCommitGapMs != 0 {
 		i -= 4
-		encoding_binary.LittleEndian.PutUint32(dAtA[i:], uint32(math.Float32bits(float32(m.PhaseWriteAvgDelayMs))))
+		encoding_binary.LittleEndian.PutUint32(dAtA[i:], uint32(math.Float32bits(float32(m.P95InterCommitGapMs))))
 		i--
 		dAtA[i] = 0x75
 	}
-	if m.PhaseProposeP95DelayMs != 0 {
+	if m.P50InterCommitGapMs != 0 {
 		i -= 4
-		encoding_binary.LittleEndian.PutUint32(dAtA[i:], uint32(math.Float32bits(float32(m.PhaseProposeP95DelayMs))))
+		encoding_binary.LittleEndian.PutUint32(dAtA[i:], uint32(math.Float32bits(float32(m.P50InterCommitGapMs))))
 		i--
 		dAtA[i] = 0x6d
 	}
-	if m.PhaseProposeAvgDelayMs != 0 {
+	if m.AvgInterCommitGapMs != 0 {
 		i -= 4
-		encoding_binary.LittleEndian.PutUint32(dAtA[i:], uint32(math.Float32bits(float32(m.PhaseProposeAvgDelayMs))))
+		encoding_binary.LittleEndian.PutUint32(dAtA[i:], uint32(math.Float32bits(float32(m.AvgInterCommitGapMs))))
 		i--
 		dAtA[i] = 0x65
+	}
+	if m.TimeoutMs != 0 {
+		i = encodeVarintAgent(dAtA, i, uint64(m.TimeoutMs))
+		i--
+		dAtA[i] = 0x58
 	}
 	if m.RegencyChangeCount != 0 {
 		i = encodeVarintAgent(dAtA, i, uint64(m.RegencyChangeCount))
 		i--
-		dAtA[i] = 0x58
+		dAtA[i] = 0x50
 	}
 	if m.LeaderChangeCount != 0 {
 		i = encodeVarintAgent(dAtA, i, uint64(m.LeaderChangeCount))
 		i--
-		dAtA[i] = 0x50
+		dAtA[i] = 0x48
 	}
 	if m.P95BatchSize != 0 {
 		i -= 4
 		encoding_binary.LittleEndian.PutUint32(dAtA[i:], uint32(math.Float32bits(float32(m.P95BatchSize))))
 		i--
-		dAtA[i] = 0x4d
+		dAtA[i] = 0x45
 	}
 	if m.AvgBatchSize != 0 {
 		i -= 4
 		encoding_binary.LittleEndian.PutUint32(dAtA[i:], uint32(math.Float32bits(float32(m.AvgBatchSize))))
-		i--
-		dAtA[i] = 0x45
-	}
-	if m.TimeoutViolationRate != 0 {
-		i -= 4
-		encoding_binary.LittleEndian.PutUint32(dAtA[i:], uint32(math.Float32bits(float32(m.TimeoutViolationRate))))
 		i--
 		dAtA[i] = 0x3d
 	}
@@ -2542,15 +3153,15 @@ func (m *PbftReport) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 		i--
 		dAtA[i] = 0x35
 	}
-	if m.P99ConsensusLatencyMs != 0 {
-		i -= 4
-		encoding_binary.LittleEndian.PutUint32(dAtA[i:], uint32(math.Float32bits(float32(m.P99ConsensusLatencyMs))))
-		i--
-		dAtA[i] = 0x2d
-	}
 	if m.P95ConsensusLatencyMs != 0 {
 		i -= 4
 		encoding_binary.LittleEndian.PutUint32(dAtA[i:], uint32(math.Float32bits(float32(m.P95ConsensusLatencyMs))))
+		i--
+		dAtA[i] = 0x2d
+	}
+	if m.P50ConsensusLatencyMs != 0 {
+		i -= 4
+		encoding_binary.LittleEndian.PutUint32(dAtA[i:], uint32(math.Float32bits(float32(m.P50ConsensusLatencyMs))))
 		i--
 		dAtA[i] = 0x25
 	}
@@ -2569,266 +3180,6 @@ func (m *PbftReport) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 		i = encodeVarintAgent(dAtA, i, uint64(m.TotalTransactions))
 		i--
 		dAtA[i] = 0x8
-	}
-	return len(dAtA) - i, nil
-}
-
-func (m *TwoPcOverPbftReport) Marshal() (dAtA []byte, err error) {
-	size := m.Size()
-	dAtA = make([]byte, size)
-	n, err := m.MarshalToSizedBuffer(dAtA[:size])
-	if err != nil {
-		return nil, err
-	}
-	return dAtA[:n], nil
-}
-
-func (m *TwoPcOverPbftReport) MarshalTo(dAtA []byte) (int, error) {
-	size := m.Size()
-	return m.MarshalToSizedBuffer(dAtA[:size])
-}
-
-func (m *TwoPcOverPbftReport) MarshalToSizedBuffer(dAtA []byte) (int, error) {
-	i := len(dAtA)
-	_ = i
-	var l int
-	_ = l
-	if m.ReasonOtherCount != 0 {
-		i = encodeVarintAgent(dAtA, i, uint64(m.ReasonOtherCount))
-		i--
-		dAtA[i] = 0x2
-		i--
-		dAtA[i] = 0x98
-	}
-	if m.ReasonAbortBestEffortTimeoutCount != 0 {
-		i = encodeVarintAgent(dAtA, i, uint64(m.ReasonAbortBestEffortTimeoutCount))
-		i--
-		dAtA[i] = 0x2
-		i--
-		dAtA[i] = 0x90
-	}
-	if m.ReasonCommitTimeoutUnknownOutcomeCount != 0 {
-		i = encodeVarintAgent(dAtA, i, uint64(m.ReasonCommitTimeoutUnknownOutcomeCount))
-		i--
-		dAtA[i] = 0x2
-		i--
-		dAtA[i] = 0x88
-	}
-	if m.ReasonPrepareOtherCount != 0 {
-		i = encodeVarintAgent(dAtA, i, uint64(m.ReasonPrepareOtherCount))
-		i--
-		dAtA[i] = 0x2
-		i--
-		dAtA[i] = 0x80
-	}
-	if m.ReasonPrepareTimeoutCount != 0 {
-		i = encodeVarintAgent(dAtA, i, uint64(m.ReasonPrepareTimeoutCount))
-		i--
-		dAtA[i] = 0x1
-		i--
-		dAtA[i] = 0xf8
-	}
-	if m.ReasonPrepareValidationFailCount != 0 {
-		i = encodeVarintAgent(dAtA, i, uint64(m.ReasonPrepareValidationFailCount))
-		i--
-		dAtA[i] = 0x1
-		i--
-		dAtA[i] = 0xf0
-	}
-	if m.ReasonPrepareLockBusyCount != 0 {
-		i = encodeVarintAgent(dAtA, i, uint64(m.ReasonPrepareLockBusyCount))
-		i--
-		dAtA[i] = 0x1
-		i--
-		dAtA[i] = 0xe8
-	}
-	if m.P95LockHoldMs != 0 {
-		i -= 4
-		encoding_binary.LittleEndian.PutUint32(dAtA[i:], uint32(math.Float32bits(float32(m.P95LockHoldMs))))
-		i--
-		dAtA[i] = 0x1
-		i--
-		dAtA[i] = 0xe5
-	}
-	if m.AvgLockHoldMs != 0 {
-		i -= 4
-		encoding_binary.LittleEndian.PutUint32(dAtA[i:], uint32(math.Float32bits(float32(m.AvgLockHoldMs))))
-		i--
-		dAtA[i] = 0x1
-		i--
-		dAtA[i] = 0xdd
-	}
-	if m.P95LockWaitMs != 0 {
-		i -= 4
-		encoding_binary.LittleEndian.PutUint32(dAtA[i:], uint32(math.Float32bits(float32(m.P95LockWaitMs))))
-		i--
-		dAtA[i] = 0x1
-		i--
-		dAtA[i] = 0xd5
-	}
-	if m.AvgLockWaitMs != 0 {
-		i -= 4
-		encoding_binary.LittleEndian.PutUint32(dAtA[i:], uint32(math.Float32bits(float32(m.AvgLockWaitMs))))
-		i--
-		dAtA[i] = 0x1
-		i--
-		dAtA[i] = 0xcd
-	}
-	if m.P95CommitLatencyMs != 0 {
-		i -= 4
-		encoding_binary.LittleEndian.PutUint32(dAtA[i:], uint32(math.Float32bits(float32(m.P95CommitLatencyMs))))
-		i--
-		dAtA[i] = 0x1
-		i--
-		dAtA[i] = 0xc5
-	}
-	if m.AvgCommitLatencyMs != 0 {
-		i -= 4
-		encoding_binary.LittleEndian.PutUint32(dAtA[i:], uint32(math.Float32bits(float32(m.AvgCommitLatencyMs))))
-		i--
-		dAtA[i] = 0x1
-		i--
-		dAtA[i] = 0xbd
-	}
-	if m.P95PrepareLatencyMs != 0 {
-		i -= 4
-		encoding_binary.LittleEndian.PutUint32(dAtA[i:], uint32(math.Float32bits(float32(m.P95PrepareLatencyMs))))
-		i--
-		dAtA[i] = 0x1
-		i--
-		dAtA[i] = 0xb5
-	}
-	if m.AvgPrepareLatencyMs != 0 {
-		i -= 4
-		encoding_binary.LittleEndian.PutUint32(dAtA[i:], uint32(math.Float32bits(float32(m.AvgPrepareLatencyMs))))
-		i--
-		dAtA[i] = 0x1
-		i--
-		dAtA[i] = 0xad
-	}
-	if m.P99EndToEndLatencyMs != 0 {
-		i -= 4
-		encoding_binary.LittleEndian.PutUint32(dAtA[i:], uint32(math.Float32bits(float32(m.P99EndToEndLatencyMs))))
-		i--
-		dAtA[i] = 0x1
-		i--
-		dAtA[i] = 0xa5
-	}
-	if m.P95EndToEndLatencyMs != 0 {
-		i -= 4
-		encoding_binary.LittleEndian.PutUint32(dAtA[i:], uint32(math.Float32bits(float32(m.P95EndToEndLatencyMs))))
-		i--
-		dAtA[i] = 0x1
-		i--
-		dAtA[i] = 0x9d
-	}
-	if m.AvgEndToEndLatencyMs != 0 {
-		i -= 4
-		encoding_binary.LittleEndian.PutUint32(dAtA[i:], uint32(math.Float32bits(float32(m.AvgEndToEndLatencyMs))))
-		i--
-		dAtA[i] = 0x1
-		i--
-		dAtA[i] = 0x95
-	}
-	if m.LockContentionRate != 0 {
-		i -= 4
-		encoding_binary.LittleEndian.PutUint32(dAtA[i:], uint32(math.Float32bits(float32(m.LockContentionRate))))
-		i--
-		dAtA[i] = 0x1
-		i--
-		dAtA[i] = 0x8d
-	}
-	if m.CommitRate != 0 {
-		i -= 4
-		encoding_binary.LittleEndian.PutUint32(dAtA[i:], uint32(math.Float32bits(float32(m.CommitRate))))
-		i--
-		dAtA[i] = 0x1
-		i--
-		dAtA[i] = 0x85
-	}
-	if m.AbortRate != 0 {
-		i -= 4
-		encoding_binary.LittleEndian.PutUint32(dAtA[i:], uint32(math.Float32bits(float32(m.AbortRate))))
-		i--
-		dAtA[i] = 0x7d
-	}
-	if m.PrepareTimeoutRate != 0 {
-		i -= 4
-		encoding_binary.LittleEndian.PutUint32(dAtA[i:], uint32(math.Float32bits(float32(m.PrepareTimeoutRate))))
-		i--
-		dAtA[i] = 0x75
-	}
-	if m.LockContentionCount != 0 {
-		i = encodeVarintAgent(dAtA, i, uint64(m.LockContentionCount))
-		i--
-		dAtA[i] = 0x68
-	}
-	if m.AbortBestEffortTimeoutCount != 0 {
-		i = encodeVarintAgent(dAtA, i, uint64(m.AbortBestEffortTimeoutCount))
-		i--
-		dAtA[i] = 0x60
-	}
-	if m.CommitTimeoutUnknownOutcomeCount != 0 {
-		i = encodeVarintAgent(dAtA, i, uint64(m.CommitTimeoutUnknownOutcomeCount))
-		i--
-		dAtA[i] = 0x58
-	}
-	if m.PrepareTimeoutCount != 0 {
-		i = encodeVarintAgent(dAtA, i, uint64(m.PrepareTimeoutCount))
-		i--
-		dAtA[i] = 0x50
-	}
-	if m.InDoubtCount != 0 {
-		i = encodeVarintAgent(dAtA, i, uint64(m.InDoubtCount))
-		i--
-		dAtA[i] = 0x48
-	}
-	if m.AbortCount != 0 {
-		i = encodeVarintAgent(dAtA, i, uint64(m.AbortCount))
-		i--
-		dAtA[i] = 0x40
-	}
-	if m.CommitOkCount != 0 {
-		i = encodeVarintAgent(dAtA, i, uint64(m.CommitOkCount))
-		i--
-		dAtA[i] = 0x38
-	}
-	if m.PrepareFailCount != 0 {
-		i = encodeVarintAgent(dAtA, i, uint64(m.PrepareFailCount))
-		i--
-		dAtA[i] = 0x30
-	}
-	if m.PrepareOkCount != 0 {
-		i = encodeVarintAgent(dAtA, i, uint64(m.PrepareOkCount))
-		i--
-		dAtA[i] = 0x28
-	}
-	if m.CrossShardTransactions != 0 {
-		i = encodeVarintAgent(dAtA, i, uint64(m.CrossShardTransactions))
-		i--
-		dAtA[i] = 0x20
-	}
-	if m.SingleShardTransactions != 0 {
-		i = encodeVarintAgent(dAtA, i, uint64(m.SingleShardTransactions))
-		i--
-		dAtA[i] = 0x18
-	}
-	if m.TotalTransactions != 0 {
-		i = encodeVarintAgent(dAtA, i, uint64(m.TotalTransactions))
-		i--
-		dAtA[i] = 0x10
-	}
-	if m.Pbft != nil {
-		{
-			size, err := m.Pbft.MarshalToSizedBuffer(dAtA[:i])
-			if err != nil {
-				return 0, err
-			}
-			i -= size
-			i = encodeVarintAgent(dAtA, i, uint64(size))
-		}
-		i--
-		dAtA[i] = 0xa
 	}
 	return len(dAtA) - i, nil
 }
@@ -2853,31 +3204,127 @@ func (m *SbftReport) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	_ = i
 	var l int
 	_ = l
+	if m.NthPrepareUnseenCount != 0 {
+		i = encodeVarintAgent(dAtA, i, uint64(m.NthPrepareUnseenCount))
+		i--
+		dAtA[i] = 0x1
+		i--
+		dAtA[i] = 0xc8
+	}
+	if m.NthPrepareSeenCount != 0 {
+		i = encodeVarintAgent(dAtA, i, uint64(m.NthPrepareSeenCount))
+		i--
+		dAtA[i] = 0x1
+		i--
+		dAtA[i] = 0xc0
+	}
+	if m.NthPrepareGapMs != 0 {
+		i -= 4
+		encoding_binary.LittleEndian.PutUint32(dAtA[i:], uint32(math.Float32bits(float32(m.NthPrepareGapMs))))
+		i--
+		dAtA[i] = 0x1
+		i--
+		dAtA[i] = 0xbd
+	}
+	if m.SlowPathCount != 0 {
+		i = encodeVarintAgent(dAtA, i, uint64(m.SlowPathCount))
+		i--
+		dAtA[i] = 0x1
+		i--
+		dAtA[i] = 0xb0
+	}
+	if m.FastPathCount != 0 {
+		i = encodeVarintAgent(dAtA, i, uint64(m.FastPathCount))
+		i--
+		dAtA[i] = 0x1
+		i--
+		dAtA[i] = 0xa8
+	}
+	if m.SlowPathTimeoutMs != 0 {
+		i = encodeVarintAgent(dAtA, i, uint64(m.SlowPathTimeoutMs))
+		i--
+		dAtA[i] = 0x1
+		i--
+		dAtA[i] = 0xa0
+	}
+	if m.CommitLatencyMs != 0 {
+		i -= 4
+		encoding_binary.LittleEndian.PutUint32(dAtA[i:], uint32(math.Float32bits(float32(m.CommitLatencyMs))))
+		i--
+		dAtA[i] = 0x1
+		i--
+		dAtA[i] = 0x9d
+	}
+	if m.PrepareLatencyMs != 0 {
+		i -= 4
+		encoding_binary.LittleEndian.PutUint32(dAtA[i:], uint32(math.Float32bits(float32(m.PrepareLatencyMs))))
+		i--
+		dAtA[i] = 0x1
+		i--
+		dAtA[i] = 0x95
+	}
+	if m.PrePrepareLatencyMs != 0 {
+		i -= 4
+		encoding_binary.LittleEndian.PutUint32(dAtA[i:], uint32(math.Float32bits(float32(m.PrePrepareLatencyMs))))
+		i--
+		dAtA[i] = 0x1
+		i--
+		dAtA[i] = 0x8d
+	}
+	if m.NoProgressViewChangeCount != 0 {
+		i = encodeVarintAgent(dAtA, i, uint64(m.NoProgressViewChangeCount))
+		i--
+		dAtA[i] = 0x1
+		i--
+		dAtA[i] = 0x80
+	}
+	if m.ViewChangeCount != 0 {
+		i = encodeVarintAgent(dAtA, i, uint64(m.ViewChangeCount))
+		i--
+		dAtA[i] = 0x78
+	}
+	if m.P95InterCommitGapMs != 0 {
+		i -= 4
+		encoding_binary.LittleEndian.PutUint32(dAtA[i:], uint32(math.Float32bits(float32(m.P95InterCommitGapMs))))
+		i--
+		dAtA[i] = 0x75
+	}
+	if m.P50InterCommitGapMs != 0 {
+		i -= 4
+		encoding_binary.LittleEndian.PutUint32(dAtA[i:], uint32(math.Float32bits(float32(m.P50InterCommitGapMs))))
+		i--
+		dAtA[i] = 0x6d
+	}
+	if m.AvgInterCommitGapMs != 0 {
+		i -= 4
+		encoding_binary.LittleEndian.PutUint32(dAtA[i:], uint32(math.Float32bits(float32(m.AvgInterCommitGapMs))))
+		i--
+		dAtA[i] = 0x65
+	}
+	if m.TimeoutMs != 0 {
+		i = encodeVarintAgent(dAtA, i, uint64(m.TimeoutMs))
+		i--
+		dAtA[i] = 0x58
+	}
 	if m.RegencyChangeCount != 0 {
 		i = encodeVarintAgent(dAtA, i, uint64(m.RegencyChangeCount))
 		i--
-		dAtA[i] = 0x58
+		dAtA[i] = 0x50
 	}
 	if m.LeaderChangeCount != 0 {
 		i = encodeVarintAgent(dAtA, i, uint64(m.LeaderChangeCount))
 		i--
-		dAtA[i] = 0x50
+		dAtA[i] = 0x48
 	}
 	if m.P95BatchSize != 0 {
 		i -= 4
 		encoding_binary.LittleEndian.PutUint32(dAtA[i:], uint32(math.Float32bits(float32(m.P95BatchSize))))
 		i--
-		dAtA[i] = 0x4d
+		dAtA[i] = 0x45
 	}
 	if m.AvgBatchSize != 0 {
 		i -= 4
 		encoding_binary.LittleEndian.PutUint32(dAtA[i:], uint32(math.Float32bits(float32(m.AvgBatchSize))))
-		i--
-		dAtA[i] = 0x45
-	}
-	if m.TimeoutViolationRate != 0 {
-		i -= 4
-		encoding_binary.LittleEndian.PutUint32(dAtA[i:], uint32(math.Float32bits(float32(m.TimeoutViolationRate))))
 		i--
 		dAtA[i] = 0x3d
 	}
@@ -2887,15 +3334,15 @@ func (m *SbftReport) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 		i--
 		dAtA[i] = 0x35
 	}
-	if m.P99ConsensusLatencyMs != 0 {
-		i -= 4
-		encoding_binary.LittleEndian.PutUint32(dAtA[i:], uint32(math.Float32bits(float32(m.P99ConsensusLatencyMs))))
-		i--
-		dAtA[i] = 0x2d
-	}
 	if m.P95ConsensusLatencyMs != 0 {
 		i -= 4
 		encoding_binary.LittleEndian.PutUint32(dAtA[i:], uint32(math.Float32bits(float32(m.P95ConsensusLatencyMs))))
+		i--
+		dAtA[i] = 0x2d
+	}
+	if m.P50ConsensusLatencyMs != 0 {
+		i -= 4
+		encoding_binary.LittleEndian.PutUint32(dAtA[i:], uint32(math.Float32bits(float32(m.P50ConsensusLatencyMs))))
 		i--
 		dAtA[i] = 0x25
 	}
@@ -3027,6 +3474,348 @@ func (m *TendermintReport) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	return len(dAtA) - i, nil
 }
 
+func (m *HotstuffReport) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *HotstuffReport) MarshalTo(dAtA []byte) (int, error) {
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *HotstuffReport) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
+	_ = i
+	var l int
+	_ = l
+	if m.NoProgressViewChangeCount != 0 {
+		i = encodeVarintAgent(dAtA, i, uint64(m.NoProgressViewChangeCount))
+		i--
+		dAtA[i] = 0x1
+		i--
+		dAtA[i] = 0x80
+	}
+	if m.ViewChangeCount != 0 {
+		i = encodeVarintAgent(dAtA, i, uint64(m.ViewChangeCount))
+		i--
+		dAtA[i] = 0x78
+	}
+	if m.P95InterCommitGapMs != 0 {
+		i -= 4
+		encoding_binary.LittleEndian.PutUint32(dAtA[i:], uint32(math.Float32bits(float32(m.P95InterCommitGapMs))))
+		i--
+		dAtA[i] = 0x75
+	}
+	if m.P50InterCommitGapMs != 0 {
+		i -= 4
+		encoding_binary.LittleEndian.PutUint32(dAtA[i:], uint32(math.Float32bits(float32(m.P50InterCommitGapMs))))
+		i--
+		dAtA[i] = 0x6d
+	}
+	if m.AvgInterCommitGapMs != 0 {
+		i -= 4
+		encoding_binary.LittleEndian.PutUint32(dAtA[i:], uint32(math.Float32bits(float32(m.AvgInterCommitGapMs))))
+		i--
+		dAtA[i] = 0x65
+	}
+	if m.TimeoutMs != 0 {
+		i = encodeVarintAgent(dAtA, i, uint64(m.TimeoutMs))
+		i--
+		dAtA[i] = 0x58
+	}
+	if m.RegencyChangeCount != 0 {
+		i = encodeVarintAgent(dAtA, i, uint64(m.RegencyChangeCount))
+		i--
+		dAtA[i] = 0x50
+	}
+	if m.LeaderChangeCount != 0 {
+		i = encodeVarintAgent(dAtA, i, uint64(m.LeaderChangeCount))
+		i--
+		dAtA[i] = 0x48
+	}
+	if m.P95BatchSize != 0 {
+		i -= 4
+		encoding_binary.LittleEndian.PutUint32(dAtA[i:], uint32(math.Float32bits(float32(m.P95BatchSize))))
+		i--
+		dAtA[i] = 0x45
+	}
+	if m.AvgBatchSize != 0 {
+		i -= 4
+		encoding_binary.LittleEndian.PutUint32(dAtA[i:], uint32(math.Float32bits(float32(m.AvgBatchSize))))
+		i--
+		dAtA[i] = 0x3d
+	}
+	if m.ThroughputTps != 0 {
+		i -= 4
+		encoding_binary.LittleEndian.PutUint32(dAtA[i:], uint32(math.Float32bits(float32(m.ThroughputTps))))
+		i--
+		dAtA[i] = 0x35
+	}
+	if m.P95ConsensusLatencyMs != 0 {
+		i -= 4
+		encoding_binary.LittleEndian.PutUint32(dAtA[i:], uint32(math.Float32bits(float32(m.P95ConsensusLatencyMs))))
+		i--
+		dAtA[i] = 0x2d
+	}
+	if m.P50ConsensusLatencyMs != 0 {
+		i -= 4
+		encoding_binary.LittleEndian.PutUint32(dAtA[i:], uint32(math.Float32bits(float32(m.P50ConsensusLatencyMs))))
+		i--
+		dAtA[i] = 0x25
+	}
+	if m.AvgConsensusLatencyMs != 0 {
+		i -= 4
+		encoding_binary.LittleEndian.PutUint32(dAtA[i:], uint32(math.Float32bits(float32(m.AvgConsensusLatencyMs))))
+		i--
+		dAtA[i] = 0x1d
+	}
+	if m.TotalConsensusInstances != 0 {
+		i = encodeVarintAgent(dAtA, i, uint64(m.TotalConsensusInstances))
+		i--
+		dAtA[i] = 0x10
+	}
+	if m.TotalTransactions != 0 {
+		i = encodeVarintAgent(dAtA, i, uint64(m.TotalTransactions))
+		i--
+		dAtA[i] = 0x8
+	}
+	return len(dAtA) - i, nil
+}
+
+func (m *AutobahnReport) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *AutobahnReport) MarshalTo(dAtA []byte) (int, error) {
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *AutobahnReport) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
+	_ = i
+	var l int
+	_ = l
+	if m.NoProgressViewChangeCount != 0 {
+		i = encodeVarintAgent(dAtA, i, uint64(m.NoProgressViewChangeCount))
+		i--
+		dAtA[i] = 0x1
+		i--
+		dAtA[i] = 0x80
+	}
+	if m.ViewChangeCount != 0 {
+		i = encodeVarintAgent(dAtA, i, uint64(m.ViewChangeCount))
+		i--
+		dAtA[i] = 0x78
+	}
+	if m.P95InterCommitGapMs != 0 {
+		i -= 4
+		encoding_binary.LittleEndian.PutUint32(dAtA[i:], uint32(math.Float32bits(float32(m.P95InterCommitGapMs))))
+		i--
+		dAtA[i] = 0x75
+	}
+	if m.P50InterCommitGapMs != 0 {
+		i -= 4
+		encoding_binary.LittleEndian.PutUint32(dAtA[i:], uint32(math.Float32bits(float32(m.P50InterCommitGapMs))))
+		i--
+		dAtA[i] = 0x6d
+	}
+	if m.AvgInterCommitGapMs != 0 {
+		i -= 4
+		encoding_binary.LittleEndian.PutUint32(dAtA[i:], uint32(math.Float32bits(float32(m.AvgInterCommitGapMs))))
+		i--
+		dAtA[i] = 0x65
+	}
+	if m.TimeoutMs != 0 {
+		i = encodeVarintAgent(dAtA, i, uint64(m.TimeoutMs))
+		i--
+		dAtA[i] = 0x58
+	}
+	if m.RegencyChangeCount != 0 {
+		i = encodeVarintAgent(dAtA, i, uint64(m.RegencyChangeCount))
+		i--
+		dAtA[i] = 0x50
+	}
+	if m.LeaderChangeCount != 0 {
+		i = encodeVarintAgent(dAtA, i, uint64(m.LeaderChangeCount))
+		i--
+		dAtA[i] = 0x48
+	}
+	if m.P95BatchSize != 0 {
+		i -= 4
+		encoding_binary.LittleEndian.PutUint32(dAtA[i:], uint32(math.Float32bits(float32(m.P95BatchSize))))
+		i--
+		dAtA[i] = 0x45
+	}
+	if m.AvgBatchSize != 0 {
+		i -= 4
+		encoding_binary.LittleEndian.PutUint32(dAtA[i:], uint32(math.Float32bits(float32(m.AvgBatchSize))))
+		i--
+		dAtA[i] = 0x3d
+	}
+	if m.ThroughputTps != 0 {
+		i -= 4
+		encoding_binary.LittleEndian.PutUint32(dAtA[i:], uint32(math.Float32bits(float32(m.ThroughputTps))))
+		i--
+		dAtA[i] = 0x35
+	}
+	if m.P95ConsensusLatencyMs != 0 {
+		i -= 4
+		encoding_binary.LittleEndian.PutUint32(dAtA[i:], uint32(math.Float32bits(float32(m.P95ConsensusLatencyMs))))
+		i--
+		dAtA[i] = 0x2d
+	}
+	if m.P50ConsensusLatencyMs != 0 {
+		i -= 4
+		encoding_binary.LittleEndian.PutUint32(dAtA[i:], uint32(math.Float32bits(float32(m.P50ConsensusLatencyMs))))
+		i--
+		dAtA[i] = 0x25
+	}
+	if m.AvgConsensusLatencyMs != 0 {
+		i -= 4
+		encoding_binary.LittleEndian.PutUint32(dAtA[i:], uint32(math.Float32bits(float32(m.AvgConsensusLatencyMs))))
+		i--
+		dAtA[i] = 0x1d
+	}
+	if m.TotalConsensusInstances != 0 {
+		i = encodeVarintAgent(dAtA, i, uint64(m.TotalConsensusInstances))
+		i--
+		dAtA[i] = 0x10
+	}
+	if m.TotalTransactions != 0 {
+		i = encodeVarintAgent(dAtA, i, uint64(m.TotalTransactions))
+		i--
+		dAtA[i] = 0x8
+	}
+	return len(dAtA) - i, nil
+}
+
+func (m *SmartbftReport) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *SmartbftReport) MarshalTo(dAtA []byte) (int, error) {
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *SmartbftReport) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
+	_ = i
+	var l int
+	_ = l
+	if m.NoProgressViewChangeCount != 0 {
+		i = encodeVarintAgent(dAtA, i, uint64(m.NoProgressViewChangeCount))
+		i--
+		dAtA[i] = 0x1
+		i--
+		dAtA[i] = 0x80
+	}
+	if m.ViewChangeCount != 0 {
+		i = encodeVarintAgent(dAtA, i, uint64(m.ViewChangeCount))
+		i--
+		dAtA[i] = 0x78
+	}
+	if m.P95InterCommitGapMs != 0 {
+		i -= 4
+		encoding_binary.LittleEndian.PutUint32(dAtA[i:], uint32(math.Float32bits(float32(m.P95InterCommitGapMs))))
+		i--
+		dAtA[i] = 0x75
+	}
+	if m.P50InterCommitGapMs != 0 {
+		i -= 4
+		encoding_binary.LittleEndian.PutUint32(dAtA[i:], uint32(math.Float32bits(float32(m.P50InterCommitGapMs))))
+		i--
+		dAtA[i] = 0x6d
+	}
+	if m.AvgInterCommitGapMs != 0 {
+		i -= 4
+		encoding_binary.LittleEndian.PutUint32(dAtA[i:], uint32(math.Float32bits(float32(m.AvgInterCommitGapMs))))
+		i--
+		dAtA[i] = 0x65
+	}
+	if m.TimeoutMs != 0 {
+		i = encodeVarintAgent(dAtA, i, uint64(m.TimeoutMs))
+		i--
+		dAtA[i] = 0x58
+	}
+	if m.RegencyChangeCount != 0 {
+		i = encodeVarintAgent(dAtA, i, uint64(m.RegencyChangeCount))
+		i--
+		dAtA[i] = 0x50
+	}
+	if m.LeaderChangeCount != 0 {
+		i = encodeVarintAgent(dAtA, i, uint64(m.LeaderChangeCount))
+		i--
+		dAtA[i] = 0x48
+	}
+	if m.P95BatchSize != 0 {
+		i -= 4
+		encoding_binary.LittleEndian.PutUint32(dAtA[i:], uint32(math.Float32bits(float32(m.P95BatchSize))))
+		i--
+		dAtA[i] = 0x45
+	}
+	if m.AvgBatchSize != 0 {
+		i -= 4
+		encoding_binary.LittleEndian.PutUint32(dAtA[i:], uint32(math.Float32bits(float32(m.AvgBatchSize))))
+		i--
+		dAtA[i] = 0x3d
+	}
+	if m.ThroughputTps != 0 {
+		i -= 4
+		encoding_binary.LittleEndian.PutUint32(dAtA[i:], uint32(math.Float32bits(float32(m.ThroughputTps))))
+		i--
+		dAtA[i] = 0x35
+	}
+	if m.P95ConsensusLatencyMs != 0 {
+		i -= 4
+		encoding_binary.LittleEndian.PutUint32(dAtA[i:], uint32(math.Float32bits(float32(m.P95ConsensusLatencyMs))))
+		i--
+		dAtA[i] = 0x2d
+	}
+	if m.P50ConsensusLatencyMs != 0 {
+		i -= 4
+		encoding_binary.LittleEndian.PutUint32(dAtA[i:], uint32(math.Float32bits(float32(m.P50ConsensusLatencyMs))))
+		i--
+		dAtA[i] = 0x25
+	}
+	if m.AvgConsensusLatencyMs != 0 {
+		i -= 4
+		encoding_binary.LittleEndian.PutUint32(dAtA[i:], uint32(math.Float32bits(float32(m.AvgConsensusLatencyMs))))
+		i--
+		dAtA[i] = 0x1d
+	}
+	if m.TotalConsensusInstances != 0 {
+		i = encodeVarintAgent(dAtA, i, uint64(m.TotalConsensusInstances))
+		i--
+		dAtA[i] = 0x10
+	}
+	if m.TotalTransactions != 0 {
+		i = encodeVarintAgent(dAtA, i, uint64(m.TotalTransactions))
+		i--
+		dAtA[i] = 0x8
+	}
+	return len(dAtA) - i, nil
+}
+
 func (m *ReportLocal) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
@@ -3055,6 +3844,11 @@ func (m *ReportLocal) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 				return 0, err
 			}
 		}
+	}
+	if m.WindowConsensusCount != 0 {
+		i = encodeVarintAgent(dAtA, i, uint64(m.WindowConsensusCount))
+		i--
+		dAtA[i] = 0x40
 	}
 	if m.ReportSeq != 0 {
 		i = encodeVarintAgent(dAtA, i, uint64(m.ReportSeq))
@@ -3124,27 +3918,6 @@ func (m *ReportLocal_PbftState) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	}
 	return len(dAtA) - i, nil
 }
-func (m *ReportLocal_TwoPcOverPbftState) MarshalTo(dAtA []byte) (int, error) {
-	size := m.Size()
-	return m.MarshalToSizedBuffer(dAtA[:size])
-}
-
-func (m *ReportLocal_TwoPcOverPbftState) MarshalToSizedBuffer(dAtA []byte) (int, error) {
-	i := len(dAtA)
-	if m.TwoPcOverPbftState != nil {
-		{
-			size, err := m.TwoPcOverPbftState.MarshalToSizedBuffer(dAtA[:i])
-			if err != nil {
-				return 0, err
-			}
-			i -= size
-			i = encodeVarintAgent(dAtA, i, uint64(size))
-		}
-		i--
-		dAtA[i] = 0x5a
-	}
-	return len(dAtA) - i, nil
-}
 func (m *ReportLocal_SbftState) MarshalTo(dAtA []byte) (int, error) {
 	size := m.Size()
 	return m.MarshalToSizedBuffer(dAtA[:size])
@@ -3187,6 +3960,71 @@ func (m *ReportLocal_TendermintState) MarshalToSizedBuffer(dAtA []byte) (int, er
 	}
 	return len(dAtA) - i, nil
 }
+func (m *ReportLocal_HotstuffState) MarshalTo(dAtA []byte) (int, error) {
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *ReportLocal_HotstuffState) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
+	if m.HotstuffState != nil {
+		{
+			size, err := m.HotstuffState.MarshalToSizedBuffer(dAtA[:i])
+			if err != nil {
+				return 0, err
+			}
+			i -= size
+			i = encodeVarintAgent(dAtA, i, uint64(size))
+		}
+		i--
+		dAtA[i] = 0x72
+	}
+	return len(dAtA) - i, nil
+}
+func (m *ReportLocal_AutobahnState) MarshalTo(dAtA []byte) (int, error) {
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *ReportLocal_AutobahnState) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
+	if m.AutobahnState != nil {
+		{
+			size, err := m.AutobahnState.MarshalToSizedBuffer(dAtA[:i])
+			if err != nil {
+				return 0, err
+			}
+			i -= size
+			i = encodeVarintAgent(dAtA, i, uint64(size))
+		}
+		i--
+		dAtA[i] = 0x7a
+	}
+	return len(dAtA) - i, nil
+}
+func (m *ReportLocal_SmartbftState) MarshalTo(dAtA []byte) (int, error) {
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *ReportLocal_SmartbftState) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
+	if m.SmartbftState != nil {
+		{
+			size, err := m.SmartbftState.MarshalToSizedBuffer(dAtA[:i])
+			if err != nil {
+				return 0, err
+			}
+			i -= size
+			i = encodeVarintAgent(dAtA, i, uint64(size))
+		}
+		i--
+		dAtA[i] = 0x1
+		i--
+		dAtA[i] = 0x82
+	}
+	return len(dAtA) - i, nil
+}
 func (m *PbftReward) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
@@ -3203,58 +4041,6 @@ func (m *PbftReward) MarshalTo(dAtA []byte) (int, error) {
 }
 
 func (m *PbftReward) MarshalToSizedBuffer(dAtA []byte) (int, error) {
-	i := len(dAtA)
-	_ = i
-	var l int
-	_ = l
-	if m.TimeoutUsed != nil {
-		{
-			size, err := m.TimeoutUsed.MarshalToSizedBuffer(dAtA[:i])
-			if err != nil {
-				return 0, err
-			}
-			i -= size
-			i = encodeVarintAgent(dAtA, i, uint64(size))
-		}
-		i--
-		dAtA[i] = 0x1a
-	}
-	if m.Report != nil {
-		{
-			size, err := m.Report.MarshalToSizedBuffer(dAtA[:i])
-			if err != nil {
-				return 0, err
-			}
-			i -= size
-			i = encodeVarintAgent(dAtA, i, uint64(size))
-		}
-		i--
-		dAtA[i] = 0x12
-	}
-	if m.Episode != 0 {
-		i = encodeVarintAgent(dAtA, i, uint64(m.Episode))
-		i--
-		dAtA[i] = 0x8
-	}
-	return len(dAtA) - i, nil
-}
-
-func (m *TwoPcOverPbftReward) Marshal() (dAtA []byte, err error) {
-	size := m.Size()
-	dAtA = make([]byte, size)
-	n, err := m.MarshalToSizedBuffer(dAtA[:size])
-	if err != nil {
-		return nil, err
-	}
-	return dAtA[:n], nil
-}
-
-func (m *TwoPcOverPbftReward) MarshalTo(dAtA []byte) (int, error) {
-	size := m.Size()
-	return m.MarshalToSizedBuffer(dAtA[:size])
-}
-
-func (m *TwoPcOverPbftReward) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	i := len(dAtA)
 	_ = i
 	var l int
@@ -3395,6 +4181,162 @@ func (m *TendermintReward) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	return len(dAtA) - i, nil
 }
 
+func (m *HotstuffReward) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *HotstuffReward) MarshalTo(dAtA []byte) (int, error) {
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *HotstuffReward) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
+	_ = i
+	var l int
+	_ = l
+	if m.TimeoutUsed != nil {
+		{
+			size, err := m.TimeoutUsed.MarshalToSizedBuffer(dAtA[:i])
+			if err != nil {
+				return 0, err
+			}
+			i -= size
+			i = encodeVarintAgent(dAtA, i, uint64(size))
+		}
+		i--
+		dAtA[i] = 0x1a
+	}
+	if m.Report != nil {
+		{
+			size, err := m.Report.MarshalToSizedBuffer(dAtA[:i])
+			if err != nil {
+				return 0, err
+			}
+			i -= size
+			i = encodeVarintAgent(dAtA, i, uint64(size))
+		}
+		i--
+		dAtA[i] = 0x12
+	}
+	if m.Episode != 0 {
+		i = encodeVarintAgent(dAtA, i, uint64(m.Episode))
+		i--
+		dAtA[i] = 0x8
+	}
+	return len(dAtA) - i, nil
+}
+
+func (m *AutobahnReward) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *AutobahnReward) MarshalTo(dAtA []byte) (int, error) {
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *AutobahnReward) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
+	_ = i
+	var l int
+	_ = l
+	if m.TimeoutUsed != nil {
+		{
+			size, err := m.TimeoutUsed.MarshalToSizedBuffer(dAtA[:i])
+			if err != nil {
+				return 0, err
+			}
+			i -= size
+			i = encodeVarintAgent(dAtA, i, uint64(size))
+		}
+		i--
+		dAtA[i] = 0x1a
+	}
+	if m.Report != nil {
+		{
+			size, err := m.Report.MarshalToSizedBuffer(dAtA[:i])
+			if err != nil {
+				return 0, err
+			}
+			i -= size
+			i = encodeVarintAgent(dAtA, i, uint64(size))
+		}
+		i--
+		dAtA[i] = 0x12
+	}
+	if m.Episode != 0 {
+		i = encodeVarintAgent(dAtA, i, uint64(m.Episode))
+		i--
+		dAtA[i] = 0x8
+	}
+	return len(dAtA) - i, nil
+}
+
+func (m *SmartbftReward) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *SmartbftReward) MarshalTo(dAtA []byte) (int, error) {
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *SmartbftReward) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
+	_ = i
+	var l int
+	_ = l
+	if m.TimeoutUsed != nil {
+		{
+			size, err := m.TimeoutUsed.MarshalToSizedBuffer(dAtA[:i])
+			if err != nil {
+				return 0, err
+			}
+			i -= size
+			i = encodeVarintAgent(dAtA, i, uint64(size))
+		}
+		i--
+		dAtA[i] = 0x1a
+	}
+	if m.Report != nil {
+		{
+			size, err := m.Report.MarshalToSizedBuffer(dAtA[:i])
+			if err != nil {
+				return 0, err
+			}
+			i -= size
+			i = encodeVarintAgent(dAtA, i, uint64(size))
+		}
+		i--
+		dAtA[i] = 0x12
+	}
+	if m.Episode != 0 {
+		i = encodeVarintAgent(dAtA, i, uint64(m.Episode))
+		i--
+		dAtA[i] = 0x8
+	}
+	return len(dAtA) - i, nil
+}
+
 func (m *Reward) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
@@ -3448,27 +4390,6 @@ func (m *Reward_Pbft) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	}
 	return len(dAtA) - i, nil
 }
-func (m *Reward_TwoPcOverPbft) MarshalTo(dAtA []byte) (int, error) {
-	size := m.Size()
-	return m.MarshalToSizedBuffer(dAtA[:size])
-}
-
-func (m *Reward_TwoPcOverPbft) MarshalToSizedBuffer(dAtA []byte) (int, error) {
-	i := len(dAtA)
-	if m.TwoPcOverPbft != nil {
-		{
-			size, err := m.TwoPcOverPbft.MarshalToSizedBuffer(dAtA[:i])
-			if err != nil {
-				return 0, err
-			}
-			i -= size
-			i = encodeVarintAgent(dAtA, i, uint64(size))
-		}
-		i--
-		dAtA[i] = 0x12
-	}
-	return len(dAtA) - i, nil
-}
 func (m *Reward_Sbft) MarshalTo(dAtA []byte) (int, error) {
 	size := m.Size()
 	return m.MarshalToSizedBuffer(dAtA[:size])
@@ -3508,6 +4429,69 @@ func (m *Reward_Tendermint) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 		}
 		i--
 		dAtA[i] = 0x22
+	}
+	return len(dAtA) - i, nil
+}
+func (m *Reward_Hotstuff) MarshalTo(dAtA []byte) (int, error) {
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *Reward_Hotstuff) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
+	if m.Hotstuff != nil {
+		{
+			size, err := m.Hotstuff.MarshalToSizedBuffer(dAtA[:i])
+			if err != nil {
+				return 0, err
+			}
+			i -= size
+			i = encodeVarintAgent(dAtA, i, uint64(size))
+		}
+		i--
+		dAtA[i] = 0x2a
+	}
+	return len(dAtA) - i, nil
+}
+func (m *Reward_Autobahn) MarshalTo(dAtA []byte) (int, error) {
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *Reward_Autobahn) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
+	if m.Autobahn != nil {
+		{
+			size, err := m.Autobahn.MarshalToSizedBuffer(dAtA[:i])
+			if err != nil {
+				return 0, err
+			}
+			i -= size
+			i = encodeVarintAgent(dAtA, i, uint64(size))
+		}
+		i--
+		dAtA[i] = 0x32
+	}
+	return len(dAtA) - i, nil
+}
+func (m *Reward_Smartbft) MarshalTo(dAtA []byte) (int, error) {
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *Reward_Smartbft) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
+	if m.Smartbft != nil {
+		{
+			size, err := m.Smartbft.MarshalToSizedBuffer(dAtA[:i])
+			if err != nil {
+				return 0, err
+			}
+			i -= size
+			i = encodeVarintAgent(dAtA, i, uint64(size))
+		}
+		i--
+		dAtA[i] = 0x3a
 	}
 	return len(dAtA) - i, nil
 }
@@ -3586,39 +4570,6 @@ func (m *PbftTimeout) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	return len(dAtA) - i, nil
 }
 
-func (m *TwoPcOverPbftTimeout) Marshal() (dAtA []byte, err error) {
-	size := m.Size()
-	dAtA = make([]byte, size)
-	n, err := m.MarshalToSizedBuffer(dAtA[:size])
-	if err != nil {
-		return nil, err
-	}
-	return dAtA[:n], nil
-}
-
-func (m *TwoPcOverPbftTimeout) MarshalTo(dAtA []byte) (int, error) {
-	size := m.Size()
-	return m.MarshalToSizedBuffer(dAtA[:size])
-}
-
-func (m *TwoPcOverPbftTimeout) MarshalToSizedBuffer(dAtA []byte) (int, error) {
-	i := len(dAtA)
-	_ = i
-	var l int
-	_ = l
-	if m.PrepareTimeoutMilliseconds != 0 {
-		i = encodeVarintAgent(dAtA, i, uint64(m.PrepareTimeoutMilliseconds))
-		i--
-		dAtA[i] = 0x10
-	}
-	if m.ElectionTimeoutMilliseconds != 0 {
-		i = encodeVarintAgent(dAtA, i, uint64(m.ElectionTimeoutMilliseconds))
-		i--
-		dAtA[i] = 0x8
-	}
-	return len(dAtA) - i, nil
-}
-
 func (m *SbftTimeout) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
@@ -3639,11 +4590,6 @@ func (m *SbftTimeout) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	_ = i
 	var l int
 	_ = l
-	if m.BatchTimeoutMilliseconds != 0 {
-		i = encodeVarintAgent(dAtA, i, uint64(m.BatchTimeoutMilliseconds))
-		i--
-		dAtA[i] = 0x18
-	}
 	if m.SlowPathTimeoutMilliseconds != 0 {
 		i = encodeVarintAgent(dAtA, i, uint64(m.SlowPathTimeoutMilliseconds))
 		i--
@@ -3689,6 +4635,100 @@ func (m *TendermintTimeout) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	}
 	if m.ProposeTimeoutMilliseconds != 0 {
 		i = encodeVarintAgent(dAtA, i, uint64(m.ProposeTimeoutMilliseconds))
+		i--
+		dAtA[i] = 0x8
+	}
+	return len(dAtA) - i, nil
+}
+
+func (m *HotstuffTimeout) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *HotstuffTimeout) MarshalTo(dAtA []byte) (int, error) {
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *HotstuffTimeout) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
+	_ = i
+	var l int
+	_ = l
+	if m.TimeoutDelayMilliseconds != 0 {
+		i = encodeVarintAgent(dAtA, i, uint64(m.TimeoutDelayMilliseconds))
+		i--
+		dAtA[i] = 0x8
+	}
+	return len(dAtA) - i, nil
+}
+
+func (m *AutobahnTimeout) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *AutobahnTimeout) MarshalTo(dAtA []byte) (int, error) {
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *AutobahnTimeout) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
+	_ = i
+	var l int
+	_ = l
+	if m.FastPathTimeoutMilliseconds != 0 {
+		i = encodeVarintAgent(dAtA, i, uint64(m.FastPathTimeoutMilliseconds))
+		i--
+		dAtA[i] = 0x18
+	}
+	if m.CarTimeoutMilliseconds != 0 {
+		i = encodeVarintAgent(dAtA, i, uint64(m.CarTimeoutMilliseconds))
+		i--
+		dAtA[i] = 0x10
+	}
+	if m.TimeoutDelayMilliseconds != 0 {
+		i = encodeVarintAgent(dAtA, i, uint64(m.TimeoutDelayMilliseconds))
+		i--
+		dAtA[i] = 0x8
+	}
+	return len(dAtA) - i, nil
+}
+
+func (m *SmartbftTimeout) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *SmartbftTimeout) MarshalTo(dAtA []byte) (int, error) {
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *SmartbftTimeout) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
+	_ = i
+	var l int
+	_ = l
+	if m.ElectionTimeoutMilliseconds != 0 {
+		i = encodeVarintAgent(dAtA, i, uint64(m.ElectionTimeoutMilliseconds))
 		i--
 		dAtA[i] = 0x8
 	}
@@ -3748,27 +4788,6 @@ func (m *Timeout_Pbft) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	}
 	return len(dAtA) - i, nil
 }
-func (m *Timeout_TwoPcOverPbft) MarshalTo(dAtA []byte) (int, error) {
-	size := m.Size()
-	return m.MarshalToSizedBuffer(dAtA[:size])
-}
-
-func (m *Timeout_TwoPcOverPbft) MarshalToSizedBuffer(dAtA []byte) (int, error) {
-	i := len(dAtA)
-	if m.TwoPcOverPbft != nil {
-		{
-			size, err := m.TwoPcOverPbft.MarshalToSizedBuffer(dAtA[:i])
-			if err != nil {
-				return 0, err
-			}
-			i -= size
-			i = encodeVarintAgent(dAtA, i, uint64(size))
-		}
-		i--
-		dAtA[i] = 0x12
-	}
-	return len(dAtA) - i, nil
-}
 func (m *Timeout_Sbft) MarshalTo(dAtA []byte) (int, error) {
 	size := m.Size()
 	return m.MarshalToSizedBuffer(dAtA[:size])
@@ -3808,6 +4827,69 @@ func (m *Timeout_Tendermint) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 		}
 		i--
 		dAtA[i] = 0x22
+	}
+	return len(dAtA) - i, nil
+}
+func (m *Timeout_Hotstuff) MarshalTo(dAtA []byte) (int, error) {
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *Timeout_Hotstuff) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
+	if m.Hotstuff != nil {
+		{
+			size, err := m.Hotstuff.MarshalToSizedBuffer(dAtA[:i])
+			if err != nil {
+				return 0, err
+			}
+			i -= size
+			i = encodeVarintAgent(dAtA, i, uint64(size))
+		}
+		i--
+		dAtA[i] = 0x2a
+	}
+	return len(dAtA) - i, nil
+}
+func (m *Timeout_Autobahn) MarshalTo(dAtA []byte) (int, error) {
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *Timeout_Autobahn) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
+	if m.Autobahn != nil {
+		{
+			size, err := m.Autobahn.MarshalToSizedBuffer(dAtA[:i])
+			if err != nil {
+				return 0, err
+			}
+			i -= size
+			i = encodeVarintAgent(dAtA, i, uint64(size))
+		}
+		i--
+		dAtA[i] = 0x32
+	}
+	return len(dAtA) - i, nil
+}
+func (m *Timeout_Smartbft) MarshalTo(dAtA []byte) (int, error) {
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *Timeout_Smartbft) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
+	if m.Smartbft != nil {
+		{
+			size, err := m.Smartbft.MarshalToSizedBuffer(dAtA[:i])
+			if err != nil {
+				return 0, err
+			}
+			i -= size
+			i = encodeVarintAgent(dAtA, i, uint64(size))
+		}
+		i--
+		dAtA[i] = 0x3a
 	}
 	return len(dAtA) - i, nil
 }
@@ -3864,6 +4946,11 @@ func (m *TimeoutStatus) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	_ = i
 	var l int
 	_ = l
+	if m.WindowConsensusCount != 0 {
+		i = encodeVarintAgent(dAtA, i, uint64(m.WindowConsensusCount))
+		i--
+		dAtA[i] = 0x30
+	}
 	if m.ReportSeq != 0 {
 		i = encodeVarintAgent(dAtA, i, uint64(m.ReportSeq))
 		i--
@@ -3925,16 +5012,13 @@ func (m *PbftReport) Size() (n int) {
 	if m.AvgConsensusLatencyMs != 0 {
 		n += 5
 	}
+	if m.P50ConsensusLatencyMs != 0 {
+		n += 5
+	}
 	if m.P95ConsensusLatencyMs != 0 {
 		n += 5
 	}
-	if m.P99ConsensusLatencyMs != 0 {
-		n += 5
-	}
 	if m.ThroughputTps != 0 {
-		n += 5
-	}
-	if m.TimeoutViolationRate != 0 {
 		n += 5
 	}
 	if m.AvgBatchSize != 0 {
@@ -3949,144 +5033,32 @@ func (m *PbftReport) Size() (n int) {
 	if m.RegencyChangeCount != 0 {
 		n += 1 + sovAgent(uint64(m.RegencyChangeCount))
 	}
-	if m.PhaseProposeAvgDelayMs != 0 {
+	if m.TimeoutMs != 0 {
+		n += 1 + sovAgent(uint64(m.TimeoutMs))
+	}
+	if m.AvgInterCommitGapMs != 0 {
 		n += 5
 	}
-	if m.PhaseProposeP95DelayMs != 0 {
+	if m.P50InterCommitGapMs != 0 {
 		n += 5
 	}
-	if m.PhaseWriteAvgDelayMs != 0 {
+	if m.P95InterCommitGapMs != 0 {
 		n += 5
 	}
-	if m.PhaseWriteP95DelayMs != 0 {
-		n += 5
+	if m.ViewChangeCount != 0 {
+		n += 1 + sovAgent(uint64(m.ViewChangeCount))
 	}
-	if m.PhaseAcceptAvgDelayMs != 0 {
+	if m.NoProgressViewChangeCount != 0 {
+		n += 2 + sovAgent(uint64(m.NoProgressViewChangeCount))
+	}
+	if m.PrePrepareLatencyMs != 0 {
 		n += 6
 	}
-	if m.PhaseAcceptP95DelayMs != 0 {
+	if m.PrepareLatencyMs != 0 {
 		n += 6
 	}
-	if m.PhasePostDecisionAvgDelayMs != 0 {
+	if m.CommitLatencyMs != 0 {
 		n += 6
-	}
-	if m.PhasePostDecisionP95DelayMs != 0 {
-		n += 6
-	}
-	return n
-}
-
-func (m *TwoPcOverPbftReport) Size() (n int) {
-	if m == nil {
-		return 0
-	}
-	var l int
-	_ = l
-	if m.Pbft != nil {
-		l = m.Pbft.Size()
-		n += 1 + l + sovAgent(uint64(l))
-	}
-	if m.TotalTransactions != 0 {
-		n += 1 + sovAgent(uint64(m.TotalTransactions))
-	}
-	if m.SingleShardTransactions != 0 {
-		n += 1 + sovAgent(uint64(m.SingleShardTransactions))
-	}
-	if m.CrossShardTransactions != 0 {
-		n += 1 + sovAgent(uint64(m.CrossShardTransactions))
-	}
-	if m.PrepareOkCount != 0 {
-		n += 1 + sovAgent(uint64(m.PrepareOkCount))
-	}
-	if m.PrepareFailCount != 0 {
-		n += 1 + sovAgent(uint64(m.PrepareFailCount))
-	}
-	if m.CommitOkCount != 0 {
-		n += 1 + sovAgent(uint64(m.CommitOkCount))
-	}
-	if m.AbortCount != 0 {
-		n += 1 + sovAgent(uint64(m.AbortCount))
-	}
-	if m.InDoubtCount != 0 {
-		n += 1 + sovAgent(uint64(m.InDoubtCount))
-	}
-	if m.PrepareTimeoutCount != 0 {
-		n += 1 + sovAgent(uint64(m.PrepareTimeoutCount))
-	}
-	if m.CommitTimeoutUnknownOutcomeCount != 0 {
-		n += 1 + sovAgent(uint64(m.CommitTimeoutUnknownOutcomeCount))
-	}
-	if m.AbortBestEffortTimeoutCount != 0 {
-		n += 1 + sovAgent(uint64(m.AbortBestEffortTimeoutCount))
-	}
-	if m.LockContentionCount != 0 {
-		n += 1 + sovAgent(uint64(m.LockContentionCount))
-	}
-	if m.PrepareTimeoutRate != 0 {
-		n += 5
-	}
-	if m.AbortRate != 0 {
-		n += 5
-	}
-	if m.CommitRate != 0 {
-		n += 6
-	}
-	if m.LockContentionRate != 0 {
-		n += 6
-	}
-	if m.AvgEndToEndLatencyMs != 0 {
-		n += 6
-	}
-	if m.P95EndToEndLatencyMs != 0 {
-		n += 6
-	}
-	if m.P99EndToEndLatencyMs != 0 {
-		n += 6
-	}
-	if m.AvgPrepareLatencyMs != 0 {
-		n += 6
-	}
-	if m.P95PrepareLatencyMs != 0 {
-		n += 6
-	}
-	if m.AvgCommitLatencyMs != 0 {
-		n += 6
-	}
-	if m.P95CommitLatencyMs != 0 {
-		n += 6
-	}
-	if m.AvgLockWaitMs != 0 {
-		n += 6
-	}
-	if m.P95LockWaitMs != 0 {
-		n += 6
-	}
-	if m.AvgLockHoldMs != 0 {
-		n += 6
-	}
-	if m.P95LockHoldMs != 0 {
-		n += 6
-	}
-	if m.ReasonPrepareLockBusyCount != 0 {
-		n += 2 + sovAgent(uint64(m.ReasonPrepareLockBusyCount))
-	}
-	if m.ReasonPrepareValidationFailCount != 0 {
-		n += 2 + sovAgent(uint64(m.ReasonPrepareValidationFailCount))
-	}
-	if m.ReasonPrepareTimeoutCount != 0 {
-		n += 2 + sovAgent(uint64(m.ReasonPrepareTimeoutCount))
-	}
-	if m.ReasonPrepareOtherCount != 0 {
-		n += 2 + sovAgent(uint64(m.ReasonPrepareOtherCount))
-	}
-	if m.ReasonCommitTimeoutUnknownOutcomeCount != 0 {
-		n += 2 + sovAgent(uint64(m.ReasonCommitTimeoutUnknownOutcomeCount))
-	}
-	if m.ReasonAbortBestEffortTimeoutCount != 0 {
-		n += 2 + sovAgent(uint64(m.ReasonAbortBestEffortTimeoutCount))
-	}
-	if m.ReasonOtherCount != 0 {
-		n += 2 + sovAgent(uint64(m.ReasonOtherCount))
 	}
 	return n
 }
@@ -4106,16 +5078,13 @@ func (m *SbftReport) Size() (n int) {
 	if m.AvgConsensusLatencyMs != 0 {
 		n += 5
 	}
+	if m.P50ConsensusLatencyMs != 0 {
+		n += 5
+	}
 	if m.P95ConsensusLatencyMs != 0 {
 		n += 5
 	}
-	if m.P99ConsensusLatencyMs != 0 {
-		n += 5
-	}
 	if m.ThroughputTps != 0 {
-		n += 5
-	}
-	if m.TimeoutViolationRate != 0 {
 		n += 5
 	}
 	if m.AvgBatchSize != 0 {
@@ -4129,6 +5098,51 @@ func (m *SbftReport) Size() (n int) {
 	}
 	if m.RegencyChangeCount != 0 {
 		n += 1 + sovAgent(uint64(m.RegencyChangeCount))
+	}
+	if m.TimeoutMs != 0 {
+		n += 1 + sovAgent(uint64(m.TimeoutMs))
+	}
+	if m.AvgInterCommitGapMs != 0 {
+		n += 5
+	}
+	if m.P50InterCommitGapMs != 0 {
+		n += 5
+	}
+	if m.P95InterCommitGapMs != 0 {
+		n += 5
+	}
+	if m.ViewChangeCount != 0 {
+		n += 1 + sovAgent(uint64(m.ViewChangeCount))
+	}
+	if m.NoProgressViewChangeCount != 0 {
+		n += 2 + sovAgent(uint64(m.NoProgressViewChangeCount))
+	}
+	if m.PrePrepareLatencyMs != 0 {
+		n += 6
+	}
+	if m.PrepareLatencyMs != 0 {
+		n += 6
+	}
+	if m.CommitLatencyMs != 0 {
+		n += 6
+	}
+	if m.SlowPathTimeoutMs != 0 {
+		n += 2 + sovAgent(uint64(m.SlowPathTimeoutMs))
+	}
+	if m.FastPathCount != 0 {
+		n += 2 + sovAgent(uint64(m.FastPathCount))
+	}
+	if m.SlowPathCount != 0 {
+		n += 2 + sovAgent(uint64(m.SlowPathCount))
+	}
+	if m.NthPrepareGapMs != 0 {
+		n += 6
+	}
+	if m.NthPrepareSeenCount != 0 {
+		n += 2 + sovAgent(uint64(m.NthPrepareSeenCount))
+	}
+	if m.NthPrepareUnseenCount != 0 {
+		n += 2 + sovAgent(uint64(m.NthPrepareUnseenCount))
 	}
 	return n
 }
@@ -4187,6 +5201,177 @@ func (m *TendermintReport) Size() (n int) {
 	return n
 }
 
+func (m *HotstuffReport) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	if m.TotalTransactions != 0 {
+		n += 1 + sovAgent(uint64(m.TotalTransactions))
+	}
+	if m.TotalConsensusInstances != 0 {
+		n += 1 + sovAgent(uint64(m.TotalConsensusInstances))
+	}
+	if m.AvgConsensusLatencyMs != 0 {
+		n += 5
+	}
+	if m.P50ConsensusLatencyMs != 0 {
+		n += 5
+	}
+	if m.P95ConsensusLatencyMs != 0 {
+		n += 5
+	}
+	if m.ThroughputTps != 0 {
+		n += 5
+	}
+	if m.AvgBatchSize != 0 {
+		n += 5
+	}
+	if m.P95BatchSize != 0 {
+		n += 5
+	}
+	if m.LeaderChangeCount != 0 {
+		n += 1 + sovAgent(uint64(m.LeaderChangeCount))
+	}
+	if m.RegencyChangeCount != 0 {
+		n += 1 + sovAgent(uint64(m.RegencyChangeCount))
+	}
+	if m.TimeoutMs != 0 {
+		n += 1 + sovAgent(uint64(m.TimeoutMs))
+	}
+	if m.AvgInterCommitGapMs != 0 {
+		n += 5
+	}
+	if m.P50InterCommitGapMs != 0 {
+		n += 5
+	}
+	if m.P95InterCommitGapMs != 0 {
+		n += 5
+	}
+	if m.ViewChangeCount != 0 {
+		n += 1 + sovAgent(uint64(m.ViewChangeCount))
+	}
+	if m.NoProgressViewChangeCount != 0 {
+		n += 2 + sovAgent(uint64(m.NoProgressViewChangeCount))
+	}
+	return n
+}
+
+func (m *AutobahnReport) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	if m.TotalTransactions != 0 {
+		n += 1 + sovAgent(uint64(m.TotalTransactions))
+	}
+	if m.TotalConsensusInstances != 0 {
+		n += 1 + sovAgent(uint64(m.TotalConsensusInstances))
+	}
+	if m.AvgConsensusLatencyMs != 0 {
+		n += 5
+	}
+	if m.P50ConsensusLatencyMs != 0 {
+		n += 5
+	}
+	if m.P95ConsensusLatencyMs != 0 {
+		n += 5
+	}
+	if m.ThroughputTps != 0 {
+		n += 5
+	}
+	if m.AvgBatchSize != 0 {
+		n += 5
+	}
+	if m.P95BatchSize != 0 {
+		n += 5
+	}
+	if m.LeaderChangeCount != 0 {
+		n += 1 + sovAgent(uint64(m.LeaderChangeCount))
+	}
+	if m.RegencyChangeCount != 0 {
+		n += 1 + sovAgent(uint64(m.RegencyChangeCount))
+	}
+	if m.TimeoutMs != 0 {
+		n += 1 + sovAgent(uint64(m.TimeoutMs))
+	}
+	if m.AvgInterCommitGapMs != 0 {
+		n += 5
+	}
+	if m.P50InterCommitGapMs != 0 {
+		n += 5
+	}
+	if m.P95InterCommitGapMs != 0 {
+		n += 5
+	}
+	if m.ViewChangeCount != 0 {
+		n += 1 + sovAgent(uint64(m.ViewChangeCount))
+	}
+	if m.NoProgressViewChangeCount != 0 {
+		n += 2 + sovAgent(uint64(m.NoProgressViewChangeCount))
+	}
+	return n
+}
+
+func (m *SmartbftReport) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	if m.TotalTransactions != 0 {
+		n += 1 + sovAgent(uint64(m.TotalTransactions))
+	}
+	if m.TotalConsensusInstances != 0 {
+		n += 1 + sovAgent(uint64(m.TotalConsensusInstances))
+	}
+	if m.AvgConsensusLatencyMs != 0 {
+		n += 5
+	}
+	if m.P50ConsensusLatencyMs != 0 {
+		n += 5
+	}
+	if m.P95ConsensusLatencyMs != 0 {
+		n += 5
+	}
+	if m.ThroughputTps != 0 {
+		n += 5
+	}
+	if m.AvgBatchSize != 0 {
+		n += 5
+	}
+	if m.P95BatchSize != 0 {
+		n += 5
+	}
+	if m.LeaderChangeCount != 0 {
+		n += 1 + sovAgent(uint64(m.LeaderChangeCount))
+	}
+	if m.RegencyChangeCount != 0 {
+		n += 1 + sovAgent(uint64(m.RegencyChangeCount))
+	}
+	if m.TimeoutMs != 0 {
+		n += 1 + sovAgent(uint64(m.TimeoutMs))
+	}
+	if m.AvgInterCommitGapMs != 0 {
+		n += 5
+	}
+	if m.P50InterCommitGapMs != 0 {
+		n += 5
+	}
+	if m.P95InterCommitGapMs != 0 {
+		n += 5
+	}
+	if m.ViewChangeCount != 0 {
+		n += 1 + sovAgent(uint64(m.ViewChangeCount))
+	}
+	if m.NoProgressViewChangeCount != 0 {
+		n += 2 + sovAgent(uint64(m.NoProgressViewChangeCount))
+	}
+	return n
+}
+
 func (m *ReportLocal) Size() (n int) {
 	if m == nil {
 		return 0
@@ -4216,6 +5401,9 @@ func (m *ReportLocal) Size() (n int) {
 	if m.ReportSeq != 0 {
 		n += 1 + sovAgent(uint64(m.ReportSeq))
 	}
+	if m.WindowConsensusCount != 0 {
+		n += 1 + sovAgent(uint64(m.WindowConsensusCount))
+	}
 	if m.State != nil {
 		n += m.State.Size()
 	}
@@ -4230,18 +5418,6 @@ func (m *ReportLocal_PbftState) Size() (n int) {
 	_ = l
 	if m.PbftState != nil {
 		l = m.PbftState.Size()
-		n += 1 + l + sovAgent(uint64(l))
-	}
-	return n
-}
-func (m *ReportLocal_TwoPcOverPbftState) Size() (n int) {
-	if m == nil {
-		return 0
-	}
-	var l int
-	_ = l
-	if m.TwoPcOverPbftState != nil {
-		l = m.TwoPcOverPbftState.Size()
 		n += 1 + l + sovAgent(uint64(l))
 	}
 	return n
@@ -4270,27 +5446,43 @@ func (m *ReportLocal_TendermintState) Size() (n int) {
 	}
 	return n
 }
-func (m *PbftReward) Size() (n int) {
+func (m *ReportLocal_HotstuffState) Size() (n int) {
 	if m == nil {
 		return 0
 	}
 	var l int
 	_ = l
-	if m.Episode != 0 {
-		n += 1 + sovAgent(uint64(m.Episode))
-	}
-	if m.Report != nil {
-		l = m.Report.Size()
-		n += 1 + l + sovAgent(uint64(l))
-	}
-	if m.TimeoutUsed != nil {
-		l = m.TimeoutUsed.Size()
+	if m.HotstuffState != nil {
+		l = m.HotstuffState.Size()
 		n += 1 + l + sovAgent(uint64(l))
 	}
 	return n
 }
-
-func (m *TwoPcOverPbftReward) Size() (n int) {
+func (m *ReportLocal_AutobahnState) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	if m.AutobahnState != nil {
+		l = m.AutobahnState.Size()
+		n += 1 + l + sovAgent(uint64(l))
+	}
+	return n
+}
+func (m *ReportLocal_SmartbftState) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	if m.SmartbftState != nil {
+		l = m.SmartbftState.Size()
+		n += 2 + l + sovAgent(uint64(l))
+	}
+	return n
+}
+func (m *PbftReward) Size() (n int) {
 	if m == nil {
 		return 0
 	}
@@ -4350,6 +5542,66 @@ func (m *TendermintReward) Size() (n int) {
 	return n
 }
 
+func (m *HotstuffReward) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	if m.Episode != 0 {
+		n += 1 + sovAgent(uint64(m.Episode))
+	}
+	if m.Report != nil {
+		l = m.Report.Size()
+		n += 1 + l + sovAgent(uint64(l))
+	}
+	if m.TimeoutUsed != nil {
+		l = m.TimeoutUsed.Size()
+		n += 1 + l + sovAgent(uint64(l))
+	}
+	return n
+}
+
+func (m *AutobahnReward) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	if m.Episode != 0 {
+		n += 1 + sovAgent(uint64(m.Episode))
+	}
+	if m.Report != nil {
+		l = m.Report.Size()
+		n += 1 + l + sovAgent(uint64(l))
+	}
+	if m.TimeoutUsed != nil {
+		l = m.TimeoutUsed.Size()
+		n += 1 + l + sovAgent(uint64(l))
+	}
+	return n
+}
+
+func (m *SmartbftReward) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	if m.Episode != 0 {
+		n += 1 + sovAgent(uint64(m.Episode))
+	}
+	if m.Report != nil {
+		l = m.Report.Size()
+		n += 1 + l + sovAgent(uint64(l))
+	}
+	if m.TimeoutUsed != nil {
+		l = m.TimeoutUsed.Size()
+		n += 1 + l + sovAgent(uint64(l))
+	}
+	return n
+}
+
 func (m *Reward) Size() (n int) {
 	if m == nil {
 		return 0
@@ -4374,18 +5626,6 @@ func (m *Reward_Pbft) Size() (n int) {
 	}
 	return n
 }
-func (m *Reward_TwoPcOverPbft) Size() (n int) {
-	if m == nil {
-		return 0
-	}
-	var l int
-	_ = l
-	if m.TwoPcOverPbft != nil {
-		l = m.TwoPcOverPbft.Size()
-		n += 1 + l + sovAgent(uint64(l))
-	}
-	return n
-}
 func (m *Reward_Sbft) Size() (n int) {
 	if m == nil {
 		return 0
@@ -4406,6 +5646,42 @@ func (m *Reward_Tendermint) Size() (n int) {
 	_ = l
 	if m.Tendermint != nil {
 		l = m.Tendermint.Size()
+		n += 1 + l + sovAgent(uint64(l))
+	}
+	return n
+}
+func (m *Reward_Hotstuff) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	if m.Hotstuff != nil {
+		l = m.Hotstuff.Size()
+		n += 1 + l + sovAgent(uint64(l))
+	}
+	return n
+}
+func (m *Reward_Autobahn) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	if m.Autobahn != nil {
+		l = m.Autobahn.Size()
+		n += 1 + l + sovAgent(uint64(l))
+	}
+	return n
+}
+func (m *Reward_Smartbft) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	if m.Smartbft != nil {
+		l = m.Smartbft.Size()
 		n += 1 + l + sovAgent(uint64(l))
 	}
 	return n
@@ -4443,21 +5719,6 @@ func (m *PbftTimeout) Size() (n int) {
 	return n
 }
 
-func (m *TwoPcOverPbftTimeout) Size() (n int) {
-	if m == nil {
-		return 0
-	}
-	var l int
-	_ = l
-	if m.ElectionTimeoutMilliseconds != 0 {
-		n += 1 + sovAgent(uint64(m.ElectionTimeoutMilliseconds))
-	}
-	if m.PrepareTimeoutMilliseconds != 0 {
-		n += 1 + sovAgent(uint64(m.PrepareTimeoutMilliseconds))
-	}
-	return n
-}
-
 func (m *SbftTimeout) Size() (n int) {
 	if m == nil {
 		return 0
@@ -4469,9 +5730,6 @@ func (m *SbftTimeout) Size() (n int) {
 	}
 	if m.SlowPathTimeoutMilliseconds != 0 {
 		n += 1 + sovAgent(uint64(m.SlowPathTimeoutMilliseconds))
-	}
-	if m.BatchTimeoutMilliseconds != 0 {
-		n += 1 + sovAgent(uint64(m.BatchTimeoutMilliseconds))
 	}
 	return n
 }
@@ -4490,6 +5748,48 @@ func (m *TendermintTimeout) Size() (n int) {
 	}
 	if m.PrecommitTimeoutMilliseconds != 0 {
 		n += 1 + sovAgent(uint64(m.PrecommitTimeoutMilliseconds))
+	}
+	return n
+}
+
+func (m *HotstuffTimeout) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	if m.TimeoutDelayMilliseconds != 0 {
+		n += 1 + sovAgent(uint64(m.TimeoutDelayMilliseconds))
+	}
+	return n
+}
+
+func (m *AutobahnTimeout) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	if m.TimeoutDelayMilliseconds != 0 {
+		n += 1 + sovAgent(uint64(m.TimeoutDelayMilliseconds))
+	}
+	if m.CarTimeoutMilliseconds != 0 {
+		n += 1 + sovAgent(uint64(m.CarTimeoutMilliseconds))
+	}
+	if m.FastPathTimeoutMilliseconds != 0 {
+		n += 1 + sovAgent(uint64(m.FastPathTimeoutMilliseconds))
+	}
+	return n
+}
+
+func (m *SmartbftTimeout) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	if m.ElectionTimeoutMilliseconds != 0 {
+		n += 1 + sovAgent(uint64(m.ElectionTimeoutMilliseconds))
 	}
 	return n
 }
@@ -4518,18 +5818,6 @@ func (m *Timeout_Pbft) Size() (n int) {
 	}
 	return n
 }
-func (m *Timeout_TwoPcOverPbft) Size() (n int) {
-	if m == nil {
-		return 0
-	}
-	var l int
-	_ = l
-	if m.TwoPcOverPbft != nil {
-		l = m.TwoPcOverPbft.Size()
-		n += 1 + l + sovAgent(uint64(l))
-	}
-	return n
-}
 func (m *Timeout_Sbft) Size() (n int) {
 	if m == nil {
 		return 0
@@ -4550,6 +5838,42 @@ func (m *Timeout_Tendermint) Size() (n int) {
 	_ = l
 	if m.Tendermint != nil {
 		l = m.Tendermint.Size()
+		n += 1 + l + sovAgent(uint64(l))
+	}
+	return n
+}
+func (m *Timeout_Hotstuff) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	if m.Hotstuff != nil {
+		l = m.Hotstuff.Size()
+		n += 1 + l + sovAgent(uint64(l))
+	}
+	return n
+}
+func (m *Timeout_Autobahn) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	if m.Autobahn != nil {
+		l = m.Autobahn.Size()
+		n += 1 + l + sovAgent(uint64(l))
+	}
+	return n
+}
+func (m *Timeout_Smartbft) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	if m.Smartbft != nil {
+		l = m.Smartbft.Size()
 		n += 1 + l + sovAgent(uint64(l))
 	}
 	return n
@@ -4590,6 +5914,9 @@ func (m *TimeoutStatus) Size() (n int) {
 	}
 	if m.ReportSeq != 0 {
 		n += 1 + sovAgent(uint64(m.ReportSeq))
+	}
+	if m.WindowConsensusCount != 0 {
+		n += 1 + sovAgent(uint64(m.WindowConsensusCount))
 	}
 	return n
 }
@@ -4680,6 +6007,17 @@ func (m *PbftReport) Unmarshal(dAtA []byte) error {
 			m.AvgConsensusLatencyMs = float32(math.Float32frombits(v))
 		case 4:
 			if wireType != 5 {
+				return fmt.Errorf("proto: wrong wireType = %d for field P50ConsensusLatencyMs", wireType)
+			}
+			var v uint32
+			if (iNdEx + 4) > l {
+				return io.ErrUnexpectedEOF
+			}
+			v = uint32(encoding_binary.LittleEndian.Uint32(dAtA[iNdEx:]))
+			iNdEx += 4
+			m.P50ConsensusLatencyMs = float32(math.Float32frombits(v))
+		case 5:
+			if wireType != 5 {
 				return fmt.Errorf("proto: wrong wireType = %d for field P95ConsensusLatencyMs", wireType)
 			}
 			var v uint32
@@ -4689,17 +6027,6 @@ func (m *PbftReport) Unmarshal(dAtA []byte) error {
 			v = uint32(encoding_binary.LittleEndian.Uint32(dAtA[iNdEx:]))
 			iNdEx += 4
 			m.P95ConsensusLatencyMs = float32(math.Float32frombits(v))
-		case 5:
-			if wireType != 5 {
-				return fmt.Errorf("proto: wrong wireType = %d for field P99ConsensusLatencyMs", wireType)
-			}
-			var v uint32
-			if (iNdEx + 4) > l {
-				return io.ErrUnexpectedEOF
-			}
-			v = uint32(encoding_binary.LittleEndian.Uint32(dAtA[iNdEx:]))
-			iNdEx += 4
-			m.P99ConsensusLatencyMs = float32(math.Float32frombits(v))
 		case 6:
 			if wireType != 5 {
 				return fmt.Errorf("proto: wrong wireType = %d for field ThroughputTps", wireType)
@@ -4713,17 +6040,6 @@ func (m *PbftReport) Unmarshal(dAtA []byte) error {
 			m.ThroughputTps = float32(math.Float32frombits(v))
 		case 7:
 			if wireType != 5 {
-				return fmt.Errorf("proto: wrong wireType = %d for field TimeoutViolationRate", wireType)
-			}
-			var v uint32
-			if (iNdEx + 4) > l {
-				return io.ErrUnexpectedEOF
-			}
-			v = uint32(encoding_binary.LittleEndian.Uint32(dAtA[iNdEx:]))
-			iNdEx += 4
-			m.TimeoutViolationRate = float32(math.Float32frombits(v))
-		case 8:
-			if wireType != 5 {
 				return fmt.Errorf("proto: wrong wireType = %d for field AvgBatchSize", wireType)
 			}
 			var v uint32
@@ -4733,7 +6049,7 @@ func (m *PbftReport) Unmarshal(dAtA []byte) error {
 			v = uint32(encoding_binary.LittleEndian.Uint32(dAtA[iNdEx:]))
 			iNdEx += 4
 			m.AvgBatchSize = float32(math.Float32frombits(v))
-		case 9:
+		case 8:
 			if wireType != 5 {
 				return fmt.Errorf("proto: wrong wireType = %d for field P95BatchSize", wireType)
 			}
@@ -4744,7 +6060,7 @@ func (m *PbftReport) Unmarshal(dAtA []byte) error {
 			v = uint32(encoding_binary.LittleEndian.Uint32(dAtA[iNdEx:]))
 			iNdEx += 4
 			m.P95BatchSize = float32(math.Float32frombits(v))
-		case 10:
+		case 9:
 			if wireType != 0 {
 				return fmt.Errorf("proto: wrong wireType = %d for field LeaderChangeCount", wireType)
 			}
@@ -4763,7 +6079,7 @@ func (m *PbftReport) Unmarshal(dAtA []byte) error {
 					break
 				}
 			}
-		case 11:
+		case 10:
 			if wireType != 0 {
 				return fmt.Errorf("proto: wrong wireType = %d for field RegencyChangeCount", wireType)
 			}
@@ -4782,356 +6098,11 @@ func (m *PbftReport) Unmarshal(dAtA []byte) error {
 					break
 				}
 			}
-		case 12:
-			if wireType != 5 {
-				return fmt.Errorf("proto: wrong wireType = %d for field PhaseProposeAvgDelayMs", wireType)
-			}
-			var v uint32
-			if (iNdEx + 4) > l {
-				return io.ErrUnexpectedEOF
-			}
-			v = uint32(encoding_binary.LittleEndian.Uint32(dAtA[iNdEx:]))
-			iNdEx += 4
-			m.PhaseProposeAvgDelayMs = float32(math.Float32frombits(v))
-		case 13:
-			if wireType != 5 {
-				return fmt.Errorf("proto: wrong wireType = %d for field PhaseProposeP95DelayMs", wireType)
-			}
-			var v uint32
-			if (iNdEx + 4) > l {
-				return io.ErrUnexpectedEOF
-			}
-			v = uint32(encoding_binary.LittleEndian.Uint32(dAtA[iNdEx:]))
-			iNdEx += 4
-			m.PhaseProposeP95DelayMs = float32(math.Float32frombits(v))
-		case 14:
-			if wireType != 5 {
-				return fmt.Errorf("proto: wrong wireType = %d for field PhaseWriteAvgDelayMs", wireType)
-			}
-			var v uint32
-			if (iNdEx + 4) > l {
-				return io.ErrUnexpectedEOF
-			}
-			v = uint32(encoding_binary.LittleEndian.Uint32(dAtA[iNdEx:]))
-			iNdEx += 4
-			m.PhaseWriteAvgDelayMs = float32(math.Float32frombits(v))
-		case 15:
-			if wireType != 5 {
-				return fmt.Errorf("proto: wrong wireType = %d for field PhaseWriteP95DelayMs", wireType)
-			}
-			var v uint32
-			if (iNdEx + 4) > l {
-				return io.ErrUnexpectedEOF
-			}
-			v = uint32(encoding_binary.LittleEndian.Uint32(dAtA[iNdEx:]))
-			iNdEx += 4
-			m.PhaseWriteP95DelayMs = float32(math.Float32frombits(v))
-		case 16:
-			if wireType != 5 {
-				return fmt.Errorf("proto: wrong wireType = %d for field PhaseAcceptAvgDelayMs", wireType)
-			}
-			var v uint32
-			if (iNdEx + 4) > l {
-				return io.ErrUnexpectedEOF
-			}
-			v = uint32(encoding_binary.LittleEndian.Uint32(dAtA[iNdEx:]))
-			iNdEx += 4
-			m.PhaseAcceptAvgDelayMs = float32(math.Float32frombits(v))
-		case 17:
-			if wireType != 5 {
-				return fmt.Errorf("proto: wrong wireType = %d for field PhaseAcceptP95DelayMs", wireType)
-			}
-			var v uint32
-			if (iNdEx + 4) > l {
-				return io.ErrUnexpectedEOF
-			}
-			v = uint32(encoding_binary.LittleEndian.Uint32(dAtA[iNdEx:]))
-			iNdEx += 4
-			m.PhaseAcceptP95DelayMs = float32(math.Float32frombits(v))
-		case 18:
-			if wireType != 5 {
-				return fmt.Errorf("proto: wrong wireType = %d for field PhasePostDecisionAvgDelayMs", wireType)
-			}
-			var v uint32
-			if (iNdEx + 4) > l {
-				return io.ErrUnexpectedEOF
-			}
-			v = uint32(encoding_binary.LittleEndian.Uint32(dAtA[iNdEx:]))
-			iNdEx += 4
-			m.PhasePostDecisionAvgDelayMs = float32(math.Float32frombits(v))
-		case 19:
-			if wireType != 5 {
-				return fmt.Errorf("proto: wrong wireType = %d for field PhasePostDecisionP95DelayMs", wireType)
-			}
-			var v uint32
-			if (iNdEx + 4) > l {
-				return io.ErrUnexpectedEOF
-			}
-			v = uint32(encoding_binary.LittleEndian.Uint32(dAtA[iNdEx:]))
-			iNdEx += 4
-			m.PhasePostDecisionP95DelayMs = float32(math.Float32frombits(v))
-		default:
-			iNdEx = preIndex
-			skippy, err := skipAgent(dAtA[iNdEx:])
-			if err != nil {
-				return err
-			}
-			if (skippy < 0) || (iNdEx+skippy) < 0 {
-				return ErrInvalidLengthAgent
-			}
-			if (iNdEx + skippy) > l {
-				return io.ErrUnexpectedEOF
-			}
-			iNdEx += skippy
-		}
-	}
-
-	if iNdEx > l {
-		return io.ErrUnexpectedEOF
-	}
-	return nil
-}
-func (m *TwoPcOverPbftReport) Unmarshal(dAtA []byte) error {
-	l := len(dAtA)
-	iNdEx := 0
-	for iNdEx < l {
-		preIndex := iNdEx
-		var wire uint64
-		for shift := uint(0); ; shift += 7 {
-			if shift >= 64 {
-				return ErrIntOverflowAgent
-			}
-			if iNdEx >= l {
-				return io.ErrUnexpectedEOF
-			}
-			b := dAtA[iNdEx]
-			iNdEx++
-			wire |= uint64(b&0x7F) << shift
-			if b < 0x80 {
-				break
-			}
-		}
-		fieldNum := int32(wire >> 3)
-		wireType := int(wire & 0x7)
-		if wireType == 4 {
-			return fmt.Errorf("proto: TwoPcOverPbftReport: wiretype end group for non-group")
-		}
-		if fieldNum <= 0 {
-			return fmt.Errorf("proto: TwoPcOverPbftReport: illegal tag %d (wire type %d)", fieldNum, wire)
-		}
-		switch fieldNum {
-		case 1:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field Pbft", wireType)
-			}
-			var msglen int
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowAgent
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				msglen |= int(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			if msglen < 0 {
-				return ErrInvalidLengthAgent
-			}
-			postIndex := iNdEx + msglen
-			if postIndex < 0 {
-				return ErrInvalidLengthAgent
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			if m.Pbft == nil {
-				m.Pbft = &PbftReport{}
-			}
-			if err := m.Pbft.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
-				return err
-			}
-			iNdEx = postIndex
-		case 2:
-			if wireType != 0 {
-				return fmt.Errorf("proto: wrong wireType = %d for field TotalTransactions", wireType)
-			}
-			m.TotalTransactions = 0
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowAgent
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				m.TotalTransactions |= uint32(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-		case 3:
-			if wireType != 0 {
-				return fmt.Errorf("proto: wrong wireType = %d for field SingleShardTransactions", wireType)
-			}
-			m.SingleShardTransactions = 0
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowAgent
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				m.SingleShardTransactions |= uint32(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-		case 4:
-			if wireType != 0 {
-				return fmt.Errorf("proto: wrong wireType = %d for field CrossShardTransactions", wireType)
-			}
-			m.CrossShardTransactions = 0
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowAgent
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				m.CrossShardTransactions |= uint32(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-		case 5:
-			if wireType != 0 {
-				return fmt.Errorf("proto: wrong wireType = %d for field PrepareOkCount", wireType)
-			}
-			m.PrepareOkCount = 0
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowAgent
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				m.PrepareOkCount |= uint32(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-		case 6:
-			if wireType != 0 {
-				return fmt.Errorf("proto: wrong wireType = %d for field PrepareFailCount", wireType)
-			}
-			m.PrepareFailCount = 0
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowAgent
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				m.PrepareFailCount |= uint32(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-		case 7:
-			if wireType != 0 {
-				return fmt.Errorf("proto: wrong wireType = %d for field CommitOkCount", wireType)
-			}
-			m.CommitOkCount = 0
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowAgent
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				m.CommitOkCount |= uint32(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-		case 8:
-			if wireType != 0 {
-				return fmt.Errorf("proto: wrong wireType = %d for field AbortCount", wireType)
-			}
-			m.AbortCount = 0
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowAgent
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				m.AbortCount |= uint32(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-		case 9:
-			if wireType != 0 {
-				return fmt.Errorf("proto: wrong wireType = %d for field InDoubtCount", wireType)
-			}
-			m.InDoubtCount = 0
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowAgent
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				m.InDoubtCount |= uint32(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-		case 10:
-			if wireType != 0 {
-				return fmt.Errorf("proto: wrong wireType = %d for field PrepareTimeoutCount", wireType)
-			}
-			m.PrepareTimeoutCount = 0
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowAgent
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				m.PrepareTimeoutCount |= uint32(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
 		case 11:
 			if wireType != 0 {
-				return fmt.Errorf("proto: wrong wireType = %d for field CommitTimeoutUnknownOutcomeCount", wireType)
+				return fmt.Errorf("proto: wrong wireType = %d for field TimeoutMs", wireType)
 			}
-			m.CommitTimeoutUnknownOutcomeCount = 0
+			m.TimeoutMs = 0
 			for shift := uint(0); ; shift += 7 {
 				if shift >= 64 {
 					return ErrIntOverflowAgent
@@ -5141,52 +6112,36 @@ func (m *TwoPcOverPbftReport) Unmarshal(dAtA []byte) error {
 				}
 				b := dAtA[iNdEx]
 				iNdEx++
-				m.CommitTimeoutUnknownOutcomeCount |= uint32(b&0x7F) << shift
+				m.TimeoutMs |= uint32(b&0x7F) << shift
 				if b < 0x80 {
 					break
 				}
 			}
 		case 12:
-			if wireType != 0 {
-				return fmt.Errorf("proto: wrong wireType = %d for field AbortBestEffortTimeoutCount", wireType)
+			if wireType != 5 {
+				return fmt.Errorf("proto: wrong wireType = %d for field AvgInterCommitGapMs", wireType)
 			}
-			m.AbortBestEffortTimeoutCount = 0
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowAgent
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				m.AbortBestEffortTimeoutCount |= uint32(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
+			var v uint32
+			if (iNdEx + 4) > l {
+				return io.ErrUnexpectedEOF
 			}
+			v = uint32(encoding_binary.LittleEndian.Uint32(dAtA[iNdEx:]))
+			iNdEx += 4
+			m.AvgInterCommitGapMs = float32(math.Float32frombits(v))
 		case 13:
-			if wireType != 0 {
-				return fmt.Errorf("proto: wrong wireType = %d for field LockContentionCount", wireType)
+			if wireType != 5 {
+				return fmt.Errorf("proto: wrong wireType = %d for field P50InterCommitGapMs", wireType)
 			}
-			m.LockContentionCount = 0
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowAgent
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				m.LockContentionCount |= uint32(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
+			var v uint32
+			if (iNdEx + 4) > l {
+				return io.ErrUnexpectedEOF
 			}
+			v = uint32(encoding_binary.LittleEndian.Uint32(dAtA[iNdEx:]))
+			iNdEx += 4
+			m.P50InterCommitGapMs = float32(math.Float32frombits(v))
 		case 14:
 			if wireType != 5 {
-				return fmt.Errorf("proto: wrong wireType = %d for field PrepareTimeoutRate", wireType)
+				return fmt.Errorf("proto: wrong wireType = %d for field P95InterCommitGapMs", wireType)
 			}
 			var v uint32
 			if (iNdEx + 4) > l {
@@ -5194,32 +6149,48 @@ func (m *TwoPcOverPbftReport) Unmarshal(dAtA []byte) error {
 			}
 			v = uint32(encoding_binary.LittleEndian.Uint32(dAtA[iNdEx:]))
 			iNdEx += 4
-			m.PrepareTimeoutRate = float32(math.Float32frombits(v))
+			m.P95InterCommitGapMs = float32(math.Float32frombits(v))
 		case 15:
-			if wireType != 5 {
-				return fmt.Errorf("proto: wrong wireType = %d for field AbortRate", wireType)
+			if wireType != 0 {
+				return fmt.Errorf("proto: wrong wireType = %d for field ViewChangeCount", wireType)
 			}
-			var v uint32
-			if (iNdEx + 4) > l {
-				return io.ErrUnexpectedEOF
+			m.ViewChangeCount = 0
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowAgent
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				m.ViewChangeCount |= uint32(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
 			}
-			v = uint32(encoding_binary.LittleEndian.Uint32(dAtA[iNdEx:]))
-			iNdEx += 4
-			m.AbortRate = float32(math.Float32frombits(v))
 		case 16:
-			if wireType != 5 {
-				return fmt.Errorf("proto: wrong wireType = %d for field CommitRate", wireType)
+			if wireType != 0 {
+				return fmt.Errorf("proto: wrong wireType = %d for field NoProgressViewChangeCount", wireType)
 			}
-			var v uint32
-			if (iNdEx + 4) > l {
-				return io.ErrUnexpectedEOF
+			m.NoProgressViewChangeCount = 0
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowAgent
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				m.NoProgressViewChangeCount |= uint32(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
 			}
-			v = uint32(encoding_binary.LittleEndian.Uint32(dAtA[iNdEx:]))
-			iNdEx += 4
-			m.CommitRate = float32(math.Float32frombits(v))
 		case 17:
 			if wireType != 5 {
-				return fmt.Errorf("proto: wrong wireType = %d for field LockContentionRate", wireType)
+				return fmt.Errorf("proto: wrong wireType = %d for field PrePrepareLatencyMs", wireType)
 			}
 			var v uint32
 			if (iNdEx + 4) > l {
@@ -5227,10 +6198,10 @@ func (m *TwoPcOverPbftReport) Unmarshal(dAtA []byte) error {
 			}
 			v = uint32(encoding_binary.LittleEndian.Uint32(dAtA[iNdEx:]))
 			iNdEx += 4
-			m.LockContentionRate = float32(math.Float32frombits(v))
+			m.PrePrepareLatencyMs = float32(math.Float32frombits(v))
 		case 18:
 			if wireType != 5 {
-				return fmt.Errorf("proto: wrong wireType = %d for field AvgEndToEndLatencyMs", wireType)
+				return fmt.Errorf("proto: wrong wireType = %d for field PrepareLatencyMs", wireType)
 			}
 			var v uint32
 			if (iNdEx + 4) > l {
@@ -5238,10 +6209,10 @@ func (m *TwoPcOverPbftReport) Unmarshal(dAtA []byte) error {
 			}
 			v = uint32(encoding_binary.LittleEndian.Uint32(dAtA[iNdEx:]))
 			iNdEx += 4
-			m.AvgEndToEndLatencyMs = float32(math.Float32frombits(v))
+			m.PrepareLatencyMs = float32(math.Float32frombits(v))
 		case 19:
 			if wireType != 5 {
-				return fmt.Errorf("proto: wrong wireType = %d for field P95EndToEndLatencyMs", wireType)
+				return fmt.Errorf("proto: wrong wireType = %d for field CommitLatencyMs", wireType)
 			}
 			var v uint32
 			if (iNdEx + 4) > l {
@@ -5249,239 +6220,7 @@ func (m *TwoPcOverPbftReport) Unmarshal(dAtA []byte) error {
 			}
 			v = uint32(encoding_binary.LittleEndian.Uint32(dAtA[iNdEx:]))
 			iNdEx += 4
-			m.P95EndToEndLatencyMs = float32(math.Float32frombits(v))
-		case 20:
-			if wireType != 5 {
-				return fmt.Errorf("proto: wrong wireType = %d for field P99EndToEndLatencyMs", wireType)
-			}
-			var v uint32
-			if (iNdEx + 4) > l {
-				return io.ErrUnexpectedEOF
-			}
-			v = uint32(encoding_binary.LittleEndian.Uint32(dAtA[iNdEx:]))
-			iNdEx += 4
-			m.P99EndToEndLatencyMs = float32(math.Float32frombits(v))
-		case 21:
-			if wireType != 5 {
-				return fmt.Errorf("proto: wrong wireType = %d for field AvgPrepareLatencyMs", wireType)
-			}
-			var v uint32
-			if (iNdEx + 4) > l {
-				return io.ErrUnexpectedEOF
-			}
-			v = uint32(encoding_binary.LittleEndian.Uint32(dAtA[iNdEx:]))
-			iNdEx += 4
-			m.AvgPrepareLatencyMs = float32(math.Float32frombits(v))
-		case 22:
-			if wireType != 5 {
-				return fmt.Errorf("proto: wrong wireType = %d for field P95PrepareLatencyMs", wireType)
-			}
-			var v uint32
-			if (iNdEx + 4) > l {
-				return io.ErrUnexpectedEOF
-			}
-			v = uint32(encoding_binary.LittleEndian.Uint32(dAtA[iNdEx:]))
-			iNdEx += 4
-			m.P95PrepareLatencyMs = float32(math.Float32frombits(v))
-		case 23:
-			if wireType != 5 {
-				return fmt.Errorf("proto: wrong wireType = %d for field AvgCommitLatencyMs", wireType)
-			}
-			var v uint32
-			if (iNdEx + 4) > l {
-				return io.ErrUnexpectedEOF
-			}
-			v = uint32(encoding_binary.LittleEndian.Uint32(dAtA[iNdEx:]))
-			iNdEx += 4
-			m.AvgCommitLatencyMs = float32(math.Float32frombits(v))
-		case 24:
-			if wireType != 5 {
-				return fmt.Errorf("proto: wrong wireType = %d for field P95CommitLatencyMs", wireType)
-			}
-			var v uint32
-			if (iNdEx + 4) > l {
-				return io.ErrUnexpectedEOF
-			}
-			v = uint32(encoding_binary.LittleEndian.Uint32(dAtA[iNdEx:]))
-			iNdEx += 4
-			m.P95CommitLatencyMs = float32(math.Float32frombits(v))
-		case 25:
-			if wireType != 5 {
-				return fmt.Errorf("proto: wrong wireType = %d for field AvgLockWaitMs", wireType)
-			}
-			var v uint32
-			if (iNdEx + 4) > l {
-				return io.ErrUnexpectedEOF
-			}
-			v = uint32(encoding_binary.LittleEndian.Uint32(dAtA[iNdEx:]))
-			iNdEx += 4
-			m.AvgLockWaitMs = float32(math.Float32frombits(v))
-		case 26:
-			if wireType != 5 {
-				return fmt.Errorf("proto: wrong wireType = %d for field P95LockWaitMs", wireType)
-			}
-			var v uint32
-			if (iNdEx + 4) > l {
-				return io.ErrUnexpectedEOF
-			}
-			v = uint32(encoding_binary.LittleEndian.Uint32(dAtA[iNdEx:]))
-			iNdEx += 4
-			m.P95LockWaitMs = float32(math.Float32frombits(v))
-		case 27:
-			if wireType != 5 {
-				return fmt.Errorf("proto: wrong wireType = %d for field AvgLockHoldMs", wireType)
-			}
-			var v uint32
-			if (iNdEx + 4) > l {
-				return io.ErrUnexpectedEOF
-			}
-			v = uint32(encoding_binary.LittleEndian.Uint32(dAtA[iNdEx:]))
-			iNdEx += 4
-			m.AvgLockHoldMs = float32(math.Float32frombits(v))
-		case 28:
-			if wireType != 5 {
-				return fmt.Errorf("proto: wrong wireType = %d for field P95LockHoldMs", wireType)
-			}
-			var v uint32
-			if (iNdEx + 4) > l {
-				return io.ErrUnexpectedEOF
-			}
-			v = uint32(encoding_binary.LittleEndian.Uint32(dAtA[iNdEx:]))
-			iNdEx += 4
-			m.P95LockHoldMs = float32(math.Float32frombits(v))
-		case 29:
-			if wireType != 0 {
-				return fmt.Errorf("proto: wrong wireType = %d for field ReasonPrepareLockBusyCount", wireType)
-			}
-			m.ReasonPrepareLockBusyCount = 0
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowAgent
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				m.ReasonPrepareLockBusyCount |= uint32(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-		case 30:
-			if wireType != 0 {
-				return fmt.Errorf("proto: wrong wireType = %d for field ReasonPrepareValidationFailCount", wireType)
-			}
-			m.ReasonPrepareValidationFailCount = 0
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowAgent
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				m.ReasonPrepareValidationFailCount |= uint32(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-		case 31:
-			if wireType != 0 {
-				return fmt.Errorf("proto: wrong wireType = %d for field ReasonPrepareTimeoutCount", wireType)
-			}
-			m.ReasonPrepareTimeoutCount = 0
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowAgent
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				m.ReasonPrepareTimeoutCount |= uint32(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-		case 32:
-			if wireType != 0 {
-				return fmt.Errorf("proto: wrong wireType = %d for field ReasonPrepareOtherCount", wireType)
-			}
-			m.ReasonPrepareOtherCount = 0
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowAgent
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				m.ReasonPrepareOtherCount |= uint32(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-		case 33:
-			if wireType != 0 {
-				return fmt.Errorf("proto: wrong wireType = %d for field ReasonCommitTimeoutUnknownOutcomeCount", wireType)
-			}
-			m.ReasonCommitTimeoutUnknownOutcomeCount = 0
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowAgent
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				m.ReasonCommitTimeoutUnknownOutcomeCount |= uint32(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-		case 34:
-			if wireType != 0 {
-				return fmt.Errorf("proto: wrong wireType = %d for field ReasonAbortBestEffortTimeoutCount", wireType)
-			}
-			m.ReasonAbortBestEffortTimeoutCount = 0
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowAgent
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				m.ReasonAbortBestEffortTimeoutCount |= uint32(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-		case 35:
-			if wireType != 0 {
-				return fmt.Errorf("proto: wrong wireType = %d for field ReasonOtherCount", wireType)
-			}
-			m.ReasonOtherCount = 0
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowAgent
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				m.ReasonOtherCount |= uint32(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
+			m.CommitLatencyMs = float32(math.Float32frombits(v))
 		default:
 			iNdEx = preIndex
 			skippy, err := skipAgent(dAtA[iNdEx:])
@@ -5583,6 +6322,17 @@ func (m *SbftReport) Unmarshal(dAtA []byte) error {
 			m.AvgConsensusLatencyMs = float32(math.Float32frombits(v))
 		case 4:
 			if wireType != 5 {
+				return fmt.Errorf("proto: wrong wireType = %d for field P50ConsensusLatencyMs", wireType)
+			}
+			var v uint32
+			if (iNdEx + 4) > l {
+				return io.ErrUnexpectedEOF
+			}
+			v = uint32(encoding_binary.LittleEndian.Uint32(dAtA[iNdEx:]))
+			iNdEx += 4
+			m.P50ConsensusLatencyMs = float32(math.Float32frombits(v))
+		case 5:
+			if wireType != 5 {
 				return fmt.Errorf("proto: wrong wireType = %d for field P95ConsensusLatencyMs", wireType)
 			}
 			var v uint32
@@ -5592,17 +6342,6 @@ func (m *SbftReport) Unmarshal(dAtA []byte) error {
 			v = uint32(encoding_binary.LittleEndian.Uint32(dAtA[iNdEx:]))
 			iNdEx += 4
 			m.P95ConsensusLatencyMs = float32(math.Float32frombits(v))
-		case 5:
-			if wireType != 5 {
-				return fmt.Errorf("proto: wrong wireType = %d for field P99ConsensusLatencyMs", wireType)
-			}
-			var v uint32
-			if (iNdEx + 4) > l {
-				return io.ErrUnexpectedEOF
-			}
-			v = uint32(encoding_binary.LittleEndian.Uint32(dAtA[iNdEx:]))
-			iNdEx += 4
-			m.P99ConsensusLatencyMs = float32(math.Float32frombits(v))
 		case 6:
 			if wireType != 5 {
 				return fmt.Errorf("proto: wrong wireType = %d for field ThroughputTps", wireType)
@@ -5616,17 +6355,6 @@ func (m *SbftReport) Unmarshal(dAtA []byte) error {
 			m.ThroughputTps = float32(math.Float32frombits(v))
 		case 7:
 			if wireType != 5 {
-				return fmt.Errorf("proto: wrong wireType = %d for field TimeoutViolationRate", wireType)
-			}
-			var v uint32
-			if (iNdEx + 4) > l {
-				return io.ErrUnexpectedEOF
-			}
-			v = uint32(encoding_binary.LittleEndian.Uint32(dAtA[iNdEx:]))
-			iNdEx += 4
-			m.TimeoutViolationRate = float32(math.Float32frombits(v))
-		case 8:
-			if wireType != 5 {
 				return fmt.Errorf("proto: wrong wireType = %d for field AvgBatchSize", wireType)
 			}
 			var v uint32
@@ -5636,7 +6364,7 @@ func (m *SbftReport) Unmarshal(dAtA []byte) error {
 			v = uint32(encoding_binary.LittleEndian.Uint32(dAtA[iNdEx:]))
 			iNdEx += 4
 			m.AvgBatchSize = float32(math.Float32frombits(v))
-		case 9:
+		case 8:
 			if wireType != 5 {
 				return fmt.Errorf("proto: wrong wireType = %d for field P95BatchSize", wireType)
 			}
@@ -5647,7 +6375,7 @@ func (m *SbftReport) Unmarshal(dAtA []byte) error {
 			v = uint32(encoding_binary.LittleEndian.Uint32(dAtA[iNdEx:]))
 			iNdEx += 4
 			m.P95BatchSize = float32(math.Float32frombits(v))
-		case 10:
+		case 9:
 			if wireType != 0 {
 				return fmt.Errorf("proto: wrong wireType = %d for field LeaderChangeCount", wireType)
 			}
@@ -5666,7 +6394,7 @@ func (m *SbftReport) Unmarshal(dAtA []byte) error {
 					break
 				}
 			}
-		case 11:
+		case 10:
 			if wireType != 0 {
 				return fmt.Errorf("proto: wrong wireType = %d for field RegencyChangeCount", wireType)
 			}
@@ -5681,6 +6409,235 @@ func (m *SbftReport) Unmarshal(dAtA []byte) error {
 				b := dAtA[iNdEx]
 				iNdEx++
 				m.RegencyChangeCount |= uint32(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+		case 11:
+			if wireType != 0 {
+				return fmt.Errorf("proto: wrong wireType = %d for field TimeoutMs", wireType)
+			}
+			m.TimeoutMs = 0
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowAgent
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				m.TimeoutMs |= uint32(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+		case 12:
+			if wireType != 5 {
+				return fmt.Errorf("proto: wrong wireType = %d for field AvgInterCommitGapMs", wireType)
+			}
+			var v uint32
+			if (iNdEx + 4) > l {
+				return io.ErrUnexpectedEOF
+			}
+			v = uint32(encoding_binary.LittleEndian.Uint32(dAtA[iNdEx:]))
+			iNdEx += 4
+			m.AvgInterCommitGapMs = float32(math.Float32frombits(v))
+		case 13:
+			if wireType != 5 {
+				return fmt.Errorf("proto: wrong wireType = %d for field P50InterCommitGapMs", wireType)
+			}
+			var v uint32
+			if (iNdEx + 4) > l {
+				return io.ErrUnexpectedEOF
+			}
+			v = uint32(encoding_binary.LittleEndian.Uint32(dAtA[iNdEx:]))
+			iNdEx += 4
+			m.P50InterCommitGapMs = float32(math.Float32frombits(v))
+		case 14:
+			if wireType != 5 {
+				return fmt.Errorf("proto: wrong wireType = %d for field P95InterCommitGapMs", wireType)
+			}
+			var v uint32
+			if (iNdEx + 4) > l {
+				return io.ErrUnexpectedEOF
+			}
+			v = uint32(encoding_binary.LittleEndian.Uint32(dAtA[iNdEx:]))
+			iNdEx += 4
+			m.P95InterCommitGapMs = float32(math.Float32frombits(v))
+		case 15:
+			if wireType != 0 {
+				return fmt.Errorf("proto: wrong wireType = %d for field ViewChangeCount", wireType)
+			}
+			m.ViewChangeCount = 0
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowAgent
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				m.ViewChangeCount |= uint32(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+		case 16:
+			if wireType != 0 {
+				return fmt.Errorf("proto: wrong wireType = %d for field NoProgressViewChangeCount", wireType)
+			}
+			m.NoProgressViewChangeCount = 0
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowAgent
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				m.NoProgressViewChangeCount |= uint32(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+		case 17:
+			if wireType != 5 {
+				return fmt.Errorf("proto: wrong wireType = %d for field PrePrepareLatencyMs", wireType)
+			}
+			var v uint32
+			if (iNdEx + 4) > l {
+				return io.ErrUnexpectedEOF
+			}
+			v = uint32(encoding_binary.LittleEndian.Uint32(dAtA[iNdEx:]))
+			iNdEx += 4
+			m.PrePrepareLatencyMs = float32(math.Float32frombits(v))
+		case 18:
+			if wireType != 5 {
+				return fmt.Errorf("proto: wrong wireType = %d for field PrepareLatencyMs", wireType)
+			}
+			var v uint32
+			if (iNdEx + 4) > l {
+				return io.ErrUnexpectedEOF
+			}
+			v = uint32(encoding_binary.LittleEndian.Uint32(dAtA[iNdEx:]))
+			iNdEx += 4
+			m.PrepareLatencyMs = float32(math.Float32frombits(v))
+		case 19:
+			if wireType != 5 {
+				return fmt.Errorf("proto: wrong wireType = %d for field CommitLatencyMs", wireType)
+			}
+			var v uint32
+			if (iNdEx + 4) > l {
+				return io.ErrUnexpectedEOF
+			}
+			v = uint32(encoding_binary.LittleEndian.Uint32(dAtA[iNdEx:]))
+			iNdEx += 4
+			m.CommitLatencyMs = float32(math.Float32frombits(v))
+		case 20:
+			if wireType != 0 {
+				return fmt.Errorf("proto: wrong wireType = %d for field SlowPathTimeoutMs", wireType)
+			}
+			m.SlowPathTimeoutMs = 0
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowAgent
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				m.SlowPathTimeoutMs |= uint32(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+		case 21:
+			if wireType != 0 {
+				return fmt.Errorf("proto: wrong wireType = %d for field FastPathCount", wireType)
+			}
+			m.FastPathCount = 0
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowAgent
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				m.FastPathCount |= uint32(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+		case 22:
+			if wireType != 0 {
+				return fmt.Errorf("proto: wrong wireType = %d for field SlowPathCount", wireType)
+			}
+			m.SlowPathCount = 0
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowAgent
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				m.SlowPathCount |= uint32(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+		case 23:
+			if wireType != 5 {
+				return fmt.Errorf("proto: wrong wireType = %d for field NthPrepareGapMs", wireType)
+			}
+			var v uint32
+			if (iNdEx + 4) > l {
+				return io.ErrUnexpectedEOF
+			}
+			v = uint32(encoding_binary.LittleEndian.Uint32(dAtA[iNdEx:]))
+			iNdEx += 4
+			m.NthPrepareGapMs = float32(math.Float32frombits(v))
+		case 24:
+			if wireType != 0 {
+				return fmt.Errorf("proto: wrong wireType = %d for field NthPrepareSeenCount", wireType)
+			}
+			m.NthPrepareSeenCount = 0
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowAgent
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				m.NthPrepareSeenCount |= uint32(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+		case 25:
+			if wireType != 0 {
+				return fmt.Errorf("proto: wrong wireType = %d for field NthPrepareUnseenCount", wireType)
+			}
+			m.NthPrepareUnseenCount = 0
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowAgent
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				m.NthPrepareUnseenCount |= uint32(b&0x7F) << shift
 				if b < 0x80 {
 					break
 				}
@@ -5953,6 +6910,852 @@ func (m *TendermintReport) Unmarshal(dAtA []byte) error {
 	}
 	return nil
 }
+func (m *HotstuffReport) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowAgent
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= uint64(b&0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: HotstuffReport: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: HotstuffReport: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		case 1:
+			if wireType != 0 {
+				return fmt.Errorf("proto: wrong wireType = %d for field TotalTransactions", wireType)
+			}
+			m.TotalTransactions = 0
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowAgent
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				m.TotalTransactions |= uint32(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+		case 2:
+			if wireType != 0 {
+				return fmt.Errorf("proto: wrong wireType = %d for field TotalConsensusInstances", wireType)
+			}
+			m.TotalConsensusInstances = 0
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowAgent
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				m.TotalConsensusInstances |= uint32(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+		case 3:
+			if wireType != 5 {
+				return fmt.Errorf("proto: wrong wireType = %d for field AvgConsensusLatencyMs", wireType)
+			}
+			var v uint32
+			if (iNdEx + 4) > l {
+				return io.ErrUnexpectedEOF
+			}
+			v = uint32(encoding_binary.LittleEndian.Uint32(dAtA[iNdEx:]))
+			iNdEx += 4
+			m.AvgConsensusLatencyMs = float32(math.Float32frombits(v))
+		case 4:
+			if wireType != 5 {
+				return fmt.Errorf("proto: wrong wireType = %d for field P50ConsensusLatencyMs", wireType)
+			}
+			var v uint32
+			if (iNdEx + 4) > l {
+				return io.ErrUnexpectedEOF
+			}
+			v = uint32(encoding_binary.LittleEndian.Uint32(dAtA[iNdEx:]))
+			iNdEx += 4
+			m.P50ConsensusLatencyMs = float32(math.Float32frombits(v))
+		case 5:
+			if wireType != 5 {
+				return fmt.Errorf("proto: wrong wireType = %d for field P95ConsensusLatencyMs", wireType)
+			}
+			var v uint32
+			if (iNdEx + 4) > l {
+				return io.ErrUnexpectedEOF
+			}
+			v = uint32(encoding_binary.LittleEndian.Uint32(dAtA[iNdEx:]))
+			iNdEx += 4
+			m.P95ConsensusLatencyMs = float32(math.Float32frombits(v))
+		case 6:
+			if wireType != 5 {
+				return fmt.Errorf("proto: wrong wireType = %d for field ThroughputTps", wireType)
+			}
+			var v uint32
+			if (iNdEx + 4) > l {
+				return io.ErrUnexpectedEOF
+			}
+			v = uint32(encoding_binary.LittleEndian.Uint32(dAtA[iNdEx:]))
+			iNdEx += 4
+			m.ThroughputTps = float32(math.Float32frombits(v))
+		case 7:
+			if wireType != 5 {
+				return fmt.Errorf("proto: wrong wireType = %d for field AvgBatchSize", wireType)
+			}
+			var v uint32
+			if (iNdEx + 4) > l {
+				return io.ErrUnexpectedEOF
+			}
+			v = uint32(encoding_binary.LittleEndian.Uint32(dAtA[iNdEx:]))
+			iNdEx += 4
+			m.AvgBatchSize = float32(math.Float32frombits(v))
+		case 8:
+			if wireType != 5 {
+				return fmt.Errorf("proto: wrong wireType = %d for field P95BatchSize", wireType)
+			}
+			var v uint32
+			if (iNdEx + 4) > l {
+				return io.ErrUnexpectedEOF
+			}
+			v = uint32(encoding_binary.LittleEndian.Uint32(dAtA[iNdEx:]))
+			iNdEx += 4
+			m.P95BatchSize = float32(math.Float32frombits(v))
+		case 9:
+			if wireType != 0 {
+				return fmt.Errorf("proto: wrong wireType = %d for field LeaderChangeCount", wireType)
+			}
+			m.LeaderChangeCount = 0
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowAgent
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				m.LeaderChangeCount |= uint32(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+		case 10:
+			if wireType != 0 {
+				return fmt.Errorf("proto: wrong wireType = %d for field RegencyChangeCount", wireType)
+			}
+			m.RegencyChangeCount = 0
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowAgent
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				m.RegencyChangeCount |= uint32(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+		case 11:
+			if wireType != 0 {
+				return fmt.Errorf("proto: wrong wireType = %d for field TimeoutMs", wireType)
+			}
+			m.TimeoutMs = 0
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowAgent
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				m.TimeoutMs |= uint32(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+		case 12:
+			if wireType != 5 {
+				return fmt.Errorf("proto: wrong wireType = %d for field AvgInterCommitGapMs", wireType)
+			}
+			var v uint32
+			if (iNdEx + 4) > l {
+				return io.ErrUnexpectedEOF
+			}
+			v = uint32(encoding_binary.LittleEndian.Uint32(dAtA[iNdEx:]))
+			iNdEx += 4
+			m.AvgInterCommitGapMs = float32(math.Float32frombits(v))
+		case 13:
+			if wireType != 5 {
+				return fmt.Errorf("proto: wrong wireType = %d for field P50InterCommitGapMs", wireType)
+			}
+			var v uint32
+			if (iNdEx + 4) > l {
+				return io.ErrUnexpectedEOF
+			}
+			v = uint32(encoding_binary.LittleEndian.Uint32(dAtA[iNdEx:]))
+			iNdEx += 4
+			m.P50InterCommitGapMs = float32(math.Float32frombits(v))
+		case 14:
+			if wireType != 5 {
+				return fmt.Errorf("proto: wrong wireType = %d for field P95InterCommitGapMs", wireType)
+			}
+			var v uint32
+			if (iNdEx + 4) > l {
+				return io.ErrUnexpectedEOF
+			}
+			v = uint32(encoding_binary.LittleEndian.Uint32(dAtA[iNdEx:]))
+			iNdEx += 4
+			m.P95InterCommitGapMs = float32(math.Float32frombits(v))
+		case 15:
+			if wireType != 0 {
+				return fmt.Errorf("proto: wrong wireType = %d for field ViewChangeCount", wireType)
+			}
+			m.ViewChangeCount = 0
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowAgent
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				m.ViewChangeCount |= uint32(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+		case 16:
+			if wireType != 0 {
+				return fmt.Errorf("proto: wrong wireType = %d for field NoProgressViewChangeCount", wireType)
+			}
+			m.NoProgressViewChangeCount = 0
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowAgent
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				m.NoProgressViewChangeCount |= uint32(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+		default:
+			iNdEx = preIndex
+			skippy, err := skipAgent(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
+				return ErrInvalidLengthAgent
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
+func (m *AutobahnReport) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowAgent
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= uint64(b&0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: AutobahnReport: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: AutobahnReport: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		case 1:
+			if wireType != 0 {
+				return fmt.Errorf("proto: wrong wireType = %d for field TotalTransactions", wireType)
+			}
+			m.TotalTransactions = 0
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowAgent
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				m.TotalTransactions |= uint32(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+		case 2:
+			if wireType != 0 {
+				return fmt.Errorf("proto: wrong wireType = %d for field TotalConsensusInstances", wireType)
+			}
+			m.TotalConsensusInstances = 0
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowAgent
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				m.TotalConsensusInstances |= uint32(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+		case 3:
+			if wireType != 5 {
+				return fmt.Errorf("proto: wrong wireType = %d for field AvgConsensusLatencyMs", wireType)
+			}
+			var v uint32
+			if (iNdEx + 4) > l {
+				return io.ErrUnexpectedEOF
+			}
+			v = uint32(encoding_binary.LittleEndian.Uint32(dAtA[iNdEx:]))
+			iNdEx += 4
+			m.AvgConsensusLatencyMs = float32(math.Float32frombits(v))
+		case 4:
+			if wireType != 5 {
+				return fmt.Errorf("proto: wrong wireType = %d for field P50ConsensusLatencyMs", wireType)
+			}
+			var v uint32
+			if (iNdEx + 4) > l {
+				return io.ErrUnexpectedEOF
+			}
+			v = uint32(encoding_binary.LittleEndian.Uint32(dAtA[iNdEx:]))
+			iNdEx += 4
+			m.P50ConsensusLatencyMs = float32(math.Float32frombits(v))
+		case 5:
+			if wireType != 5 {
+				return fmt.Errorf("proto: wrong wireType = %d for field P95ConsensusLatencyMs", wireType)
+			}
+			var v uint32
+			if (iNdEx + 4) > l {
+				return io.ErrUnexpectedEOF
+			}
+			v = uint32(encoding_binary.LittleEndian.Uint32(dAtA[iNdEx:]))
+			iNdEx += 4
+			m.P95ConsensusLatencyMs = float32(math.Float32frombits(v))
+		case 6:
+			if wireType != 5 {
+				return fmt.Errorf("proto: wrong wireType = %d for field ThroughputTps", wireType)
+			}
+			var v uint32
+			if (iNdEx + 4) > l {
+				return io.ErrUnexpectedEOF
+			}
+			v = uint32(encoding_binary.LittleEndian.Uint32(dAtA[iNdEx:]))
+			iNdEx += 4
+			m.ThroughputTps = float32(math.Float32frombits(v))
+		case 7:
+			if wireType != 5 {
+				return fmt.Errorf("proto: wrong wireType = %d for field AvgBatchSize", wireType)
+			}
+			var v uint32
+			if (iNdEx + 4) > l {
+				return io.ErrUnexpectedEOF
+			}
+			v = uint32(encoding_binary.LittleEndian.Uint32(dAtA[iNdEx:]))
+			iNdEx += 4
+			m.AvgBatchSize = float32(math.Float32frombits(v))
+		case 8:
+			if wireType != 5 {
+				return fmt.Errorf("proto: wrong wireType = %d for field P95BatchSize", wireType)
+			}
+			var v uint32
+			if (iNdEx + 4) > l {
+				return io.ErrUnexpectedEOF
+			}
+			v = uint32(encoding_binary.LittleEndian.Uint32(dAtA[iNdEx:]))
+			iNdEx += 4
+			m.P95BatchSize = float32(math.Float32frombits(v))
+		case 9:
+			if wireType != 0 {
+				return fmt.Errorf("proto: wrong wireType = %d for field LeaderChangeCount", wireType)
+			}
+			m.LeaderChangeCount = 0
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowAgent
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				m.LeaderChangeCount |= uint32(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+		case 10:
+			if wireType != 0 {
+				return fmt.Errorf("proto: wrong wireType = %d for field RegencyChangeCount", wireType)
+			}
+			m.RegencyChangeCount = 0
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowAgent
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				m.RegencyChangeCount |= uint32(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+		case 11:
+			if wireType != 0 {
+				return fmt.Errorf("proto: wrong wireType = %d for field TimeoutMs", wireType)
+			}
+			m.TimeoutMs = 0
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowAgent
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				m.TimeoutMs |= uint32(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+		case 12:
+			if wireType != 5 {
+				return fmt.Errorf("proto: wrong wireType = %d for field AvgInterCommitGapMs", wireType)
+			}
+			var v uint32
+			if (iNdEx + 4) > l {
+				return io.ErrUnexpectedEOF
+			}
+			v = uint32(encoding_binary.LittleEndian.Uint32(dAtA[iNdEx:]))
+			iNdEx += 4
+			m.AvgInterCommitGapMs = float32(math.Float32frombits(v))
+		case 13:
+			if wireType != 5 {
+				return fmt.Errorf("proto: wrong wireType = %d for field P50InterCommitGapMs", wireType)
+			}
+			var v uint32
+			if (iNdEx + 4) > l {
+				return io.ErrUnexpectedEOF
+			}
+			v = uint32(encoding_binary.LittleEndian.Uint32(dAtA[iNdEx:]))
+			iNdEx += 4
+			m.P50InterCommitGapMs = float32(math.Float32frombits(v))
+		case 14:
+			if wireType != 5 {
+				return fmt.Errorf("proto: wrong wireType = %d for field P95InterCommitGapMs", wireType)
+			}
+			var v uint32
+			if (iNdEx + 4) > l {
+				return io.ErrUnexpectedEOF
+			}
+			v = uint32(encoding_binary.LittleEndian.Uint32(dAtA[iNdEx:]))
+			iNdEx += 4
+			m.P95InterCommitGapMs = float32(math.Float32frombits(v))
+		case 15:
+			if wireType != 0 {
+				return fmt.Errorf("proto: wrong wireType = %d for field ViewChangeCount", wireType)
+			}
+			m.ViewChangeCount = 0
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowAgent
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				m.ViewChangeCount |= uint32(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+		case 16:
+			if wireType != 0 {
+				return fmt.Errorf("proto: wrong wireType = %d for field NoProgressViewChangeCount", wireType)
+			}
+			m.NoProgressViewChangeCount = 0
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowAgent
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				m.NoProgressViewChangeCount |= uint32(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+		default:
+			iNdEx = preIndex
+			skippy, err := skipAgent(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
+				return ErrInvalidLengthAgent
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
+func (m *SmartbftReport) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowAgent
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= uint64(b&0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: SmartbftReport: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: SmartbftReport: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		case 1:
+			if wireType != 0 {
+				return fmt.Errorf("proto: wrong wireType = %d for field TotalTransactions", wireType)
+			}
+			m.TotalTransactions = 0
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowAgent
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				m.TotalTransactions |= uint32(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+		case 2:
+			if wireType != 0 {
+				return fmt.Errorf("proto: wrong wireType = %d for field TotalConsensusInstances", wireType)
+			}
+			m.TotalConsensusInstances = 0
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowAgent
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				m.TotalConsensusInstances |= uint32(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+		case 3:
+			if wireType != 5 {
+				return fmt.Errorf("proto: wrong wireType = %d for field AvgConsensusLatencyMs", wireType)
+			}
+			var v uint32
+			if (iNdEx + 4) > l {
+				return io.ErrUnexpectedEOF
+			}
+			v = uint32(encoding_binary.LittleEndian.Uint32(dAtA[iNdEx:]))
+			iNdEx += 4
+			m.AvgConsensusLatencyMs = float32(math.Float32frombits(v))
+		case 4:
+			if wireType != 5 {
+				return fmt.Errorf("proto: wrong wireType = %d for field P50ConsensusLatencyMs", wireType)
+			}
+			var v uint32
+			if (iNdEx + 4) > l {
+				return io.ErrUnexpectedEOF
+			}
+			v = uint32(encoding_binary.LittleEndian.Uint32(dAtA[iNdEx:]))
+			iNdEx += 4
+			m.P50ConsensusLatencyMs = float32(math.Float32frombits(v))
+		case 5:
+			if wireType != 5 {
+				return fmt.Errorf("proto: wrong wireType = %d for field P95ConsensusLatencyMs", wireType)
+			}
+			var v uint32
+			if (iNdEx + 4) > l {
+				return io.ErrUnexpectedEOF
+			}
+			v = uint32(encoding_binary.LittleEndian.Uint32(dAtA[iNdEx:]))
+			iNdEx += 4
+			m.P95ConsensusLatencyMs = float32(math.Float32frombits(v))
+		case 6:
+			if wireType != 5 {
+				return fmt.Errorf("proto: wrong wireType = %d for field ThroughputTps", wireType)
+			}
+			var v uint32
+			if (iNdEx + 4) > l {
+				return io.ErrUnexpectedEOF
+			}
+			v = uint32(encoding_binary.LittleEndian.Uint32(dAtA[iNdEx:]))
+			iNdEx += 4
+			m.ThroughputTps = float32(math.Float32frombits(v))
+		case 7:
+			if wireType != 5 {
+				return fmt.Errorf("proto: wrong wireType = %d for field AvgBatchSize", wireType)
+			}
+			var v uint32
+			if (iNdEx + 4) > l {
+				return io.ErrUnexpectedEOF
+			}
+			v = uint32(encoding_binary.LittleEndian.Uint32(dAtA[iNdEx:]))
+			iNdEx += 4
+			m.AvgBatchSize = float32(math.Float32frombits(v))
+		case 8:
+			if wireType != 5 {
+				return fmt.Errorf("proto: wrong wireType = %d for field P95BatchSize", wireType)
+			}
+			var v uint32
+			if (iNdEx + 4) > l {
+				return io.ErrUnexpectedEOF
+			}
+			v = uint32(encoding_binary.LittleEndian.Uint32(dAtA[iNdEx:]))
+			iNdEx += 4
+			m.P95BatchSize = float32(math.Float32frombits(v))
+		case 9:
+			if wireType != 0 {
+				return fmt.Errorf("proto: wrong wireType = %d for field LeaderChangeCount", wireType)
+			}
+			m.LeaderChangeCount = 0
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowAgent
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				m.LeaderChangeCount |= uint32(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+		case 10:
+			if wireType != 0 {
+				return fmt.Errorf("proto: wrong wireType = %d for field RegencyChangeCount", wireType)
+			}
+			m.RegencyChangeCount = 0
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowAgent
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				m.RegencyChangeCount |= uint32(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+		case 11:
+			if wireType != 0 {
+				return fmt.Errorf("proto: wrong wireType = %d for field TimeoutMs", wireType)
+			}
+			m.TimeoutMs = 0
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowAgent
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				m.TimeoutMs |= uint32(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+		case 12:
+			if wireType != 5 {
+				return fmt.Errorf("proto: wrong wireType = %d for field AvgInterCommitGapMs", wireType)
+			}
+			var v uint32
+			if (iNdEx + 4) > l {
+				return io.ErrUnexpectedEOF
+			}
+			v = uint32(encoding_binary.LittleEndian.Uint32(dAtA[iNdEx:]))
+			iNdEx += 4
+			m.AvgInterCommitGapMs = float32(math.Float32frombits(v))
+		case 13:
+			if wireType != 5 {
+				return fmt.Errorf("proto: wrong wireType = %d for field P50InterCommitGapMs", wireType)
+			}
+			var v uint32
+			if (iNdEx + 4) > l {
+				return io.ErrUnexpectedEOF
+			}
+			v = uint32(encoding_binary.LittleEndian.Uint32(dAtA[iNdEx:]))
+			iNdEx += 4
+			m.P50InterCommitGapMs = float32(math.Float32frombits(v))
+		case 14:
+			if wireType != 5 {
+				return fmt.Errorf("proto: wrong wireType = %d for field P95InterCommitGapMs", wireType)
+			}
+			var v uint32
+			if (iNdEx + 4) > l {
+				return io.ErrUnexpectedEOF
+			}
+			v = uint32(encoding_binary.LittleEndian.Uint32(dAtA[iNdEx:]))
+			iNdEx += 4
+			m.P95InterCommitGapMs = float32(math.Float32frombits(v))
+		case 15:
+			if wireType != 0 {
+				return fmt.Errorf("proto: wrong wireType = %d for field ViewChangeCount", wireType)
+			}
+			m.ViewChangeCount = 0
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowAgent
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				m.ViewChangeCount |= uint32(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+		case 16:
+			if wireType != 0 {
+				return fmt.Errorf("proto: wrong wireType = %d for field NoProgressViewChangeCount", wireType)
+			}
+			m.NoProgressViewChangeCount = 0
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowAgent
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				m.NoProgressViewChangeCount |= uint32(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+		default:
+			iNdEx = preIndex
+			skippy, err := skipAgent(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
+				return ErrInvalidLengthAgent
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
 func (m *ReportLocal) Unmarshal(dAtA []byte) error {
 	l := len(dAtA)
 	iNdEx := 0
@@ -6147,6 +7950,25 @@ func (m *ReportLocal) Unmarshal(dAtA []byte) error {
 					break
 				}
 			}
+		case 8:
+			if wireType != 0 {
+				return fmt.Errorf("proto: wrong wireType = %d for field WindowConsensusCount", wireType)
+			}
+			m.WindowConsensusCount = 0
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowAgent
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				m.WindowConsensusCount |= uint32(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
 		case 10:
 			if wireType != 2 {
 				return fmt.Errorf("proto: wrong wireType = %d for field PbftState", wireType)
@@ -6181,41 +8003,6 @@ func (m *ReportLocal) Unmarshal(dAtA []byte) error {
 				return err
 			}
 			m.State = &ReportLocal_PbftState{v}
-			iNdEx = postIndex
-		case 11:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field TwoPcOverPbftState", wireType)
-			}
-			var msglen int
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowAgent
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				msglen |= int(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			if msglen < 0 {
-				return ErrInvalidLengthAgent
-			}
-			postIndex := iNdEx + msglen
-			if postIndex < 0 {
-				return ErrInvalidLengthAgent
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			v := &TwoPcOverPbftReport{}
-			if err := v.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
-				return err
-			}
-			m.State = &ReportLocal_TwoPcOverPbftState{v}
 			iNdEx = postIndex
 		case 12:
 			if wireType != 2 {
@@ -6286,6 +8073,111 @@ func (m *ReportLocal) Unmarshal(dAtA []byte) error {
 				return err
 			}
 			m.State = &ReportLocal_TendermintState{v}
+			iNdEx = postIndex
+		case 14:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field HotstuffState", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowAgent
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLengthAgent
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return ErrInvalidLengthAgent
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			v := &HotstuffReport{}
+			if err := v.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			m.State = &ReportLocal_HotstuffState{v}
+			iNdEx = postIndex
+		case 15:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field AutobahnState", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowAgent
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLengthAgent
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return ErrInvalidLengthAgent
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			v := &AutobahnReport{}
+			if err := v.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			m.State = &ReportLocal_AutobahnState{v}
+			iNdEx = postIndex
+		case 16:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field SmartbftState", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowAgent
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLengthAgent
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return ErrInvalidLengthAgent
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			v := &SmartbftReport{}
+			if err := v.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			m.State = &ReportLocal_SmartbftState{v}
 			iNdEx = postIndex
 		default:
 			iNdEx = preIndex
@@ -6423,147 +8315,6 @@ func (m *PbftReward) Unmarshal(dAtA []byte) error {
 			}
 			if m.TimeoutUsed == nil {
 				m.TimeoutUsed = &PbftTimeout{}
-			}
-			if err := m.TimeoutUsed.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
-				return err
-			}
-			iNdEx = postIndex
-		default:
-			iNdEx = preIndex
-			skippy, err := skipAgent(dAtA[iNdEx:])
-			if err != nil {
-				return err
-			}
-			if (skippy < 0) || (iNdEx+skippy) < 0 {
-				return ErrInvalidLengthAgent
-			}
-			if (iNdEx + skippy) > l {
-				return io.ErrUnexpectedEOF
-			}
-			iNdEx += skippy
-		}
-	}
-
-	if iNdEx > l {
-		return io.ErrUnexpectedEOF
-	}
-	return nil
-}
-func (m *TwoPcOverPbftReward) Unmarshal(dAtA []byte) error {
-	l := len(dAtA)
-	iNdEx := 0
-	for iNdEx < l {
-		preIndex := iNdEx
-		var wire uint64
-		for shift := uint(0); ; shift += 7 {
-			if shift >= 64 {
-				return ErrIntOverflowAgent
-			}
-			if iNdEx >= l {
-				return io.ErrUnexpectedEOF
-			}
-			b := dAtA[iNdEx]
-			iNdEx++
-			wire |= uint64(b&0x7F) << shift
-			if b < 0x80 {
-				break
-			}
-		}
-		fieldNum := int32(wire >> 3)
-		wireType := int(wire & 0x7)
-		if wireType == 4 {
-			return fmt.Errorf("proto: TwoPcOverPbftReward: wiretype end group for non-group")
-		}
-		if fieldNum <= 0 {
-			return fmt.Errorf("proto: TwoPcOverPbftReward: illegal tag %d (wire type %d)", fieldNum, wire)
-		}
-		switch fieldNum {
-		case 1:
-			if wireType != 0 {
-				return fmt.Errorf("proto: wrong wireType = %d for field Episode", wireType)
-			}
-			m.Episode = 0
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowAgent
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				m.Episode |= uint32(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-		case 2:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field Report", wireType)
-			}
-			var msglen int
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowAgent
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				msglen |= int(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			if msglen < 0 {
-				return ErrInvalidLengthAgent
-			}
-			postIndex := iNdEx + msglen
-			if postIndex < 0 {
-				return ErrInvalidLengthAgent
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			if m.Report == nil {
-				m.Report = &TwoPcOverPbftReport{}
-			}
-			if err := m.Report.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
-				return err
-			}
-			iNdEx = postIndex
-		case 3:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field TimeoutUsed", wireType)
-			}
-			var msglen int
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowAgent
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				msglen |= int(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			if msglen < 0 {
-				return ErrInvalidLengthAgent
-			}
-			postIndex := iNdEx + msglen
-			if postIndex < 0 {
-				return ErrInvalidLengthAgent
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			if m.TimeoutUsed == nil {
-				m.TimeoutUsed = &TwoPcOverPbftTimeout{}
 			}
 			if err := m.TimeoutUsed.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
 				return err
@@ -6872,6 +8623,429 @@ func (m *TendermintReward) Unmarshal(dAtA []byte) error {
 	}
 	return nil
 }
+func (m *HotstuffReward) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowAgent
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= uint64(b&0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: HotstuffReward: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: HotstuffReward: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		case 1:
+			if wireType != 0 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Episode", wireType)
+			}
+			m.Episode = 0
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowAgent
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				m.Episode |= uint32(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+		case 2:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Report", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowAgent
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLengthAgent
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return ErrInvalidLengthAgent
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			if m.Report == nil {
+				m.Report = &HotstuffReport{}
+			}
+			if err := m.Report.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			iNdEx = postIndex
+		case 3:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field TimeoutUsed", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowAgent
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLengthAgent
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return ErrInvalidLengthAgent
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			if m.TimeoutUsed == nil {
+				m.TimeoutUsed = &HotstuffTimeout{}
+			}
+			if err := m.TimeoutUsed.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			iNdEx = postIndex
+		default:
+			iNdEx = preIndex
+			skippy, err := skipAgent(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
+				return ErrInvalidLengthAgent
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
+func (m *AutobahnReward) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowAgent
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= uint64(b&0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: AutobahnReward: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: AutobahnReward: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		case 1:
+			if wireType != 0 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Episode", wireType)
+			}
+			m.Episode = 0
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowAgent
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				m.Episode |= uint32(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+		case 2:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Report", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowAgent
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLengthAgent
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return ErrInvalidLengthAgent
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			if m.Report == nil {
+				m.Report = &AutobahnReport{}
+			}
+			if err := m.Report.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			iNdEx = postIndex
+		case 3:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field TimeoutUsed", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowAgent
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLengthAgent
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return ErrInvalidLengthAgent
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			if m.TimeoutUsed == nil {
+				m.TimeoutUsed = &AutobahnTimeout{}
+			}
+			if err := m.TimeoutUsed.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			iNdEx = postIndex
+		default:
+			iNdEx = preIndex
+			skippy, err := skipAgent(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
+				return ErrInvalidLengthAgent
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
+func (m *SmartbftReward) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowAgent
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= uint64(b&0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: SmartbftReward: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: SmartbftReward: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		case 1:
+			if wireType != 0 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Episode", wireType)
+			}
+			m.Episode = 0
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowAgent
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				m.Episode |= uint32(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+		case 2:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Report", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowAgent
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLengthAgent
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return ErrInvalidLengthAgent
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			if m.Report == nil {
+				m.Report = &SmartbftReport{}
+			}
+			if err := m.Report.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			iNdEx = postIndex
+		case 3:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field TimeoutUsed", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowAgent
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLengthAgent
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return ErrInvalidLengthAgent
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			if m.TimeoutUsed == nil {
+				m.TimeoutUsed = &SmartbftTimeout{}
+			}
+			if err := m.TimeoutUsed.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			iNdEx = postIndex
+		default:
+			iNdEx = preIndex
+			skippy, err := skipAgent(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
+				return ErrInvalidLengthAgent
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
 func (m *Reward) Unmarshal(dAtA []byte) error {
 	l := len(dAtA)
 	iNdEx := 0
@@ -6935,41 +9109,6 @@ func (m *Reward) Unmarshal(dAtA []byte) error {
 				return err
 			}
 			m.Value = &Reward_Pbft{v}
-			iNdEx = postIndex
-		case 2:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field TwoPcOverPbft", wireType)
-			}
-			var msglen int
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowAgent
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				msglen |= int(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			if msglen < 0 {
-				return ErrInvalidLengthAgent
-			}
-			postIndex := iNdEx + msglen
-			if postIndex < 0 {
-				return ErrInvalidLengthAgent
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			v := &TwoPcOverPbftReward{}
-			if err := v.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
-				return err
-			}
-			m.Value = &Reward_TwoPcOverPbft{v}
 			iNdEx = postIndex
 		case 3:
 			if wireType != 2 {
@@ -7040,6 +9179,111 @@ func (m *Reward) Unmarshal(dAtA []byte) error {
 				return err
 			}
 			m.Value = &Reward_Tendermint{v}
+			iNdEx = postIndex
+		case 5:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Hotstuff", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowAgent
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLengthAgent
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return ErrInvalidLengthAgent
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			v := &HotstuffReward{}
+			if err := v.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			m.Value = &Reward_Hotstuff{v}
+			iNdEx = postIndex
+		case 6:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Autobahn", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowAgent
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLengthAgent
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return ErrInvalidLengthAgent
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			v := &AutobahnReward{}
+			if err := v.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			m.Value = &Reward_Autobahn{v}
+			iNdEx = postIndex
+		case 7:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Smartbft", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowAgent
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLengthAgent
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return ErrInvalidLengthAgent
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			v := &SmartbftReward{}
+			if err := v.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			m.Value = &Reward_Smartbft{v}
 			iNdEx = postIndex
 		default:
 			iNdEx = preIndex
@@ -7253,94 +9497,6 @@ func (m *PbftTimeout) Unmarshal(dAtA []byte) error {
 	}
 	return nil
 }
-func (m *TwoPcOverPbftTimeout) Unmarshal(dAtA []byte) error {
-	l := len(dAtA)
-	iNdEx := 0
-	for iNdEx < l {
-		preIndex := iNdEx
-		var wire uint64
-		for shift := uint(0); ; shift += 7 {
-			if shift >= 64 {
-				return ErrIntOverflowAgent
-			}
-			if iNdEx >= l {
-				return io.ErrUnexpectedEOF
-			}
-			b := dAtA[iNdEx]
-			iNdEx++
-			wire |= uint64(b&0x7F) << shift
-			if b < 0x80 {
-				break
-			}
-		}
-		fieldNum := int32(wire >> 3)
-		wireType := int(wire & 0x7)
-		if wireType == 4 {
-			return fmt.Errorf("proto: TwoPcOverPbftTimeout: wiretype end group for non-group")
-		}
-		if fieldNum <= 0 {
-			return fmt.Errorf("proto: TwoPcOverPbftTimeout: illegal tag %d (wire type %d)", fieldNum, wire)
-		}
-		switch fieldNum {
-		case 1:
-			if wireType != 0 {
-				return fmt.Errorf("proto: wrong wireType = %d for field ElectionTimeoutMilliseconds", wireType)
-			}
-			m.ElectionTimeoutMilliseconds = 0
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowAgent
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				m.ElectionTimeoutMilliseconds |= uint32(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-		case 2:
-			if wireType != 0 {
-				return fmt.Errorf("proto: wrong wireType = %d for field PrepareTimeoutMilliseconds", wireType)
-			}
-			m.PrepareTimeoutMilliseconds = 0
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowAgent
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				m.PrepareTimeoutMilliseconds |= uint32(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-		default:
-			iNdEx = preIndex
-			skippy, err := skipAgent(dAtA[iNdEx:])
-			if err != nil {
-				return err
-			}
-			if (skippy < 0) || (iNdEx+skippy) < 0 {
-				return ErrInvalidLengthAgent
-			}
-			if (iNdEx + skippy) > l {
-				return io.ErrUnexpectedEOF
-			}
-			iNdEx += skippy
-		}
-	}
-
-	if iNdEx > l {
-		return io.ErrUnexpectedEOF
-	}
-	return nil
-}
 func (m *SbftTimeout) Unmarshal(dAtA []byte) error {
 	l := len(dAtA)
 	iNdEx := 0
@@ -7404,25 +9560,6 @@ func (m *SbftTimeout) Unmarshal(dAtA []byte) error {
 				b := dAtA[iNdEx]
 				iNdEx++
 				m.SlowPathTimeoutMilliseconds |= uint32(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-		case 3:
-			if wireType != 0 {
-				return fmt.Errorf("proto: wrong wireType = %d for field BatchTimeoutMilliseconds", wireType)
-			}
-			m.BatchTimeoutMilliseconds = 0
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowAgent
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				m.BatchTimeoutMilliseconds |= uint32(b&0x7F) << shift
 				if b < 0x80 {
 					break
 				}
@@ -7555,6 +9692,251 @@ func (m *TendermintTimeout) Unmarshal(dAtA []byte) error {
 	}
 	return nil
 }
+func (m *HotstuffTimeout) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowAgent
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= uint64(b&0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: HotstuffTimeout: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: HotstuffTimeout: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		case 1:
+			if wireType != 0 {
+				return fmt.Errorf("proto: wrong wireType = %d for field TimeoutDelayMilliseconds", wireType)
+			}
+			m.TimeoutDelayMilliseconds = 0
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowAgent
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				m.TimeoutDelayMilliseconds |= uint32(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+		default:
+			iNdEx = preIndex
+			skippy, err := skipAgent(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
+				return ErrInvalidLengthAgent
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
+func (m *AutobahnTimeout) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowAgent
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= uint64(b&0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: AutobahnTimeout: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: AutobahnTimeout: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		case 1:
+			if wireType != 0 {
+				return fmt.Errorf("proto: wrong wireType = %d for field TimeoutDelayMilliseconds", wireType)
+			}
+			m.TimeoutDelayMilliseconds = 0
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowAgent
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				m.TimeoutDelayMilliseconds |= uint32(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+		case 2:
+			if wireType != 0 {
+				return fmt.Errorf("proto: wrong wireType = %d for field CarTimeoutMilliseconds", wireType)
+			}
+			m.CarTimeoutMilliseconds = 0
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowAgent
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				m.CarTimeoutMilliseconds |= uint32(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+		case 3:
+			if wireType != 0 {
+				return fmt.Errorf("proto: wrong wireType = %d for field FastPathTimeoutMilliseconds", wireType)
+			}
+			m.FastPathTimeoutMilliseconds = 0
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowAgent
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				m.FastPathTimeoutMilliseconds |= uint32(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+		default:
+			iNdEx = preIndex
+			skippy, err := skipAgent(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
+				return ErrInvalidLengthAgent
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
+func (m *SmartbftTimeout) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowAgent
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= uint64(b&0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: SmartbftTimeout: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: SmartbftTimeout: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		case 1:
+			if wireType != 0 {
+				return fmt.Errorf("proto: wrong wireType = %d for field ElectionTimeoutMilliseconds", wireType)
+			}
+			m.ElectionTimeoutMilliseconds = 0
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowAgent
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				m.ElectionTimeoutMilliseconds |= uint32(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+		default:
+			iNdEx = preIndex
+			skippy, err := skipAgent(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
+				return ErrInvalidLengthAgent
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
 func (m *Timeout) Unmarshal(dAtA []byte) error {
 	l := len(dAtA)
 	iNdEx := 0
@@ -7618,41 +10000,6 @@ func (m *Timeout) Unmarshal(dAtA []byte) error {
 				return err
 			}
 			m.Value = &Timeout_Pbft{v}
-			iNdEx = postIndex
-		case 2:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field TwoPcOverPbft", wireType)
-			}
-			var msglen int
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowAgent
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				msglen |= int(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			if msglen < 0 {
-				return ErrInvalidLengthAgent
-			}
-			postIndex := iNdEx + msglen
-			if postIndex < 0 {
-				return ErrInvalidLengthAgent
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			v := &TwoPcOverPbftTimeout{}
-			if err := v.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
-				return err
-			}
-			m.Value = &Timeout_TwoPcOverPbft{v}
 			iNdEx = postIndex
 		case 3:
 			if wireType != 2 {
@@ -7723,6 +10070,111 @@ func (m *Timeout) Unmarshal(dAtA []byte) error {
 				return err
 			}
 			m.Value = &Timeout_Tendermint{v}
+			iNdEx = postIndex
+		case 5:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Hotstuff", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowAgent
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLengthAgent
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return ErrInvalidLengthAgent
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			v := &HotstuffTimeout{}
+			if err := v.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			m.Value = &Timeout_Hotstuff{v}
+			iNdEx = postIndex
+		case 6:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Autobahn", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowAgent
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLengthAgent
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return ErrInvalidLengthAgent
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			v := &AutobahnTimeout{}
+			if err := v.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			m.Value = &Timeout_Autobahn{v}
+			iNdEx = postIndex
+		case 7:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Smartbft", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowAgent
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLengthAgent
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return ErrInvalidLengthAgent
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			v := &SmartbftTimeout{}
+			if err := v.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			m.Value = &Timeout_Smartbft{v}
 			iNdEx = postIndex
 		default:
 			iNdEx = preIndex
@@ -7970,6 +10422,25 @@ func (m *TimeoutStatus) Unmarshal(dAtA []byte) error {
 				b := dAtA[iNdEx]
 				iNdEx++
 				m.ReportSeq |= uint32(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+		case 6:
+			if wireType != 0 {
+				return fmt.Errorf("proto: wrong wireType = %d for field WindowConsensusCount", wireType)
+			}
+			m.WindowConsensusCount = 0
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowAgent
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				m.WindowConsensusCount |= uint32(b&0x7F) << shift
 				if b < 0x80 {
 					break
 				}
