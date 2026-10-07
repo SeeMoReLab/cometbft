@@ -48,23 +48,6 @@ type pendingReward struct {
 	timeoutUsed *adaptivetimers.TendermintTimeout
 }
 
-type learningEpochBoundaries struct {
-	reportAt      int64
-	applyAt       int64
-	rewardStartAt int64
-	endAt         int64
-}
-
-func newLearningEpochBoundaries(epochSize int64) learningEpochBoundaries {
-	gap := epochSize / 10
-	return learningEpochBoundaries{
-		reportAt:      epochSize,
-		applyAt:       epochSize + gap,
-		rewardStartAt: epochSize + 2*gap,
-		endAt:         2*epochSize + 2*gap,
-	}
-}
-
 // wallClockStage is the position within one wall-clock learning episode.
 type wallClockStage uint8
 
@@ -98,15 +81,9 @@ func (s wallClockStage) String() string {
 
 // EpochTracker coordinates the adaptive-timer feedback loop.
 //
-// Episode boundaries are drawn one of two ways, selected by the window mode:
-//
-//   - consensus: every boundary is a count of committed heights, so all state is
-//     mutated from the consensus receiveRoutine.
-//   - wall-clock: every boundary is an instant, driven by a background goroutine
-//     so that episodes keep advancing even while consensus is stalled.
-//
-// mu therefore guards all mutable state, since in wall-clock mode the driver and
-// receiveRoutine both touch it.
+// Episode boundaries are wall-clock instants, driven by a background goroutine
+// so that episodes keep advancing even while consensus is stalled. mu guards all
+// mutable state, since the driver and the consensus receiveRoutine both touch it.
 type EpochTracker struct {
 	consensusCfg *cfg.ConsensusConfig
 	logger       log.Logger
@@ -115,11 +92,7 @@ type EpochTracker struct {
 
 	nodeID uint32
 
-	// windowMode is one of cfg.AdaptiveTimerWindowMode*. Immutable after construction.
-	windowMode string
-	// epochSize is the consensus-mode window length in committed heights.
-	epochSize int64
-	// Wall-clock mode stage lengths.
+	// Wall-clock stage lengths.
 	featureDuration time.Duration
 	replyWait       time.Duration
 	warmupDuration  time.Duration
@@ -134,12 +107,7 @@ type EpochTracker struct {
 	// windowB collects the reward window, after reply waiting and warm-up.
 	windowB windowData
 
-	// consensusCounterA counts committed heights in phase A (consensus mode only).
-	consensusCounterA int64
-	// consensusCounterB counts committed heights in phase B (consensus mode only).
-	consensusCounterB int64
-
-	// stage is the current wall-clock stage (wall-clock mode only).
+	// stage is the current wall-clock stage.
 	stage wallClockStage
 	// stageDeadline is the instant at which the current wall-clock stage ends.
 	stageDeadline time.Time
@@ -167,21 +135,11 @@ type EpochTracker struct {
 // NewEpochTracker creates an EpochTracker. If AdaptiveTimerAddr is empty the
 // tracker is a no-op (client == nil).
 func NewEpochTracker(config *cfg.ConsensusConfig, logger log.Logger) (*EpochTracker, error) {
-	windowMode := config.AdaptiveTimerWindowMode
-	if windowMode != cfg.AdaptiveTimerWindowModeConsensus && windowMode != cfg.AdaptiveTimerWindowModeWallClock {
-		return nil, fmt.Errorf(
-			"adaptive_timer: unknown window mode %q; expected %q or %q",
-			windowMode, cfg.AdaptiveTimerWindowModeConsensus, cfg.AdaptiveTimerWindowModeWallClock,
-		)
-	}
-
 	now := time.Now()
 	et := &EpochTracker{
 		consensusCfg:    config,
 		logger:          logger,
 		nodeID:          config.AdaptiveTimerNodeIndex,
-		windowMode:      windowMode,
-		epochSize:       config.AdaptiveTimerEpochSize,
 		featureDuration: config.AdaptiveTimerFeatureDuration,
 		replyWait:       config.AdaptiveTimerReplyWait,
 		warmupDuration:  config.AdaptiveTimerWarmupDuration,
@@ -203,19 +161,12 @@ func NewEpochTracker(config *cfg.ConsensusConfig, logger log.Logger) (*EpochTrac
 		return et, nil
 	}
 
-	if windowMode == cfg.AdaptiveTimerWindowModeWallClock {
-		if config.AdaptiveTimerFeatureDuration <= 0 || config.AdaptiveTimerReplyWait <= 0 ||
-			config.AdaptiveTimerWarmupDuration <= 0 || config.AdaptiveTimerRewardDuration <= 0 {
-			return nil, fmt.Errorf(
-				"adaptive_timer: wall-clock mode requires positive durations, got feature=%s reply_wait=%s warmup=%s reward=%s",
-				config.AdaptiveTimerFeatureDuration, config.AdaptiveTimerReplyWait,
-				config.AdaptiveTimerWarmupDuration, config.AdaptiveTimerRewardDuration,
-			)
-		}
-	} else if config.AdaptiveTimerEpochSize <= 0 {
+	if config.AdaptiveTimerFeatureDuration <= 0 || config.AdaptiveTimerReplyWait <= 0 ||
+		config.AdaptiveTimerWarmupDuration <= 0 || config.AdaptiveTimerRewardDuration <= 0 {
 		return nil, fmt.Errorf(
-			"adaptive_timer: consensus mode requires a positive epoch size, got %d",
-			config.AdaptiveTimerEpochSize,
+			"adaptive_timer: requires positive durations, got feature=%s reply_wait=%s warmup=%s reward=%s",
+			config.AdaptiveTimerFeatureDuration, config.AdaptiveTimerReplyWait,
+			config.AdaptiveTimerWarmupDuration, config.AdaptiveTimerRewardDuration,
 		)
 	}
 
@@ -249,7 +200,7 @@ func (et *EpochTracker) SetLogger(l log.Logger) {
 		l.Error("adaptive_timer: Reset failed", "err", err)
 		return
 	}
-	l.Info("adaptive_timer: agent reset ok", "window_mode", et.windowMode)
+	l.Info("adaptive_timer: agent reset ok")
 }
 
 func (et *EpochTracker) Close() {
@@ -315,12 +266,7 @@ func (et *EpochTracker) OnBlockCommitted(height int64, txCount int, commitRound 
 
 	now := time.Now()
 	sample := et.buildHeightSampleLocked(now, height, txCount, commitRound)
-
-	if et.windowMode == cfg.AdaptiveTimerWindowModeWallClock {
-		et.accumulateWallClockLocked(now, sample)
-		return
-	}
-	et.accumulateConsensusLocked(sample)
+	et.accumulateWallClockLocked(now, sample)
 }
 
 // buildHeightSampleLocked computes the end-to-end and phase latencies for a
@@ -358,40 +304,6 @@ func (et *EpochTracker) buildHeightSampleLocked(now time.Time, height int64, txC
 }
 
 // accumulateConsensusLocked advances the episode by counting committed heights.
-func (et *EpochTracker) accumulateConsensusLocked(sample heightSample) {
-	boundaries := newLearningEpochBoundaries(et.epochSize)
-
-	// Feature collection: accumulate n consensus instances.
-	if et.consensusCounterA < boundaries.reportAt {
-		accumulateHeight(&et.windowA, sample)
-		et.consensusCounterA++
-		if et.consensusCounterA >= boundaries.reportAt {
-			et.sendReportAndStartPollingLocked(time.Now())
-		}
-		return
-	}
-
-	// The remainder of the learning cycle contains reply waiting, warm-up, and reward.
-	accumulateHeight(&et.windowB, sample)
-	et.consensusCounterB++
-	epochPosition := et.consensusCounterA + et.consensusCounterB
-
-	// After a 0.1n reply window, stop polling and apply the recommendation.
-	if epochPosition >= boundaries.applyAt && epochPosition-1 < boundaries.applyAt {
-		et.stopPollingAndApplyLocked()
-	}
-
-	// Discard the next 0.1n as post-apply warm-up, then start reward collection.
-	if epochPosition >= boundaries.rewardStartAt && epochPosition-1 < boundaries.rewardStartAt {
-		et.startRewardWindowLocked(time.Now())
-	}
-
-	// After n reward instances, snapshot the reward window and begin the next episode.
-	if epochPosition >= boundaries.endAt && et.windowB.heightCount > 0 {
-		et.snapshotBAndResetLocked()
-	}
-}
-
 // accumulateWallClockLocked files a committed height into whichever wall-clock
 // window is currently open. Heights committed during reply-wait or warm-up are
 // deliberately dropped: they belong to neither the feature nor the reward window.
@@ -497,9 +409,7 @@ func waitUntil(ctx context.Context, deadline time.Time) bool {
 }
 
 func (et *EpochTracker) atWallClockStageLocked(episode uint32, stage wallClockStage) bool {
-	return et.windowMode == cfg.AdaptiveTimerWindowModeWallClock &&
-		et.episode == episode &&
-		et.stage == stage
+	return et.episode == episode && et.stage == stage
 }
 
 func (et *EpochTracker) onWallClockFeatureDeadline(episode uint32, deadline time.Time) bool {
@@ -626,7 +536,6 @@ func (et *EpochTracker) sendReportAndStartPollingLocked(reportEnd time.Time) {
 
 	et.logger.Info("adaptive_timer: sending report",
 		"episode", et.episode,
-		"window_mode", et.windowMode,
 		"start_height", et.windowA.startHeight,
 		"end_height", et.windowA.endHeight,
 		"total_txs", report.TotalTransactions,
@@ -786,7 +695,6 @@ func (et *EpochTracker) stopPollingAndApplyLocked() {
 		et.currentTimeout = tm
 		et.logger.Info("adaptive_timer: applying new timeout",
 			"episode", et.episode,
-			"window_mode", et.windowMode,
 			"propose_ms", tm.ProposeTimeoutMilliseconds,
 			"prevote_ms", tm.PrevoteTimeoutMilliseconds,
 			"precommit_ms", tm.PrecommitTimeoutMilliseconds,
@@ -794,17 +702,14 @@ func (et *EpochTracker) stopPollingAndApplyLocked() {
 	default:
 		et.logger.Info("adaptive_timer: reply deadline reached without a recommendation, keeping previous",
 			"episode", et.episode,
-			"window_mode", et.windowMode,
 		)
 	}
 }
 
 // fastForward jumps to an episode that the agent has already decided while this
 // node was still working on an older one. Reaching this point means the node
-// missed at least one episode outright: in consensus mode because heights caught
-// up via blocksync never reach OnBlockCommitted, or after a restart; in wall-clock
-// mode only if the node was down, since episodes there advance on the clock and
-// so keep pace regardless of commit rate.
+// missed at least one episode outright, which happens only if the node was down,
+// since episodes advance on the clock and so keep pace regardless of commit rate.
 //
 // The recommendation is applied immediately rather than at the usual apply point,
 // since that point has passed, and the remainder of the episode keeps its normal
@@ -832,37 +737,28 @@ func (et *EpochTracker) fastForward(target, polled uint32, tm *adaptivetimers.Te
 	// The abandoned episode's in-flight windows are discarded rather than
 	// re-attributed: they were measured against an episode that no longer applies.
 	// pendingReward is deliberately left alone, matching SmartBFT. It cannot leak
-	// into the new episode's report either way, because both branches below resume
-	// past the report point, so it is overwritten at the next reward deadline.
+	// into the new episode's report, because the driver resumes past the report
+	// point, so it is overwritten at the next reward deadline.
 	et.windowA = windowData{windowStart: now}
 	et.windowB = windowData{windowStart: now}
 
-	if et.windowMode == cfg.AdaptiveTimerWindowModeWallClock {
-		if et.wallClockCancel != nil {
-			et.wallClockCancel()
-		}
-		et.stage = wallClockWarmup
-		et.stageDeadline = now.Add(et.warmupDuration)
-
-		ctx, cancel := context.WithCancel(context.Background())
-		et.wallClockCancel = cancel
-		// The driver is bound to a single episode number and its handlers bail as
-		// soon as the episode changes, so it has to be restarted here or learning
-		// stops for the rest of the run.
-		go et.runWallClockEpisodes(ctx, target, now, true)
-	} else {
-		// Resume at the instant the apply point would have been, so the remaining
-		// warm-up and the reward window are both full length.
-		boundaries := newLearningEpochBoundaries(et.epochSize)
-		et.consensusCounterA = boundaries.reportAt
-		et.consensusCounterB = boundaries.applyAt - boundaries.reportAt
+	if et.wallClockCancel != nil {
+		et.wallClockCancel()
 	}
+	et.stage = wallClockWarmup
+	et.stageDeadline = now.Add(et.warmupDuration)
+
+	ctx, cancel := context.WithCancel(context.Background())
+	et.wallClockCancel = cancel
+	// The driver is bound to a single episode number and its handlers bail as
+	// soon as the episode changes, so it has to be restarted here or learning
+	// stops for the rest of the run.
+	go et.runWallClockEpisodes(ctx, target, now, true)
 
 	et.logger.Info("adaptive_timer: fast-forward",
 		"from_episode", previous,
 		"to_episode", target,
 		"polled_episode", polled,
-		"window_mode", et.windowMode,
 		"propose_ms", tm.ProposeTimeoutMilliseconds,
 		"prevote_ms", tm.PrevoteTimeoutMilliseconds,
 		"precommit_ms", tm.PrecommitTimeoutMilliseconds,
@@ -875,8 +771,6 @@ func (et *EpochTracker) startRewardWindowLocked(start time.Time) {
 	et.windowB = windowData{windowStart: start}
 	et.logger.Info("adaptive_timer: reward window started after warm-up",
 		"episode", et.episode,
-		"window_mode", et.windowMode,
-		"epoch_position", et.consensusCounterA+et.consensusCounterB,
 		"timeout_used_propose_ms", et.currentTimeout.ProposeTimeoutMilliseconds,
 		"timeout_used_prevote_ms", et.currentTimeout.PrevoteTimeoutMilliseconds,
 		"timeout_used_precommit_ms", et.currentTimeout.PrecommitTimeoutMilliseconds,
@@ -891,18 +785,6 @@ func (et *EpochTracker) snapshotBLocked(end time.Time) {
 		report:      buildReport(&et.windowB, end),
 		timeoutUsed: et.currentTimeout,
 	}
-}
-
-func (et *EpochTracker) snapshotBAndResetLocked() {
-	now := time.Now()
-	et.snapshotBLocked(now)
-
-	et.episode++
-	et.windowA = windowData{windowStart: now}
-	et.windowB = windowData{windowStart: now}
-	et.consensusCounterA = 0
-	et.consensusCounterB = 0
-	et.drainTimeoutResultLocked()
 }
 
 // drainTimeoutResultLocked discards a timeout written by the previous episode's
@@ -942,8 +824,8 @@ func accumulateHeight(w *windowData, s heightSample) {
 }
 
 // buildReport summarises a window that closed at end. Passing the closing instant
-// explicitly matters in wall-clock mode, where throughput must be divided by the
-// nominal window length rather than by however long it took to get here.
+// explicitly matters because throughput must be divided by the nominal window
+// length rather than by however long it took to get here.
 func buildReport(w *windowData, end time.Time) *adaptivetimers.TendermintReport {
 	elapsed := end.Sub(w.windowStart).Seconds()
 	var tps float64

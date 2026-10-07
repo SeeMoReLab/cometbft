@@ -595,21 +595,9 @@ double_sign_check_height = {{ .Consensus.DoubleSignCheckHeight }}
 # Leave empty to disable the adaptive timer feedback loop.
 adaptive_timer_addr = "{{ .Consensus.AdaptiveTimerAddr }}"
 
-# How learning episode boundaries are drawn: "consensus" counts committed consensus
-# instances (adaptive_timer_epoch_size), "wall-clock" uses elapsed time
-# (adaptive_timer_feature_duration and friends).
-adaptive_timer_window_mode = "{{ .Consensus.AdaptiveTimerWindowMode }}"
-
-# Number of committed consensus instances in each feature and reward window.
-# After the feature report, allow 0.1*epoch_size for the recommendation and
-# another 0.1*epoch_size for post-apply warm-up before collecting the reward.
-# Only used when adaptive_timer_window_mode = "consensus".
-adaptive_timer_epoch_size = {{ .Consensus.AdaptiveTimerEpochSize }}
-
 # Wall-clock learning window durations. Each episode collects features for
 # feature_duration, waits reply_wait for the agent's recommendation, applies it and
 # discards warmup_duration, then collects the reward for reward_duration.
-# Only used when adaptive_timer_window_mode = "wall-clock".
 adaptive_timer_feature_duration = "{{ .Consensus.AdaptiveTimerFeatureDuration }}"
 adaptive_timer_reply_wait = "{{ .Consensus.AdaptiveTimerReplyWait }}"
 adaptive_timer_warmup_duration = "{{ .Consensus.AdaptiveTimerWarmupDuration }}"

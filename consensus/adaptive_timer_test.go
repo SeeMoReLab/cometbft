@@ -4,38 +4,14 @@ import (
 	"testing"
 	"time"
 
-	cfg "github.com/cometbft/cometbft/config"
 	"github.com/cometbft/cometbft/libs/log"
 	adaptivetimers "github.com/cometbft/cometbft/proto/adaptive_timers"
 )
-
-func TestLearningEpochBoundaries(t *testing.T) {
-	boundaries := newLearningEpochBoundaries(50)
-	if boundaries.reportAt != 50 {
-		t.Fatalf("reportAt = %d, want 50", boundaries.reportAt)
-	}
-	if boundaries.applyAt != 55 {
-		t.Fatalf("applyAt = %d, want 55", boundaries.applyAt)
-	}
-	if boundaries.rewardStartAt != 60 {
-		t.Fatalf("rewardStartAt = %d, want 60", boundaries.rewardStartAt)
-	}
-	if boundaries.endAt != 110 {
-		t.Fatalf("endAt = %d, want 110", boundaries.endAt)
-	}
-	if featureLength := boundaries.reportAt; featureLength != 50 {
-		t.Fatalf("feature length = %d, want 50", featureLength)
-	}
-	if rewardLength := boundaries.endAt - boundaries.rewardStartAt; rewardLength != 50 {
-		t.Fatalf("reward length = %d, want 50", rewardLength)
-	}
-}
 
 func TestApplyDoesNotStartRewardWindow(t *testing.T) {
 	previousStart := time.Unix(100, 0)
 	tracker := &EpochTracker{
 		logger:          log.NewNopLogger(),
-		windowMode:      cfg.AdaptiveTimerWindowModeConsensus,
 		episode:         1,
 		windowB:         windowData{heightCount: 10, totalTxs: 20, windowStart: previousStart},
 		timeoutResultCh: make(chan *adaptivetimers.TendermintTimeout, 1),
@@ -66,12 +42,9 @@ func TestApplyDoesNotStartRewardWindow(t *testing.T) {
 
 func TestRewardWindowStartsAfterWarmup(t *testing.T) {
 	tracker := &EpochTracker{
-		logger:            log.NewNopLogger(),
-		windowMode:        cfg.AdaptiveTimerWindowModeConsensus,
-		episode:           1,
-		consensusCounterA: 50,
-		consensusCounterB: 10,
-		windowB:           windowData{heightCount: 20, totalTxs: 40, windowStart: time.Unix(100, 0)},
+		logger:  log.NewNopLogger(),
+		episode: 1,
+		windowB: windowData{heightCount: 20, totalTxs: 40, windowStart: time.Unix(100, 0)},
 		currentTimeout: &adaptivetimers.TendermintTimeout{
 			ProposeTimeoutMilliseconds:   300,
 			PrevoteTimeoutMilliseconds:   100,
@@ -96,7 +69,6 @@ func TestRewardWindowStartsAfterWarmup(t *testing.T) {
 func newWallClockTestTracker() *EpochTracker {
 	return &EpochTracker{
 		logger:          log.NewNopLogger(),
-		windowMode:      cfg.AdaptiveTimerWindowModeWallClock,
 		featureDuration: 8 * time.Second,
 		replyWait:       2 * time.Second,
 		warmupDuration:  2 * time.Second,
@@ -228,73 +200,11 @@ func TestWallClockDropsHeightsPastTheStageDeadline(t *testing.T) {
 	}
 }
 
-func newConsensusTestTracker(epochSize int64) *EpochTracker {
-	return &EpochTracker{
-		logger:          log.NewNopLogger(),
-		windowMode:      cfg.AdaptiveTimerWindowModeConsensus,
-		epochSize:       epochSize,
-		proposeTime:     make(map[int64]time.Time),
-		prevoteTime:     make(map[int64]time.Time),
-		precommitTime:   make(map[int64]time.Time),
-		timeoutResultCh: make(chan *adaptivetimers.TendermintTimeout, 1),
-		currentTimeout: &adaptivetimers.TendermintTimeout{
-			ProposeTimeoutMilliseconds:   150,
-			PrevoteTimeoutMilliseconds:   50,
-			PrecommitTimeoutMilliseconds: 50,
-		},
-	}
-}
-
 func recommendation(proposeMs uint32) *adaptivetimers.TendermintTimeout {
 	return &adaptivetimers.TendermintTimeout{
 		ProposeTimeoutMilliseconds:   proposeMs,
 		PrevoteTimeoutMilliseconds:   100,
 		PrecommitTimeoutMilliseconds: 100,
-	}
-}
-
-// A fast-forwarded consensus-mode episode must still produce a full-length reward
-// window, otherwise the reward the agent trains on is shorter than every other one.
-func TestFastForwardConsensusKeepsFullRewardWindow(t *testing.T) {
-	const epochSize = 20
-	tracker := newConsensusTestTracker(epochSize)
-	tracker.episode = 3
-
-	tracker.fastForward(7, 3, recommendation(999))
-
-	if tracker.episode != 7 {
-		t.Fatalf("episode after fast-forward = %d, want 7", tracker.episode)
-	}
-	if tracker.currentTimeout.ProposeTimeoutMilliseconds != 999 {
-		t.Fatalf("timeout was not applied: propose_ms = %d", tracker.currentTimeout.ProposeTimeoutMilliseconds)
-	}
-
-	boundaries := newLearningEpochBoundaries(epochSize)
-	if pos := tracker.consensusCounterA + tracker.consensusCounterB; pos != boundaries.applyAt {
-		t.Fatalf("epoch position after fast-forward = %d, want applyAt %d", pos, boundaries.applyAt)
-	}
-
-	// Warm-up runs to rewardStartAt, then a full epochSize of reward heights.
-	remaining := boundaries.endAt - boundaries.applyAt
-	for h := int64(1); h <= remaining; h++ {
-		tracker.accumulateConsensusLocked(heightSample{height: h, txCount: 1})
-	}
-
-	if tracker.episode != 8 {
-		t.Fatalf("episode after completing the fast-forwarded cycle = %d, want 8", tracker.episode)
-	}
-	if tracker.pendingReward == nil {
-		t.Fatal("fast-forwarded episode produced no reward")
-	}
-	if tracker.pendingReward.episode != 7 {
-		t.Fatalf("reward episode = %d, want 7", tracker.pendingReward.episode)
-	}
-	if got := tracker.pendingReward.report.TotalConsensusInstances; got != epochSize {
-		t.Fatalf("reward window = %d heights, want a full %d", got, epochSize)
-	}
-	if tracker.pendingReward.timeoutUsed.ProposeTimeoutMilliseconds != 999 {
-		t.Fatalf("reward attributed to propose_ms = %d, want the fast-forwarded 999",
-			tracker.pendingReward.timeoutUsed.ProposeTimeoutMilliseconds)
 	}
 }
 
@@ -349,17 +259,17 @@ func TestFastForwardRetiresTheAbandonedWallClockDriver(t *testing.T) {
 }
 
 func TestFastForwardIgnoresStaleTarget(t *testing.T) {
-	tracker := newConsensusTestTracker(20)
+	tracker := newWallClockTestTracker()
 	tracker.episode = 9
-	tracker.consensusCounterA = 4
+	tracker.stage = wallClockFeature
 
 	tracker.fastForward(7, 3, recommendation(999))
 
 	if tracker.episode != 9 {
 		t.Fatalf("stale fast-forward moved episode to %d, want 9", tracker.episode)
 	}
-	if tracker.consensusCounterA != 4 {
-		t.Fatalf("stale fast-forward repositioned counters to %d, want 4", tracker.consensusCounterA)
+	if tracker.stage != wallClockFeature {
+		t.Fatalf("stale fast-forward moved stage to %s, want feature", tracker.stage)
 	}
 	if tracker.currentTimeout.ProposeTimeoutMilliseconds != 150 {
 		t.Fatalf("stale fast-forward applied a timeout: propose_ms = %d",
