@@ -43,7 +43,8 @@ var (
 	flagProve  bool
 
 	// kvstore
-	flagPersist string
+	flagPersist      string
+	flagRetainBlocks int64
 )
 
 var RootCmd = &cobra.Command{
@@ -130,6 +131,8 @@ func addQueryFlags() {
 
 func addKVStoreFlags() {
 	kvstoreCmd.PersistentFlags().StringVarP(&flagPersist, "persist", "", "", "directory to use for a database")
+	kvstoreCmd.PersistentFlags().Int64VarP(&flagRetainBlocks,
+		"retain-blocks", "", 0, "blocks to retain after commit (ResponseCommit.RetainHeight); 0 keeps all")
 }
 
 func addCommands() {
@@ -697,8 +700,11 @@ func cmdProcessProposal(cmd *cobra.Command, args []string) error {
 func cmdKVStore(*cobra.Command, []string) error {
 	logger := log.NewTMLogger(log.NewSyncWriter(os.Stdout))
 
+	if flagRetainBlocks < 0 {
+		return fmt.Errorf("--retain-blocks must be >= 0, got %d", flagRetainBlocks)
+	}
+
 	// Create the application - in memory or persisted to disk
-	var app types.Application
 	if flagPersist == "" {
 		var err error
 		flagPersist, err = os.MkdirTemp("", "persistent_kvstore_tmp")
@@ -706,7 +712,8 @@ func cmdKVStore(*cobra.Command, []string) error {
 			return err
 		}
 	}
-	app = kvstore.NewPersistentApplication(flagPersist)
+	app := kvstore.NewPersistentApplication(flagPersist)
+	app.RetainBlocks = flagRetainBlocks
 
 	// Start the listener
 	srv, err := server.NewServer(flagAddress, flagAbci, app)

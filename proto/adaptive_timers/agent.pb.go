@@ -123,13 +123,26 @@ type PbftReport struct {
 	P95InterCommitGapMs       float32 `protobuf:"fixed32,14,opt,name=p95_inter_commit_gap_ms,json=p95InterCommitGapMs,proto3" json:"p95_inter_commit_gap_ms,omitempty"`
 	ViewChangeCount           uint32  `protobuf:"varint,15,opt,name=view_change_count,json=viewChangeCount,proto3" json:"view_change_count,omitempty"`
 	NoProgressViewChangeCount uint32  `protobuf:"varint,16,opt,name=no_progress_view_change_count,json=noProgressViewChangeCount,proto3" json:"no_progress_view_change_count,omitempty"`
-	// Phase-wise latency (milliseconds), reported by CppBedrock PBFT:
-	// pre-prepare arrival -> prepare quorum, prepare quorum -> commit quorum,
-	// commit quorum -> local execution. Zero when the engine does not
-	// measure them (SmartBFT-shaped consumers ignore these fields).
+	// Phase-wise latency window means (milliseconds), reported by CppBedrock
+	// PBFT: pre-prepare arrival -> prepare quorum, prepare quorum -> commit
+	// quorum, commit quorum -> local execution.
 	PrePrepareLatencyMs float32 `protobuf:"fixed32,17,opt,name=pre_prepare_latency_ms,json=prePrepareLatencyMs,proto3" json:"pre_prepare_latency_ms,omitempty"`
 	PrepareLatencyMs    float32 `protobuf:"fixed32,18,opt,name=prepare_latency_ms,json=prepareLatencyMs,proto3" json:"prepare_latency_ms,omitempty"`
 	CommitLatencyMs     float32 `protobuf:"fixed32,19,opt,name=commit_latency_ms,json=commitLatencyMs,proto3" json:"commit_latency_ms,omitempty"`
+	// Percentiles completing the avg/p50/p90/p95 families.
+	P90ConsensusLatencyMs  float32 `protobuf:"fixed32,30,opt,name=p90_consensus_latency_ms,json=p90ConsensusLatencyMs,proto3" json:"p90_consensus_latency_ms,omitempty"`
+	P90InterCommitGapMs    float32 `protobuf:"fixed32,34,opt,name=p90_inter_commit_gap_ms,json=p90InterCommitGapMs,proto3" json:"p90_inter_commit_gap_ms,omitempty"`
+	P50BatchSize           float32 `protobuf:"fixed32,36,opt,name=p50_batch_size,json=p50BatchSize,proto3" json:"p50_batch_size,omitempty"`
+	P90BatchSize           float32 `protobuf:"fixed32,37,opt,name=p90_batch_size,json=p90BatchSize,proto3" json:"p90_batch_size,omitempty"`
+	P50PrePrepareLatencyMs float32 `protobuf:"fixed32,40,opt,name=p50_pre_prepare_latency_ms,json=p50PrePrepareLatencyMs,proto3" json:"p50_pre_prepare_latency_ms,omitempty"`
+	P90PrePrepareLatencyMs float32 `protobuf:"fixed32,41,opt,name=p90_pre_prepare_latency_ms,json=p90PrePrepareLatencyMs,proto3" json:"p90_pre_prepare_latency_ms,omitempty"`
+	P95PrePrepareLatencyMs float32 `protobuf:"fixed32,42,opt,name=p95_pre_prepare_latency_ms,json=p95PrePrepareLatencyMs,proto3" json:"p95_pre_prepare_latency_ms,omitempty"`
+	P50PrepareLatencyMs    float32 `protobuf:"fixed32,43,opt,name=p50_prepare_latency_ms,json=p50PrepareLatencyMs,proto3" json:"p50_prepare_latency_ms,omitempty"`
+	P90PrepareLatencyMs    float32 `protobuf:"fixed32,44,opt,name=p90_prepare_latency_ms,json=p90PrepareLatencyMs,proto3" json:"p90_prepare_latency_ms,omitempty"`
+	P95PrepareLatencyMs    float32 `protobuf:"fixed32,45,opt,name=p95_prepare_latency_ms,json=p95PrepareLatencyMs,proto3" json:"p95_prepare_latency_ms,omitempty"`
+	P50CommitLatencyMs     float32 `protobuf:"fixed32,46,opt,name=p50_commit_latency_ms,json=p50CommitLatencyMs,proto3" json:"p50_commit_latency_ms,omitempty"`
+	P90CommitLatencyMs     float32 `protobuf:"fixed32,47,opt,name=p90_commit_latency_ms,json=p90CommitLatencyMs,proto3" json:"p90_commit_latency_ms,omitempty"`
+	P95CommitLatencyMs     float32 `protobuf:"fixed32,48,opt,name=p95_commit_latency_ms,json=p95CommitLatencyMs,proto3" json:"p95_commit_latency_ms,omitempty"`
 }
 
 func (m *PbftReport) Reset()         { *m = PbftReport{} }
@@ -298,9 +311,100 @@ func (m *PbftReport) GetCommitLatencyMs() float32 {
 	return 0
 }
 
-// SBFT state report (CppBedrock SBFT). Fields 1-16 have the same layout and
-// semantics as PbftReport so tooling can treat the two uniformly; the
-// remaining fields carry the SBFT-specific phase and fast/slow-path context.
+func (m *PbftReport) GetP90ConsensusLatencyMs() float32 {
+	if m != nil {
+		return m.P90ConsensusLatencyMs
+	}
+	return 0
+}
+
+func (m *PbftReport) GetP90InterCommitGapMs() float32 {
+	if m != nil {
+		return m.P90InterCommitGapMs
+	}
+	return 0
+}
+
+func (m *PbftReport) GetP50BatchSize() float32 {
+	if m != nil {
+		return m.P50BatchSize
+	}
+	return 0
+}
+
+func (m *PbftReport) GetP90BatchSize() float32 {
+	if m != nil {
+		return m.P90BatchSize
+	}
+	return 0
+}
+
+func (m *PbftReport) GetP50PrePrepareLatencyMs() float32 {
+	if m != nil {
+		return m.P50PrePrepareLatencyMs
+	}
+	return 0
+}
+
+func (m *PbftReport) GetP90PrePrepareLatencyMs() float32 {
+	if m != nil {
+		return m.P90PrePrepareLatencyMs
+	}
+	return 0
+}
+
+func (m *PbftReport) GetP95PrePrepareLatencyMs() float32 {
+	if m != nil {
+		return m.P95PrePrepareLatencyMs
+	}
+	return 0
+}
+
+func (m *PbftReport) GetP50PrepareLatencyMs() float32 {
+	if m != nil {
+		return m.P50PrepareLatencyMs
+	}
+	return 0
+}
+
+func (m *PbftReport) GetP90PrepareLatencyMs() float32 {
+	if m != nil {
+		return m.P90PrepareLatencyMs
+	}
+	return 0
+}
+
+func (m *PbftReport) GetP95PrepareLatencyMs() float32 {
+	if m != nil {
+		return m.P95PrepareLatencyMs
+	}
+	return 0
+}
+
+func (m *PbftReport) GetP50CommitLatencyMs() float32 {
+	if m != nil {
+		return m.P50CommitLatencyMs
+	}
+	return 0
+}
+
+func (m *PbftReport) GetP90CommitLatencyMs() float32 {
+	if m != nil {
+		return m.P90CommitLatencyMs
+	}
+	return 0
+}
+
+func (m *PbftReport) GetP95CommitLatencyMs() float32 {
+	if m != nil {
+		return m.P95CommitLatencyMs
+	}
+	return 0
+}
+
+// SBFT state report (CppBedrock SBFT). Fields 1-19 and 30-48 have the same
+// layout as PbftReport so tooling can treat the two uniformly; fields 20-25
+// carry the SBFT-specific fast/slow-path context.
 type SbftReport struct {
 	TotalTransactions       uint32  `protobuf:"varint,1,opt,name=total_transactions,json=totalTransactions,proto3" json:"total_transactions,omitempty"`
 	TotalConsensusInstances uint32  `protobuf:"varint,2,opt,name=total_consensus_instances,json=totalConsensusInstances,proto3" json:"total_consensus_instances,omitempty"`
@@ -319,8 +423,10 @@ type SbftReport struct {
 	P95InterCommitGapMs       float32 `protobuf:"fixed32,14,opt,name=p95_inter_commit_gap_ms,json=p95InterCommitGapMs,proto3" json:"p95_inter_commit_gap_ms,omitempty"`
 	ViewChangeCount           uint32  `protobuf:"varint,15,opt,name=view_change_count,json=viewChangeCount,proto3" json:"view_change_count,omitempty"`
 	NoProgressViewChangeCount uint32  `protobuf:"varint,16,opt,name=no_progress_view_change_count,json=noProgressViewChangeCount,proto3" json:"no_progress_view_change_count,omitempty"`
-	// Phase-wise latency (milliseconds): pre-prepare arrival -> prepare
-	// quorum, prepare quorum -> commit quorum, commit quorum -> execution.
+	// Phase-wise latency window means (milliseconds). The names follow PBFT
+	// but the phases differ: pre-prepare arrival -> certificate, certificate
+	// -> execute certificate (about 0 on the fast path), and the rest to
+	// local execution.
 	PrePrepareLatencyMs float32 `protobuf:"fixed32,17,opt,name=pre_prepare_latency_ms,json=prePrepareLatencyMs,proto3" json:"pre_prepare_latency_ms,omitempty"`
 	PrepareLatencyMs    float32 `protobuf:"fixed32,18,opt,name=prepare_latency_ms,json=prepareLatencyMs,proto3" json:"prepare_latency_ms,omitempty"`
 	CommitLatencyMs     float32 `protobuf:"fixed32,19,opt,name=commit_latency_ms,json=commitLatencyMs,proto3" json:"commit_latency_ms,omitempty"`
@@ -338,6 +444,20 @@ type SbftReport struct {
 	NthPrepareGapMs       float32 `protobuf:"fixed32,23,opt,name=nth_prepare_gap_ms,json=nthPrepareGapMs,proto3" json:"nth_prepare_gap_ms,omitempty"`
 	NthPrepareSeenCount   uint32  `protobuf:"varint,24,opt,name=nth_prepare_seen_count,json=nthPrepareSeenCount,proto3" json:"nth_prepare_seen_count,omitempty"`
 	NthPrepareUnseenCount uint32  `protobuf:"varint,25,opt,name=nth_prepare_unseen_count,json=nthPrepareUnseenCount,proto3" json:"nth_prepare_unseen_count,omitempty"`
+	// Percentiles completing the avg/p50/p90/p95 families.
+	P90ConsensusLatencyMs  float32 `protobuf:"fixed32,30,opt,name=p90_consensus_latency_ms,json=p90ConsensusLatencyMs,proto3" json:"p90_consensus_latency_ms,omitempty"`
+	P90InterCommitGapMs    float32 `protobuf:"fixed32,34,opt,name=p90_inter_commit_gap_ms,json=p90InterCommitGapMs,proto3" json:"p90_inter_commit_gap_ms,omitempty"`
+	P50BatchSize           float32 `protobuf:"fixed32,36,opt,name=p50_batch_size,json=p50BatchSize,proto3" json:"p50_batch_size,omitempty"`
+	P90BatchSize           float32 `protobuf:"fixed32,37,opt,name=p90_batch_size,json=p90BatchSize,proto3" json:"p90_batch_size,omitempty"`
+	P50PrePrepareLatencyMs float32 `protobuf:"fixed32,40,opt,name=p50_pre_prepare_latency_ms,json=p50PrePrepareLatencyMs,proto3" json:"p50_pre_prepare_latency_ms,omitempty"`
+	P90PrePrepareLatencyMs float32 `protobuf:"fixed32,41,opt,name=p90_pre_prepare_latency_ms,json=p90PrePrepareLatencyMs,proto3" json:"p90_pre_prepare_latency_ms,omitempty"`
+	P95PrePrepareLatencyMs float32 `protobuf:"fixed32,42,opt,name=p95_pre_prepare_latency_ms,json=p95PrePrepareLatencyMs,proto3" json:"p95_pre_prepare_latency_ms,omitempty"`
+	P50PrepareLatencyMs    float32 `protobuf:"fixed32,43,opt,name=p50_prepare_latency_ms,json=p50PrepareLatencyMs,proto3" json:"p50_prepare_latency_ms,omitempty"`
+	P90PrepareLatencyMs    float32 `protobuf:"fixed32,44,opt,name=p90_prepare_latency_ms,json=p90PrepareLatencyMs,proto3" json:"p90_prepare_latency_ms,omitempty"`
+	P95PrepareLatencyMs    float32 `protobuf:"fixed32,45,opt,name=p95_prepare_latency_ms,json=p95PrepareLatencyMs,proto3" json:"p95_prepare_latency_ms,omitempty"`
+	P50CommitLatencyMs     float32 `protobuf:"fixed32,46,opt,name=p50_commit_latency_ms,json=p50CommitLatencyMs,proto3" json:"p50_commit_latency_ms,omitempty"`
+	P90CommitLatencyMs     float32 `protobuf:"fixed32,47,opt,name=p90_commit_latency_ms,json=p90CommitLatencyMs,proto3" json:"p90_commit_latency_ms,omitempty"`
+	P95CommitLatencyMs     float32 `protobuf:"fixed32,48,opt,name=p95_commit_latency_ms,json=p95CommitLatencyMs,proto3" json:"p95_commit_latency_ms,omitempty"`
 }
 
 func (m *SbftReport) Reset()         { *m = SbftReport{} }
@@ -548,6 +668,97 @@ func (m *SbftReport) GetNthPrepareUnseenCount() uint32 {
 	return 0
 }
 
+func (m *SbftReport) GetP90ConsensusLatencyMs() float32 {
+	if m != nil {
+		return m.P90ConsensusLatencyMs
+	}
+	return 0
+}
+
+func (m *SbftReport) GetP90InterCommitGapMs() float32 {
+	if m != nil {
+		return m.P90InterCommitGapMs
+	}
+	return 0
+}
+
+func (m *SbftReport) GetP50BatchSize() float32 {
+	if m != nil {
+		return m.P50BatchSize
+	}
+	return 0
+}
+
+func (m *SbftReport) GetP90BatchSize() float32 {
+	if m != nil {
+		return m.P90BatchSize
+	}
+	return 0
+}
+
+func (m *SbftReport) GetP50PrePrepareLatencyMs() float32 {
+	if m != nil {
+		return m.P50PrePrepareLatencyMs
+	}
+	return 0
+}
+
+func (m *SbftReport) GetP90PrePrepareLatencyMs() float32 {
+	if m != nil {
+		return m.P90PrePrepareLatencyMs
+	}
+	return 0
+}
+
+func (m *SbftReport) GetP95PrePrepareLatencyMs() float32 {
+	if m != nil {
+		return m.P95PrePrepareLatencyMs
+	}
+	return 0
+}
+
+func (m *SbftReport) GetP50PrepareLatencyMs() float32 {
+	if m != nil {
+		return m.P50PrepareLatencyMs
+	}
+	return 0
+}
+
+func (m *SbftReport) GetP90PrepareLatencyMs() float32 {
+	if m != nil {
+		return m.P90PrepareLatencyMs
+	}
+	return 0
+}
+
+func (m *SbftReport) GetP95PrepareLatencyMs() float32 {
+	if m != nil {
+		return m.P95PrepareLatencyMs
+	}
+	return 0
+}
+
+func (m *SbftReport) GetP50CommitLatencyMs() float32 {
+	if m != nil {
+		return m.P50CommitLatencyMs
+	}
+	return 0
+}
+
+func (m *SbftReport) GetP90CommitLatencyMs() float32 {
+	if m != nil {
+		return m.P90CommitLatencyMs
+	}
+	return 0
+}
+
+func (m *SbftReport) GetP95CommitLatencyMs() float32 {
+	if m != nil {
+		return m.P95CommitLatencyMs
+	}
+	return 0
+}
+
 type TendermintReport struct {
 	// Workload size in the learning window.
 	TotalTransactions       uint32 `protobuf:"varint,1,opt,name=total_transactions,json=totalTransactions,proto3" json:"total_transactions,omitempty"`
@@ -566,10 +777,32 @@ type TendermintReport struct {
 	// Leadership dynamics.
 	LeaderChangeCount  uint32 `protobuf:"varint,10,opt,name=leader_change_count,json=leaderChangeCount,proto3" json:"leader_change_count,omitempty"`
 	RegencyChangeCount uint32 `protobuf:"varint,11,opt,name=regency_change_count,json=regencyChangeCount,proto3" json:"regency_change_count,omitempty"`
-	// Phase-wise latency
+	// Phase-wise latency window means (milliseconds), round 0 only except
+	// that a height committing in a later round adds those rounds to
+	// precommit: propose -> prevote, prevote -> precommit, precommit -> commit.
 	ProposeLatencyMs   float32 `protobuf:"fixed32,12,opt,name=propose_latency_ms,json=proposeLatencyMs,proto3" json:"propose_latency_ms,omitempty"`
 	PrevoteLatencyMs   float32 `protobuf:"fixed32,13,opt,name=prevote_latency_ms,json=prevoteLatencyMs,proto3" json:"prevote_latency_ms,omitempty"`
 	PrecommitLatencyMs float32 `protobuf:"fixed32,14,opt,name=precommit_latency_ms,json=precommitLatencyMs,proto3" json:"precommit_latency_ms,omitempty"`
+	// Percentiles and the inter-commit gap family completing the
+	// avg/p50/p90/p95 families.
+	P95ConsensusLatencyMs float32 `protobuf:"fixed32,31,opt,name=p95_consensus_latency_ms,json=p95ConsensusLatencyMs,proto3" json:"p95_consensus_latency_ms,omitempty"`
+	AvgInterCommitGapMs   float32 `protobuf:"fixed32,32,opt,name=avg_inter_commit_gap_ms,json=avgInterCommitGapMs,proto3" json:"avg_inter_commit_gap_ms,omitempty"`
+	P50InterCommitGapMs   float32 `protobuf:"fixed32,33,opt,name=p50_inter_commit_gap_ms,json=p50InterCommitGapMs,proto3" json:"p50_inter_commit_gap_ms,omitempty"`
+	P90InterCommitGapMs   float32 `protobuf:"fixed32,34,opt,name=p90_inter_commit_gap_ms,json=p90InterCommitGapMs,proto3" json:"p90_inter_commit_gap_ms,omitempty"`
+	P95InterCommitGapMs   float32 `protobuf:"fixed32,35,opt,name=p95_inter_commit_gap_ms,json=p95InterCommitGapMs,proto3" json:"p95_inter_commit_gap_ms,omitempty"`
+	P95BatchSize          float32 `protobuf:"fixed32,38,opt,name=p95_batch_size,json=p95BatchSize,proto3" json:"p95_batch_size,omitempty"`
+	P50ProposeLatencyMs   float32 `protobuf:"fixed32,40,opt,name=p50_propose_latency_ms,json=p50ProposeLatencyMs,proto3" json:"p50_propose_latency_ms,omitempty"`
+	P90ProposeLatencyMs   float32 `protobuf:"fixed32,41,opt,name=p90_propose_latency_ms,json=p90ProposeLatencyMs,proto3" json:"p90_propose_latency_ms,omitempty"`
+	P95ProposeLatencyMs   float32 `protobuf:"fixed32,42,opt,name=p95_propose_latency_ms,json=p95ProposeLatencyMs,proto3" json:"p95_propose_latency_ms,omitempty"`
+	P50PrevoteLatencyMs   float32 `protobuf:"fixed32,43,opt,name=p50_prevote_latency_ms,json=p50PrevoteLatencyMs,proto3" json:"p50_prevote_latency_ms,omitempty"`
+	P90PrevoteLatencyMs   float32 `protobuf:"fixed32,44,opt,name=p90_prevote_latency_ms,json=p90PrevoteLatencyMs,proto3" json:"p90_prevote_latency_ms,omitempty"`
+	P95PrevoteLatencyMs   float32 `protobuf:"fixed32,45,opt,name=p95_prevote_latency_ms,json=p95PrevoteLatencyMs,proto3" json:"p95_prevote_latency_ms,omitempty"`
+	P50PrecommitLatencyMs float32 `protobuf:"fixed32,46,opt,name=p50_precommit_latency_ms,json=p50PrecommitLatencyMs,proto3" json:"p50_precommit_latency_ms,omitempty"`
+	P90PrecommitLatencyMs float32 `protobuf:"fixed32,47,opt,name=p90_precommit_latency_ms,json=p90PrecommitLatencyMs,proto3" json:"p90_precommit_latency_ms,omitempty"`
+	P95PrecommitLatencyMs float32 `protobuf:"fixed32,48,opt,name=p95_precommit_latency_ms,json=p95PrecommitLatencyMs,proto3" json:"p95_precommit_latency_ms,omitempty"`
+	// The propose timeout in force for this window. Tendermint has no
+	// view-change counters: a round change is not an election.
+	TimeoutMs uint32 `protobuf:"varint,49,opt,name=timeout_ms,json=timeoutMs,proto3" json:"timeout_ms,omitempty"`
 }
 
 func (m *TendermintReport) Reset()         { *m = TendermintReport{} }
@@ -710,6 +943,118 @@ func (m *TendermintReport) GetPrecommitLatencyMs() float32 {
 	return 0
 }
 
+func (m *TendermintReport) GetP95ConsensusLatencyMs() float32 {
+	if m != nil {
+		return m.P95ConsensusLatencyMs
+	}
+	return 0
+}
+
+func (m *TendermintReport) GetAvgInterCommitGapMs() float32 {
+	if m != nil {
+		return m.AvgInterCommitGapMs
+	}
+	return 0
+}
+
+func (m *TendermintReport) GetP50InterCommitGapMs() float32 {
+	if m != nil {
+		return m.P50InterCommitGapMs
+	}
+	return 0
+}
+
+func (m *TendermintReport) GetP90InterCommitGapMs() float32 {
+	if m != nil {
+		return m.P90InterCommitGapMs
+	}
+	return 0
+}
+
+func (m *TendermintReport) GetP95InterCommitGapMs() float32 {
+	if m != nil {
+		return m.P95InterCommitGapMs
+	}
+	return 0
+}
+
+func (m *TendermintReport) GetP95BatchSize() float32 {
+	if m != nil {
+		return m.P95BatchSize
+	}
+	return 0
+}
+
+func (m *TendermintReport) GetP50ProposeLatencyMs() float32 {
+	if m != nil {
+		return m.P50ProposeLatencyMs
+	}
+	return 0
+}
+
+func (m *TendermintReport) GetP90ProposeLatencyMs() float32 {
+	if m != nil {
+		return m.P90ProposeLatencyMs
+	}
+	return 0
+}
+
+func (m *TendermintReport) GetP95ProposeLatencyMs() float32 {
+	if m != nil {
+		return m.P95ProposeLatencyMs
+	}
+	return 0
+}
+
+func (m *TendermintReport) GetP50PrevoteLatencyMs() float32 {
+	if m != nil {
+		return m.P50PrevoteLatencyMs
+	}
+	return 0
+}
+
+func (m *TendermintReport) GetP90PrevoteLatencyMs() float32 {
+	if m != nil {
+		return m.P90PrevoteLatencyMs
+	}
+	return 0
+}
+
+func (m *TendermintReport) GetP95PrevoteLatencyMs() float32 {
+	if m != nil {
+		return m.P95PrevoteLatencyMs
+	}
+	return 0
+}
+
+func (m *TendermintReport) GetP50PrecommitLatencyMs() float32 {
+	if m != nil {
+		return m.P50PrecommitLatencyMs
+	}
+	return 0
+}
+
+func (m *TendermintReport) GetP90PrecommitLatencyMs() float32 {
+	if m != nil {
+		return m.P90PrecommitLatencyMs
+	}
+	return 0
+}
+
+func (m *TendermintReport) GetP95PrecommitLatencyMs() float32 {
+	if m != nil {
+		return m.P95PrecommitLatencyMs
+	}
+	return 0
+}
+
+func (m *TendermintReport) GetTimeoutMs() uint32 {
+	if m != nil {
+		return m.TimeoutMs
+	}
+	return 0
+}
+
 // Batched (chained 2-chain) HotStuff state report. Field layout mirrors
 // PbftReport so tooling can treat the two uniformly; semantic notes:
 //   - view_change_count counts local round timeouts fired.
@@ -720,6 +1065,8 @@ func (m *TendermintReport) GetPrecommitLatencyMs() float32 {
 //   - leader_change_count follows the committed blocks' authors; HotStuff
 //     rotates leaders every round, so this tracks commit cadence, not
 //     elections.
+//
+// HotStuff has no phase fields.
 type HotstuffReport struct {
 	TotalTransactions         uint32  `protobuf:"varint,1,opt,name=total_transactions,json=totalTransactions,proto3" json:"total_transactions,omitempty"`
 	TotalConsensusInstances   uint32  `protobuf:"varint,2,opt,name=total_consensus_instances,json=totalConsensusInstances,proto3" json:"total_consensus_instances,omitempty"`
@@ -737,6 +1084,11 @@ type HotstuffReport struct {
 	P95InterCommitGapMs       float32 `protobuf:"fixed32,14,opt,name=p95_inter_commit_gap_ms,json=p95InterCommitGapMs,proto3" json:"p95_inter_commit_gap_ms,omitempty"`
 	ViewChangeCount           uint32  `protobuf:"varint,15,opt,name=view_change_count,json=viewChangeCount,proto3" json:"view_change_count,omitempty"`
 	NoProgressViewChangeCount uint32  `protobuf:"varint,16,opt,name=no_progress_view_change_count,json=noProgressViewChangeCount,proto3" json:"no_progress_view_change_count,omitempty"`
+	// Percentiles completing the avg/p50/p90/p95 families.
+	P90ConsensusLatencyMs float32 `protobuf:"fixed32,30,opt,name=p90_consensus_latency_ms,json=p90ConsensusLatencyMs,proto3" json:"p90_consensus_latency_ms,omitempty"`
+	P90InterCommitGapMs   float32 `protobuf:"fixed32,34,opt,name=p90_inter_commit_gap_ms,json=p90InterCommitGapMs,proto3" json:"p90_inter_commit_gap_ms,omitempty"`
+	P50BatchSize          float32 `protobuf:"fixed32,36,opt,name=p50_batch_size,json=p50BatchSize,proto3" json:"p50_batch_size,omitempty"`
+	P90BatchSize          float32 `protobuf:"fixed32,37,opt,name=p90_batch_size,json=p90BatchSize,proto3" json:"p90_batch_size,omitempty"`
 }
 
 func (m *HotstuffReport) Reset()         { *m = HotstuffReport{} }
@@ -884,6 +1236,34 @@ func (m *HotstuffReport) GetNoProgressViewChangeCount() uint32 {
 	return 0
 }
 
+func (m *HotstuffReport) GetP90ConsensusLatencyMs() float32 {
+	if m != nil {
+		return m.P90ConsensusLatencyMs
+	}
+	return 0
+}
+
+func (m *HotstuffReport) GetP90InterCommitGapMs() float32 {
+	if m != nil {
+		return m.P90InterCommitGapMs
+	}
+	return 0
+}
+
+func (m *HotstuffReport) GetP50BatchSize() float32 {
+	if m != nil {
+		return m.P50BatchSize
+	}
+	return 0
+}
+
+func (m *HotstuffReport) GetP90BatchSize() float32 {
+	if m != nil {
+		return m.P90BatchSize
+	}
+	return 0
+}
+
 // Autobahn state report. Same layout and semantics as HotstuffReport, with
 // batch sizes measured in payload digests per committed header (transaction
 // counts live in the worker processes, not the primary), and no
@@ -905,6 +1285,11 @@ type AutobahnReport struct {
 	P95InterCommitGapMs       float32 `protobuf:"fixed32,14,opt,name=p95_inter_commit_gap_ms,json=p95InterCommitGapMs,proto3" json:"p95_inter_commit_gap_ms,omitempty"`
 	ViewChangeCount           uint32  `protobuf:"varint,15,opt,name=view_change_count,json=viewChangeCount,proto3" json:"view_change_count,omitempty"`
 	NoProgressViewChangeCount uint32  `protobuf:"varint,16,opt,name=no_progress_view_change_count,json=noProgressViewChangeCount,proto3" json:"no_progress_view_change_count,omitempty"`
+	// Percentiles completing the avg/p50/p90/p95 families.
+	P90ConsensusLatencyMs float32 `protobuf:"fixed32,30,opt,name=p90_consensus_latency_ms,json=p90ConsensusLatencyMs,proto3" json:"p90_consensus_latency_ms,omitempty"`
+	P90InterCommitGapMs   float32 `protobuf:"fixed32,34,opt,name=p90_inter_commit_gap_ms,json=p90InterCommitGapMs,proto3" json:"p90_inter_commit_gap_ms,omitempty"`
+	P50BatchSize          float32 `protobuf:"fixed32,36,opt,name=p50_batch_size,json=p50BatchSize,proto3" json:"p50_batch_size,omitempty"`
+	P90BatchSize          float32 `protobuf:"fixed32,37,opt,name=p90_batch_size,json=p90BatchSize,proto3" json:"p90_batch_size,omitempty"`
 }
 
 func (m *AutobahnReport) Reset()         { *m = AutobahnReport{} }
@@ -1045,9 +1430,38 @@ func (m *AutobahnReport) GetNoProgressViewChangeCount() uint32 {
 	return 0
 }
 
+func (m *AutobahnReport) GetP90ConsensusLatencyMs() float32 {
+	if m != nil {
+		return m.P90ConsensusLatencyMs
+	}
+	return 0
+}
+
+func (m *AutobahnReport) GetP90InterCommitGapMs() float32 {
+	if m != nil {
+		return m.P90InterCommitGapMs
+	}
+	return 0
+}
+
+func (m *AutobahnReport) GetP50BatchSize() float32 {
+	if m != nil {
+		return m.P50BatchSize
+	}
+	return 0
+}
+
+func (m *AutobahnReport) GetP90BatchSize() float32 {
+	if m != nil {
+		return m.P90BatchSize
+	}
+	return 0
+}
+
 // SmartBFT state report. Same layout and semantics as PbftReport. SmartBFT is
 // registered as its own protocol so its reward function and schedule can be
-// tuned independently of the Rust PBFT baseline.
+// tuned independently of the Rust PBFT baseline. The engine leaves
+// no_progress_view_change_count at 0.
 type SmartbftReport struct {
 	TotalTransactions         uint32  `protobuf:"varint,1,opt,name=total_transactions,json=totalTransactions,proto3" json:"total_transactions,omitempty"`
 	TotalConsensusInstances   uint32  `protobuf:"varint,2,opt,name=total_consensus_instances,json=totalConsensusInstances,proto3" json:"total_consensus_instances,omitempty"`
@@ -1065,6 +1479,11 @@ type SmartbftReport struct {
 	P95InterCommitGapMs       float32 `protobuf:"fixed32,14,opt,name=p95_inter_commit_gap_ms,json=p95InterCommitGapMs,proto3" json:"p95_inter_commit_gap_ms,omitempty"`
 	ViewChangeCount           uint32  `protobuf:"varint,15,opt,name=view_change_count,json=viewChangeCount,proto3" json:"view_change_count,omitempty"`
 	NoProgressViewChangeCount uint32  `protobuf:"varint,16,opt,name=no_progress_view_change_count,json=noProgressViewChangeCount,proto3" json:"no_progress_view_change_count,omitempty"`
+	// Percentiles completing the avg/p50/p90/p95 families.
+	P90ConsensusLatencyMs float32 `protobuf:"fixed32,30,opt,name=p90_consensus_latency_ms,json=p90ConsensusLatencyMs,proto3" json:"p90_consensus_latency_ms,omitempty"`
+	P90InterCommitGapMs   float32 `protobuf:"fixed32,34,opt,name=p90_inter_commit_gap_ms,json=p90InterCommitGapMs,proto3" json:"p90_inter_commit_gap_ms,omitempty"`
+	P50BatchSize          float32 `protobuf:"fixed32,36,opt,name=p50_batch_size,json=p50BatchSize,proto3" json:"p50_batch_size,omitempty"`
+	P90BatchSize          float32 `protobuf:"fixed32,37,opt,name=p90_batch_size,json=p90BatchSize,proto3" json:"p90_batch_size,omitempty"`
 }
 
 func (m *SmartbftReport) Reset()         { *m = SmartbftReport{} }
@@ -1208,6 +1627,34 @@ func (m *SmartbftReport) GetViewChangeCount() uint32 {
 func (m *SmartbftReport) GetNoProgressViewChangeCount() uint32 {
 	if m != nil {
 		return m.NoProgressViewChangeCount
+	}
+	return 0
+}
+
+func (m *SmartbftReport) GetP90ConsensusLatencyMs() float32 {
+	if m != nil {
+		return m.P90ConsensusLatencyMs
+	}
+	return 0
+}
+
+func (m *SmartbftReport) GetP90InterCommitGapMs() float32 {
+	if m != nil {
+		return m.P90InterCommitGapMs
+	}
+	return 0
+}
+
+func (m *SmartbftReport) GetP50BatchSize() float32 {
+	if m != nil {
+		return m.P50BatchSize
+	}
+	return 0
+}
+
+func (m *SmartbftReport) GetP90BatchSize() float32 {
+	if m != nil {
+		return m.P90BatchSize
 	}
 	return 0
 }
@@ -2591,132 +3038,150 @@ func init() {
 func init() { proto.RegisterFile("adaptive_timers/agent.proto", fileDescriptor_5ce53b760672e5c1) }
 
 var fileDescriptor_5ce53b760672e5c1 = []byte{
-	// 2000 bytes of a gzipped FileDescriptorProto
-	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xec, 0x5a, 0x4b, 0x73, 0x1b, 0x59,
-	0x15, 0xb6, 0x64, 0x5b, 0x8f, 0x23, 0x4b, 0x6a, 0xdd, 0xf8, 0xa1, 0x38, 0x89, 0x18, 0x04, 0x13,
-	0x86, 0x40, 0x64, 0x95, 0x1d, 0x55, 0xc6, 0x40, 0x51, 0xe3, 0x87, 0x1c, 0x3b, 0x95, 0xd8, 0x9a,
-	0x6e, 0x39, 0x55, 0xc0, 0xa2, 0xab, 0x2d, 0x5d, 0x4b, 0x5d, 0x23, 0x75, 0x77, 0xba, 0xaf, 0xe4,
-	0xca, 0x14, 0x3f, 0x80, 0x15, 0xc5, 0x02, 0x36, 0x6c, 0xd8, 0xb1, 0x60, 0xc1, 0x8e, 0x2a, 0x16,
-	0xfc, 0x00, 0x96, 0xc3, 0x8e, 0x0d, 0x55, 0x54, 0xb2, 0xe0, 0x07, 0xf0, 0x07, 0xa8, 0xfb, 0xea,
-	0x87, 0xd4, 0xb2, 0xe3, 0x99, 0xd9, 0x4c, 0xa1, 0x95, 0xdd, 0xf7, 0x7c, 0xdf, 0xb9, 0xe7, 0xf6,
-	0x3d, 0xe7, 0x3b, 0xb7, 0x6f, 0x09, 0xee, 0x19, 0x5d, 0xc3, 0x21, 0xe6, 0x18, 0xeb, 0xc4, 0x1c,
-	0x62, 0xd7, 0xdb, 0x32, 0x7a, 0xd8, 0x22, 0x35, 0xc7, 0xb5, 0x89, 0xbd, 0x79, 0xaf, 0x67, 0xdb,
-	0xbd, 0x01, 0xde, 0x62, 0x4f, 0x17, 0xa3, 0xcb, 0x2d, 0x3c, 0x74, 0xc8, 0x1b, 0x6e, 0xac, 0xfe,
-	0x25, 0x0d, 0xd0, 0xba, 0xb8, 0x24, 0x2a, 0x76, 0x6c, 0x97, 0xa0, 0xc7, 0x80, 0x88, 0x4d, 0x8c,
-	0x81, 0x4e, 0x5c, 0xc3, 0xf2, 0x8c, 0x0e, 0x31, 0x6d, 0xcb, 0x2b, 0x27, 0x3e, 0x48, 0x7c, 0x94,
-	0x57, 0x4b, 0xcc, 0xd2, 0x0e, 0x19, 0xd0, 0x8f, 0xe0, 0x2e, 0x87, 0x77, 0x6c, 0xcb, 0xc3, 0x96,
-	0x37, 0xf2, 0x74, 0xd3, 0xf2, 0x88, 0x61, 0x75, 0xb0, 0x57, 0x4e, 0x32, 0xd6, 0x06, 0x03, 0x1c,
-	0x48, 0xfb, 0x89, 0x34, 0xa3, 0xa7, 0x50, 0x36, 0xc6, 0xbd, 0x10, 0x73, 0x60, 0x10, 0x6c, 0x75,
-	0xde, 0xe8, 0x43, 0xaf, 0xbc, 0xf8, 0x41, 0xe2, 0xa3, 0xa4, 0xba, 0x66, 0x8c, 0x7b, 0x3e, 0xf1,
-	0x05, 0xb7, 0xbe, 0x64, 0x44, 0xa7, 0x51, 0x8f, 0x27, 0x2e, 0x71, 0xa2, 0xd3, 0xa8, 0xcf, 0x20,
-	0xee, 0x36, 0xe2, 0x89, 0xcb, 0x82, 0xb8, 0xdb, 0x88, 0x21, 0x7e, 0x08, 0x05, 0xd2, 0x77, 0xed,
-	0x51, 0xaf, 0xef, 0x8c, 0x88, 0x4e, 0x1c, 0xaf, 0x9c, 0x62, 0xf0, 0x7c, 0x30, 0xda, 0x76, 0x3c,
-	0xf4, 0x5d, 0x28, 0xd0, 0x15, 0x5d, 0x18, 0xa4, 0xd3, 0xd7, 0x3d, 0xf3, 0x73, 0x5c, 0x4e, 0x33,
-	0xd8, 0x8a, 0x31, 0xee, 0xed, 0xd3, 0x41, 0xcd, 0xfc, 0x1c, 0x53, 0x14, 0x8d, 0x22, 0x84, 0xca,
-	0x70, 0x94, 0xb3, 0xdb, 0x08, 0x50, 0x35, 0xb8, 0x33, 0xc0, 0x46, 0x17, 0xbb, 0x7a, 0xa7, 0x6f,
-	0x58, 0x3d, 0xac, 0x77, 0xec, 0x91, 0x45, 0xca, 0x59, 0xbe, 0x13, 0xdc, 0x74, 0xc0, 0x2c, 0x07,
-	0xd4, 0x80, 0xea, 0xb0, 0xea, 0xe2, 0x1e, 0x5b, 0x4d, 0x84, 0x00, 0x8c, 0x80, 0x84, 0x2d, 0xcc,
-	0x78, 0x00, 0x40, 0x93, 0xc5, 0x1e, 0x11, 0xba, 0xfe, 0x1c, 0xc3, 0x65, 0xc5, 0xc8, 0x4b, 0x0f,
-	0x3d, 0x81, 0x0d, 0xba, 0x18, 0xd3, 0x22, 0x34, 0x06, 0x7b, 0x38, 0x34, 0x89, 0xde, 0x33, 0x1c,
-	0x8a, 0x5d, 0x61, 0xf1, 0xde, 0x31, 0xc6, 0xbd, 0x13, 0x6a, 0x3d, 0x60, 0xc6, 0x67, 0x86, 0xc3,
-	0x59, 0x74, 0x6f, 0xe2, 0x58, 0x79, 0xce, 0x72, 0x1a, 0xf5, 0x58, 0xd6, 0x6e, 0x23, 0x96, 0x55,
-	0x10, 0xac, 0xdd, 0xc6, 0x14, 0xeb, 0x11, 0x94, 0xc6, 0x26, 0xbe, 0x8a, 0xae, 0xb7, 0xc8, 0xd6,
-	0x51, 0xa4, 0x86, 0xf0, 0x62, 0x3f, 0x81, 0x07, 0x96, 0xad, 0x3b, 0xae, 0xdd, 0x73, 0xb1, 0xe7,
-	0xe9, 0xd3, 0x3c, 0x85, 0xf1, 0xee, 0x5a, 0x76, 0x4b, 0x60, 0x5e, 0x4d, 0x78, 0xd8, 0x81, 0x75,
-	0xc7, 0xc5, 0xba, 0xe3, 0x62, 0xc7, 0x70, 0x71, 0x38, 0x75, 0x4a, 0x22, 0x44, 0x17, 0xb7, 0xb8,
-	0x31, 0x48, 0x9c, 0x1f, 0x02, 0x8a, 0x21, 0x20, 0x46, 0x50, 0x9c, 0x49, 0xf4, 0x23, 0x28, 0x89,
-	0xc5, 0x87, 0xc0, 0x77, 0x18, 0xb8, 0xc8, 0x0d, 0x3e, 0xb6, 0xfa, 0x8f, 0x2c, 0x80, 0x36, 0xaf,
-	0xdb, 0x79, 0xdd, 0xce, 0xeb, 0xf6, 0x9b, 0x54, 0xb7, 0x68, 0x0b, 0x56, 0xbd, 0x81, 0x7d, 0xa5,
-	0x3b, 0x06, 0xe9, 0xeb, 0xa1, 0x7d, 0x5c, 0xe5, 0x09, 0x42, 0x6d, 0x2d, 0x83, 0xf4, 0xdb, 0xfe,
-	0x7e, 0x3e, 0x84, 0xe2, 0xa5, 0xe1, 0x11, 0x4e, 0xe0, 0x6b, 0x5e, 0x63, 0xd8, 0x3c, 0x1d, 0xa6,
-	0x58, 0xbe, 0xce, 0x87, 0x50, 0x0c, 0x1c, 0x73, 0xdc, 0x3a, 0xc7, 0x49, 0x9f, 0x1c, 0xf7, 0x03,
-	0x40, 0x16, 0xe9, 0xfb, 0xef, 0x43, 0x6c, 0xd7, 0x06, 0x8f, 0xd6, 0x22, 0x7d, 0xf1, 0x2e, 0xf8,
-	0x56, 0xed, 0xc0, 0x7a, 0x18, 0xec, 0x61, 0x6c, 0x09, 0xdf, 0x65, 0xe6, 0xfb, 0x4e, 0x40, 0xd0,
-	0x30, 0xb6, 0xf8, 0x0c, 0x4f, 0xa1, 0x1c, 0x26, 0x8d, 0xac, 0x10, 0xed, 0x2e, 0xa3, 0xad, 0x05,
-	0xb4, 0x73, 0x66, 0x65, 0xc4, 0xea, 0x7f, 0x96, 0x41, 0x69, 0x63, 0xab, 0x8b, 0xdd, 0xa1, 0x69,
-	0xfd, 0xff, 0x28, 0x5b, 0xfd, 0x06, 0x65, 0xab, 0x7f, 0x79, 0x65, 0x7b, 0x02, 0xeb, 0x32, 0xc7,
-	0xc6, 0xa6, 0x3d, 0x30, 0xe8, 0x3b, 0xd2, 0x5d, 0x83, 0x48, 0x85, 0x5b, 0x15, 0xd6, 0x57, 0xd2,
-	0xa8, 0x1a, 0x04, 0xc7, 0xe8, 0x61, 0x66, 0x86, 0x1e, 0x36, 0xea, 0x61, 0x54, 0x56, 0xe8, 0x61,
-	0xa3, 0x3e, 0xa1, 0x9a, 0x11, 0x54, 0x51, 0xaa, 0x66, 0xfd, 0x46, 0xd5, 0x84, 0xdb, 0xaa, 0x66,
-	0x6e, 0xa6, 0x6a, 0xb2, 0x8a, 0xb6, 0x1d, 0xdb, 0x8b, 0x54, 0xf4, 0x8a, 0xac, 0x68, 0x66, 0x99,
-	0xac, 0xff, 0xb1, 0x4d, 0x22, 0xe8, 0xbc, 0x5f, 0xff, 0xd4, 0x12, 0xa0, 0xeb, 0xb0, 0xea, 0xb8,
-	0x78, 0x5a, 0x02, 0xb8, 0x06, 0x22, 0xdf, 0x16, 0x74, 0xef, 0x3f, 0xa5, 0xa0, 0x70, 0x6c, 0x13,
-	0x8f, 0x8c, 0x2e, 0x2f, 0xe7, 0x1d, 0x7c, 0xde, 0xc1, 0xe7, 0x1d, 0x7c, 0x76, 0x07, 0xaf, 0xfe,
-	0x36, 0x05, 0x85, 0xbd, 0x11, 0xb1, 0x2f, 0x8c, 0xbe, 0x35, 0x2f, 0x96, 0x6f, 0x76, 0xb1, 0xcc,
-	0x53, 0xff, 0x36, 0xa9, 0xff, 0x7c, 0x29, 0x03, 0x4a, 0x4e, 0x8d, 0xd5, 0x17, 0xd6, 0x43, 0xb4,
-	0xa1, 0xe1, 0x92, 0xf9, 0x57, 0xe0, 0xbc, 0x87, 0xcc, 0x0b, 0xe9, 0xfa, 0x1e, 0xf2, 0xdf, 0x25,
-	0xc8, 0xf1, 0x22, 0x79, 0x61, 0x77, 0x8c, 0x01, 0xda, 0x80, 0xb4, 0x65, 0x77, 0xb1, 0x6e, 0x76,
-	0x45, 0x79, 0xa4, 0xe8, 0xe3, 0x49, 0x17, 0x95, 0x21, 0x8d, 0x1d, 0xd3, 0xb3, 0xbb, 0x58, 0x54,
-	0x80, 0x7c, 0x44, 0x1f, 0x42, 0x86, 0x5d, 0x99, 0x76, 0xec, 0x01, 0xcb, 0xf0, 0xc2, 0x76, 0xb6,
-	0xd6, 0x12, 0x03, 0xaa, 0x6f, 0xa2, 0x1b, 0xe3, 0x11, 0xc3, 0x25, 0x3a, 0x31, 0x3b, 0x9f, 0xb1,
-	0x4c, 0xcb, 0xab, 0x59, 0x36, 0xd2, 0x36, 0x3b, 0x9f, 0x51, 0xb3, 0xcb, 0xe2, 0xd0, 0x3d, 0xfc,
-	0x9a, 0x65, 0x58, 0x5e, 0xcd, 0xf2, 0x11, 0x0d, 0xbf, 0xa6, 0x07, 0xf6, 0x2b, 0xd3, 0xea, 0xda,
-	0x57, 0xa1, 0x3c, 0xe7, 0x4b, 0xcc, 0x30, 0xe8, 0x2a, 0xb7, 0xfa, 0x59, 0x2e, 0x0f, 0xb7, 0xe0,
-	0x5c, 0x5c, 0x12, 0xdd, 0x23, 0xf4, 0x68, 0x4f, 0x93, 0x26, 0xb7, 0x9d, 0xab, 0x05, 0xd7, 0xba,
-	0xc7, 0x0b, 0x6a, 0x96, 0x02, 0x34, 0x6a, 0xa7, 0x68, 0x2f, 0x40, 0xaf, 0x08, 0xb4, 0x16, 0x41,
-	0x7b, 0x3e, 0xfa, 0xa7, 0xa0, 0x10, 0xff, 0x9b, 0x4c, 0x70, 0xf2, 0x8c, 0x53, 0xaa, 0x4d, 0x7e,
-	0xac, 0x1d, 0x2f, 0xa8, 0xc5, 0x00, 0xcc, 0xf9, 0x1f, 0x43, 0xa1, 0x2f, 0x4e, 0xba, 0x82, 0x5d,
-	0x60, 0xec, 0x62, 0x2d, 0x7a, 0x00, 0x3e, 0x5e, 0x50, 0xf3, 0x12, 0xe8, 0x33, 0x0d, 0xd1, 0xf6,
-	0x05, 0xb3, 0x28, 0x98, 0xd1, 0xd3, 0x00, 0x65, 0x4a, 0xa0, 0xcf, 0xf4, 0x84, 0x32, 0x0a, 0xa6,
-	0x22, 0x98, 0x51, 0xc1, 0xa4, 0x4c, 0x09, 0xe4, 0xcc, 0x6f, 0x41, 0xca, 0xc5, 0x57, 0x86, 0xdb,
-	0x65, 0x5a, 0x94, 0xdb, 0x4e, 0xd7, 0x54, 0xf6, 0xa8, 0x8a, 0x61, 0x74, 0x1f, 0xb2, 0x9e, 0xd9,
-	0xb3, 0x0c, 0x32, 0x72, 0x31, 0x93, 0x9d, 0x15, 0x35, 0x18, 0xd8, 0x4f, 0xc3, 0x32, 0x9b, 0xef,
-	0xf9, 0x52, 0x26, 0xa7, 0xac, 0x54, 0x7f, 0x29, 0xef, 0xd6, 0x19, 0x35, 0x94, 0x5a, 0x89, 0x68,
-	0x6a, 0x7d, 0x87, 0xce, 0x4a, 0x03, 0x62, 0x39, 0x17, 0xdd, 0x3b, 0x55, 0x98, 0xd0, 0x16, 0xac,
-	0xc8, 0x8a, 0x1f, 0x79, 0xb8, 0xcb, 0x72, 0x30, 0xb7, 0xbd, 0xc2, 0xa0, 0xe2, 0xba, 0x40, 0xcd,
-	0x09, 0xc4, 0xb9, 0x87, 0xbb, 0x74, 0x76, 0xed, 0xcb, 0xcd, 0xae, 0xbd, 0xff, 0xec, 0xda, 0xac,
-	0xd9, 0x7f, 0x9d, 0x88, 0x7e, 0xcc, 0xdf, 0x10, 0xc4, 0xf7, 0x27, 0x82, 0x98, 0x4e, 0x2e, 0x3f,
-	0x94, 0x46, 0x6c, 0x28, 0x28, 0x44, 0x88, 0x0d, 0xe8, 0x57, 0x89, 0xf0, 0x37, 0xd7, 0x0d, 0xe1,
-	0x7c, 0x6f, 0x22, 0x9c, 0xc9, 0x6c, 0xf5, 0x83, 0xd9, 0x89, 0x0d, 0x46, 0xf1, 0xe1, 0x33, 0x43,
-	0x09, 0x72, 0xf8, 0xd6, 0xa1, 0x44, 0xd3, 0xff, 0xc6, 0x50, 0x24, 0x7c, 0x66, 0x28, 0x41, 0x51,
-	0xdc, 0x3a, 0x94, 0x68, 0x3d, 0xdd, 0x18, 0x8a, 0x84, 0xc7, 0x86, 0xf2, 0x87, 0x24, 0xa4, 0x44,
-	0x08, 0xdf, 0x86, 0x25, 0xaa, 0x57, 0x6c, 0xfe, 0xa0, 0x1c, 0xa8, 0xe9, 0x78, 0x41, 0x65, 0x26,
-	0x0a, 0xa1, 0x22, 0x25, 0x5c, 0xcb, 0x9c, 0x95, 0x10, 0x6a, 0x42, 0x3b, 0x00, 0x81, 0x1a, 0x89,
-	0x82, 0x8e, 0xe6, 0x95, 0x80, 0x87, 0x60, 0xe8, 0x31, 0x64, 0xa4, 0x0c, 0xb1, 0xfa, 0x8e, 0xee,
-	0xbd, 0x20, 0xf8, 0x10, 0x0a, 0x97, 0xda, 0xc3, 0xc4, 0x3e, 0xba, 0x3f, 0x12, 0x2e, 0x21, 0x14,
-	0x2e, 0x05, 0x87, 0x89, 0x7f, 0xf4, 0x1d, 0x4a, 0xb8, 0x84, 0x50, 0x3d, 0x19, 0x1b, 0x83, 0x11,
-	0xd5, 0x93, 0xa4, 0xb2, 0x58, 0x1d, 0xcb, 0x26, 0xc6, 0x4e, 0x1a, 0xd7, 0x6c, 0x54, 0xb8, 0x57,
-	0x25, 0x67, 0xf7, 0xaa, 0x87, 0x90, 0xe6, 0x1b, 0x46, 0xcf, 0x6c, 0x8b, 0xac, 0x9e, 0x43, 0x4d,
-	0x52, 0x95, 0xc6, 0xea, 0xa7, 0x90, 0x0b, 0xa9, 0x0c, 0xda, 0x87, 0x07, 0x78, 0x80, 0xd9, 0x21,
-	0x32, 0xb8, 0xc2, 0x34, 0x07, 0x03, 0xd3, 0xc3, 0x1d, 0xdb, 0xea, 0xca, 0x13, 0xe7, 0x3d, 0x09,
-	0x92, 0x97, 0x99, 0x21, 0x48, 0xf5, 0xaf, 0x09, 0xc8, 0x69, 0x5f, 0xaf, 0x4f, 0x74, 0x00, 0x95,
-	0x98, 0xbb, 0xd5, 0xb0, 0x13, 0xde, 0xd2, 0xef, 0x4d, 0xde, 0xb2, 0x86, 0x20, 0xcf, 0x97, 0x32,
-	0x8b, 0xca, 0x92, 0xba, 0xc9, 0x0f, 0x78, 0x71, 0x4e, 0xaa, 0xff, 0x4a, 0x40, 0x69, 0x4a, 0x6b,
-	0xd0, 0x27, 0x70, 0x5f, 0x5e, 0x30, 0x5d, 0x13, 0xff, 0xa6, 0xc0, 0xc4, 0x85, 0xcf, 0x3c, 0xf0,
-	0x4b, 0xa7, 0x6b, 0x82, 0xdf, 0x14, 0x98, 0x38, 0x0f, 0x87, 0x50, 0x09, 0x2e, 0xa2, 0x62, 0x7d,
-	0x2c, 0x32, 0x1f, 0xf7, 0x7d, 0x54, 0xdc, 0xd6, 0x9c, 0x41, 0x71, 0x42, 0xbd, 0xd0, 0x4f, 0x60,
-	0x53, 0xba, 0xeb, 0xe2, 0x81, 0xf1, 0x26, 0x6e, 0x69, 0x65, 0x81, 0x38, 0xa4, 0x80, 0x88, 0xc3,
-	0xdf, 0x25, 0xa0, 0x38, 0x21, 0x42, 0x5f, 0xcd, 0x23, 0x2f, 0x07, 0xb1, 0x55, 0xe5, 0x8e, 0xe1,
-	0xc6, 0x2e, 0x56, 0xad, 0x04, 0x17, 0xe7, 0xb1, 0x1b, 0x79, 0x0e, 0xc5, 0x09, 0x41, 0xfa, 0x5a,
-	0x52, 0xfb, 0x8f, 0x49, 0x48, 0x4b, 0x7f, 0xd5, 0x88, 0x90, 0x45, 0x9a, 0xb5, 0xaf, 0x64, 0xd5,
-	0x88, 0x92, 0x45, 0x5a, 0xaa, 0x2f, 0x65, 0x4f, 0x62, 0xa4, 0x2c, 0xa6, 0xe3, 0x4d, 0x68, 0x59,
-	0x6d, 0x4a, 0xcb, 0xa6, 0x1a, 0x53, 0x44, 0xcc, 0x6a, 0x53, 0x62, 0x36, 0xd5, 0x3d, 0x22, 0x6a,
-	0x56, 0x9b, 0x52, 0xb3, 0x29, 0x89, 0xbf, 0x4e, 0xce, 0x3e, 0x85, 0x82, 0x6c, 0x04, 0xf8, 0xf5,
-	0x08, 0x7b, 0xe4, 0x2b, 0x2b, 0x5a, 0xf5, 0x6f, 0x49, 0xc8, 0x0b, 0x9f, 0xf4, 0x40, 0x37, 0xf2,
-	0xae, 0x71, 0xf9, 0x18, 0x52, 0x1e, 0xc3, 0x08, 0x87, 0x6b, 0xb5, 0x08, 0xb3, 0xc6, 0xff, 0xa8,
-	0x02, 0x84, 0xaa, 0x90, 0x16, 0x19, 0x21, 0x76, 0x2a, 0x23, 0xf1, 0xaa, 0x34, 0x4c, 0x1c, 0xfe,
-	0x97, 0xae, 0x3f, 0xfc, 0x2f, 0xbf, 0xff, 0xe1, 0x3f, 0x35, 0xfb, 0xf0, 0x5f, 0x7d, 0x0e, 0x29,
-	0xb1, 0xd4, 0x75, 0x40, 0x5a, 0x7b, 0xaf, 0x7d, 0xae, 0xe9, 0xe7, 0xa7, 0x5a, 0xab, 0x79, 0x70,
-	0x72, 0x74, 0xd2, 0x3c, 0x54, 0x16, 0x90, 0x02, 0x2b, 0xa7, 0x67, 0x6d, 0x5d, 0x6d, 0x1e, 0x34,
-	0x4f, 0x5e, 0x35, 0x0f, 0x95, 0x04, 0xca, 0x41, 0xba, 0xd5, 0x3c, 0x3d, 0x3c, 0x39, 0x7d, 0xa6,
-	0x24, 0x51, 0x16, 0x96, 0xd5, 0xe6, 0xde, 0xe1, 0xcf, 0x94, 0xc5, 0x47, 0x7f, 0x4e, 0x40, 0x46,
-	0xbe, 0x55, 0x54, 0x86, 0xd5, 0x96, 0x7a, 0xd6, 0x3e, 0x3b, 0x38, 0x7b, 0x31, 0xe1, 0xb0, 0x04,
-	0x79, 0xdf, 0xd2, 0xda, 0x3f, 0x6a, 0x2b, 0x89, 0xc8, 0x90, 0x46, 0x87, 0x16, 0xd1, 0x06, 0xdc,
-	0xf1, 0x87, 0xda, 0xcd, 0xd3, 0xc3, 0xa6, 0xfa, 0xf2, 0xe4, 0xb4, 0xad, 0x2c, 0xa1, 0x35, 0x28,
-	0xf9, 0x86, 0xe3, 0xb3, 0xb6, 0xd6, 0x3e, 0x3f, 0x3a, 0x52, 0x96, 0x23, 0xc3, 0x7b, 0xe7, 0xed,
-	0xb3, 0xfd, 0xbd, 0xe3, 0x53, 0x25, 0x15, 0x19, 0xd6, 0x5e, 0xee, 0xa9, 0x6d, 0xea, 0x3d, 0x5d,
-	0xa5, 0x29, 0x94, 0xdc, 0x3e, 0x82, 0xac, 0xff, 0x3a, 0xd0, 0x2e, 0x94, 0xb4, 0xd1, 0xc5, 0xd0,
-	0x24, 0xe1, 0x26, 0x29, 0x5b, 0x1a, 0x7b, 0xda, 0x5c, 0xaf, 0xf1, 0x1f, 0xc3, 0xd4, 0xe4, 0x8f,
-	0x61, 0x6a, 0xcd, 0xa1, 0x43, 0xde, 0x6c, 0xff, 0x3e, 0x09, 0xf9, 0x17, 0xd8, 0x70, 0x2d, 0xd3,
-	0xea, 0xed, 0xf5, 0xb0, 0x45, 0xd0, 0x36, 0x80, 0x86, 0xad, 0xae, 0xb8, 0x59, 0x89, 0x34, 0xc6,
-	0x59, 0x5e, 0xd0, 0x63, 0x80, 0x67, 0xd8, 0xd7, 0x92, 0x62, 0x2d, 0x9a, 0xdd, 0x9b, 0x85, 0x68,
-	0x82, 0xa1, 0x1d, 0xc8, 0x69, 0x7d, 0xc3, 0xc5, 0xb7, 0x9a, 0xe3, 0x63, 0x50, 0x0e, 0xf1, 0xc0,
-	0x1c, 0xd3, 0xaf, 0x69, 0xb9, 0xf0, 0xf7, 0x5a, 0x23, 0x7a, 0x0a, 0xcb, 0x2a, 0xf6, 0x30, 0x41,
-	0x33, 0x00, 0xb3, 0x88, 0xfb, 0xbf, 0xf8, 0xfb, 0xdb, 0x4a, 0xe2, 0x8b, 0xb7, 0x95, 0xc4, 0xbf,
-	0xdf, 0x56, 0x12, 0xbf, 0x79, 0x57, 0x59, 0xf8, 0xe2, 0x5d, 0x65, 0xe1, 0x9f, 0xef, 0x2a, 0x0b,
-	0x3f, 0xdf, 0xeb, 0x99, 0xa4, 0x3f, 0xba, 0xa8, 0x75, 0xec, 0xe1, 0x56, 0xc7, 0x1e, 0x62, 0x5a,
-	0xe5, 0xc1, 0x3f, 0xcc, 0xcd, 0xd6, 0xc4, 0x4f, 0x93, 0x7e, 0x2c, 0x9f, 0xf9, 0xe3, 0x45, 0x8a,
-	0xa1, 0x76, 0xfe, 0x17, 0x00, 0x00, 0xff, 0xff, 0xf5, 0xc2, 0xc3, 0x65, 0xc3, 0x24, 0x00, 0x00,
+	// 2281 bytes of a gzipped FileDescriptorProto
+	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xec, 0x5a, 0x4f, 0x73, 0xdb, 0xc6,
+	0x15, 0x17, 0xf5, 0x8f, 0xd4, 0xe3, 0x3f, 0x08, 0x96, 0x64, 0x5a, 0xb6, 0x15, 0x87, 0x89, 0x5d,
+	0xdb, 0x89, 0x29, 0x5a, 0x32, 0xc7, 0x61, 0xda, 0xe9, 0x44, 0xff, 0x6c, 0xc9, 0x63, 0x4b, 0x0c,
+	0x48, 0x79, 0xa6, 0xed, 0x01, 0x03, 0x91, 0x2b, 0x12, 0x13, 0x12, 0x80, 0x81, 0x25, 0x3d, 0xce,
+	0xf4, 0x03, 0xf4, 0xd4, 0xe9, 0xa5, 0x97, 0x5e, 0x7a, 0xcb, 0xb1, 0xe7, 0x1e, 0xfa, 0x01, 0x7a,
+	0x6b, 0x8e, 0x3d, 0xb4, 0x33, 0x1d, 0x7b, 0xfa, 0x01, 0x3a, 0xbd, 0xf4, 0xd8, 0xd9, 0xc5, 0x2e,
+	0x80, 0x05, 0x17, 0x92, 0xe5, 0xe4, 0x50, 0x37, 0x3c, 0x49, 0xd8, 0xf7, 0xfb, 0x3d, 0xbc, 0xdd,
+	0x7d, 0xef, 0xf7, 0x16, 0x00, 0xe1, 0xaa, 0xd1, 0x31, 0x1c, 0x6c, 0x8e, 0x90, 0x8e, 0xcd, 0x01,
+	0x72, 0xbd, 0x75, 0xa3, 0x8b, 0x2c, 0x5c, 0x71, 0x5c, 0x1b, 0xdb, 0xab, 0x57, 0xbb, 0xb6, 0xdd,
+	0xed, 0xa3, 0x75, 0x7a, 0x75, 0x32, 0x3c, 0x5d, 0x47, 0x03, 0x07, 0xbf, 0xf2, 0x8d, 0xe5, 0xbf,
+	0xe5, 0x00, 0x1a, 0x27, 0xa7, 0x58, 0x43, 0x8e, 0xed, 0x62, 0xf5, 0x1e, 0xa8, 0xd8, 0xc6, 0x46,
+	0x5f, 0xc7, 0xae, 0x61, 0x79, 0x46, 0x1b, 0x9b, 0xb6, 0xe5, 0x95, 0x52, 0x37, 0x52, 0xb7, 0xf3,
+	0xda, 0x22, 0xb5, 0xb4, 0x22, 0x06, 0xf5, 0x73, 0xb8, 0xe2, 0xc3, 0xdb, 0xb6, 0xe5, 0x21, 0xcb,
+	0x1b, 0x7a, 0xba, 0x69, 0x79, 0xd8, 0xb0, 0xda, 0xc8, 0x2b, 0x4d, 0x53, 0xd6, 0x65, 0x0a, 0xd8,
+	0xe1, 0xf6, 0x03, 0x6e, 0x56, 0x1f, 0x42, 0xc9, 0x18, 0x75, 0x23, 0xcc, 0xbe, 0x81, 0x91, 0xd5,
+	0x7e, 0xa5, 0x0f, 0xbc, 0xd2, 0xcc, 0x8d, 0xd4, 0xed, 0x69, 0x6d, 0xd9, 0x18, 0x75, 0x03, 0xe2,
+	0x53, 0xdf, 0xfa, 0x8c, 0x12, 0x9d, 0x5a, 0x55, 0x4e, 0x9c, 0xf5, 0x89, 0x4e, 0xad, 0x9a, 0x40,
+	0xac, 0xd7, 0xe4, 0xc4, 0x39, 0x46, 0xac, 0xd7, 0x24, 0xc4, 0x9b, 0x50, 0xc0, 0x3d, 0xd7, 0x1e,
+	0x76, 0x7b, 0xce, 0x10, 0xeb, 0xd8, 0xf1, 0x4a, 0xf3, 0x14, 0x9e, 0x0f, 0x47, 0x5b, 0x8e, 0xa7,
+	0x7e, 0x0c, 0x05, 0x32, 0xa3, 0x13, 0x03, 0xb7, 0x7b, 0xba, 0x67, 0x7e, 0x8d, 0x4a, 0x69, 0x0a,
+	0xcb, 0x19, 0xa3, 0xee, 0x36, 0x19, 0x6c, 0x9a, 0x5f, 0x23, 0x82, 0x22, 0x51, 0x44, 0x50, 0x19,
+	0x1f, 0xe5, 0xd4, 0x6b, 0x21, 0xaa, 0x02, 0x97, 0xfa, 0xc8, 0xe8, 0x20, 0x57, 0x6f, 0xf7, 0x0c,
+	0xab, 0x8b, 0xf4, 0xb6, 0x3d, 0xb4, 0x70, 0x69, 0xc1, 0xdf, 0x09, 0xdf, 0xb4, 0x43, 0x2d, 0x3b,
+	0xc4, 0xa0, 0x56, 0x61, 0xc9, 0x45, 0x5d, 0x3a, 0x1b, 0x81, 0x00, 0x94, 0xa0, 0x32, 0x5b, 0x94,
+	0x71, 0x1d, 0x80, 0x24, 0x8b, 0x3d, 0xc4, 0x64, 0xfe, 0x59, 0x8a, 0x5b, 0x60, 0x23, 0xcf, 0x3c,
+	0xf5, 0x01, 0x5c, 0x26, 0x93, 0x31, 0x2d, 0x4c, 0x62, 0xb0, 0x07, 0x03, 0x13, 0xeb, 0x5d, 0xc3,
+	0x21, 0xd8, 0x1c, 0x8d, 0xf7, 0x92, 0x31, 0xea, 0x1e, 0x10, 0xeb, 0x0e, 0x35, 0x3e, 0x36, 0x1c,
+	0x9f, 0x45, 0xf6, 0x46, 0xc6, 0xca, 0xfb, 0x2c, 0xa7, 0x56, 0x95, 0xb2, 0xea, 0x35, 0x29, 0xab,
+	0xc0, 0x58, 0xf5, 0xda, 0x18, 0xeb, 0x2e, 0x2c, 0x8e, 0x4c, 0xf4, 0x52, 0x9c, 0x6f, 0x91, 0xce,
+	0xa3, 0x48, 0x0c, 0xd1, 0xc9, 0x7e, 0x01, 0xd7, 0x2d, 0x5b, 0x77, 0x5c, 0xbb, 0xeb, 0x22, 0xcf,
+	0xd3, 0xc7, 0x79, 0x0a, 0xe5, 0x5d, 0xb1, 0xec, 0x06, 0xc3, 0x3c, 0x8f, 0x79, 0xd8, 0x84, 0x15,
+	0xc7, 0x45, 0xba, 0xe3, 0x22, 0xc7, 0x70, 0x51, 0x34, 0x75, 0x16, 0x59, 0x88, 0x2e, 0x6a, 0xf8,
+	0xc6, 0x30, 0x71, 0x3e, 0x05, 0x55, 0x42, 0x50, 0x29, 0x41, 0x71, 0xe2, 0xe8, 0xbb, 0xb0, 0xc8,
+	0x26, 0x1f, 0x01, 0x5f, 0xa2, 0xe0, 0xa2, 0x6f, 0x88, 0xe5, 0x72, 0x42, 0x11, 0xac, 0xf1, 0x5c,
+	0x96, 0x15, 0x01, 0x5d, 0x6b, 0xf9, 0x0e, 0x95, 0xf9, 0x5a, 0x8f, 0xef, 0x10, 0x49, 0xda, 0x5a,
+	0x35, 0x9a, 0xb4, 0x1f, 0xb3, 0xa4, 0xad, 0x55, 0x63, 0xa9, 0x2d, 0xa0, 0x6e, 0xf2, 0xd4, 0x8e,
+	0xa0, 0x3e, 0x87, 0x55, 0xe2, 0x2b, 0x61, 0x35, 0x6f, 0x53, 0xc6, 0x8a, 0x53, 0xab, 0x36, 0x24,
+	0x0b, 0x4a, 0xb8, 0xf5, 0x44, 0xee, 0x1d, 0xc6, 0xad, 0x27, 0x73, 0x6b, 0x49, 0xdc, 0xbb, 0x9c,
+	0x5b, 0x93, 0x71, 0xc9, 0xee, 0xfb, 0x31, 0xc7, 0x79, 0x9f, 0x04, 0x69, 0x2d, 0x25, 0xd5, 0xa5,
+	0xa4, 0x4f, 0x83, 0x95, 0x96, 0x93, 0x6a, 0x32, 0xd2, 0xbd, 0xa0, 0x14, 0xc6, 0x48, 0xf7, 0x61,
+	0xd9, 0x97, 0xc4, 0x78, 0xf6, 0x54, 0x28, 0x47, 0xa5, 0x7a, 0x28, 0x26, 0x10, 0xa1, 0xd4, 0x65,
+	0x94, 0x75, 0x46, 0xa9, 0xcb, 0x29, 0x35, 0x09, 0xa5, 0xca, 0x29, 0xb5, 0x18, 0xa5, 0xfc, 0x9f,
+	0x02, 0x40, 0x73, 0xd2, 0x5e, 0x26, 0xed, 0x65, 0xd2, 0x5e, 0xde, 0xab, 0xf6, 0xb2, 0x0e, 0x4b,
+	0x5e, 0xdf, 0x7e, 0xa9, 0x3b, 0x06, 0xee, 0xe9, 0x91, 0x7d, 0x5c, 0xf2, 0x13, 0x84, 0xd8, 0x1a,
+	0x06, 0xee, 0xb5, 0x82, 0xfd, 0xbc, 0x05, 0xc5, 0x53, 0xc3, 0xc3, 0x3e, 0xc1, 0x9f, 0xf3, 0x32,
+	0xc5, 0xe6, 0xc9, 0x30, 0xc1, 0xfa, 0xf3, 0xbc, 0x05, 0xc5, 0xd0, 0xb1, 0x8f, 0x5b, 0xf1, 0x71,
+	0xdc, 0xa7, 0x8f, 0xfb, 0x04, 0x54, 0x0b, 0xf7, 0x82, 0xf5, 0x60, 0xdb, 0x75, 0xd9, 0x8f, 0xd6,
+	0xc2, 0x3d, 0xb6, 0x16, 0xfe, 0x56, 0x6d, 0xc2, 0x4a, 0x14, 0xec, 0x21, 0x64, 0x31, 0xdf, 0x25,
+	0xea, 0xfb, 0x52, 0x48, 0x68, 0x22, 0x64, 0xf9, 0x77, 0x78, 0x08, 0xa5, 0x28, 0x69, 0x68, 0x45,
+	0x68, 0x57, 0x28, 0x6d, 0x39, 0xa4, 0x1d, 0x53, 0x6b, 0x40, 0x9c, 0xb4, 0xde, 0x49, 0xeb, 0xfd,
+	0x5f, 0x6f, 0xbd, 0xdf, 0xe4, 0x40, 0x69, 0x21, 0xab, 0x83, 0xdc, 0x81, 0x69, 0xfd, 0x70, 0x1a,
+	0x70, 0xf5, 0x9c, 0x06, 0x5c, 0x7d, 0xf7, 0x06, 0xfc, 0x00, 0x56, 0xb8, 0x14, 0x8e, 0x4c, 0xbb,
+	0x6f, 0x90, 0x35, 0xd2, 0x5d, 0x03, 0xf3, 0x46, 0xbc, 0xc4, 0xac, 0xcf, 0xb9, 0x51, 0x33, 0x30,
+	0x92, 0xb4, 0xed, 0x4c, 0x42, 0xdb, 0x16, 0xab, 0x7c, 0xe1, 0xad, 0xaa, 0xbc, 0x28, 0xa9, 0xf2,
+	0x84, 0xe6, 0x0e, 0x17, 0x6d, 0xee, 0xd9, 0xc4, 0xe6, 0x4e, 0x1b, 0x8f, 0xed, 0xd8, 0x9e, 0x50,
+	0x25, 0x39, 0xde, 0x78, 0xa8, 0x25, 0xde, 0xa6, 0x46, 0x36, 0x16, 0xd0, 0xf9, 0xa0, 0x4d, 0x11,
+	0x4b, 0x88, 0xae, 0xc2, 0x92, 0xe3, 0xa2, 0xf1, 0x4c, 0x2f, 0xb0, 0x4c, 0xe7, 0xb6, 0xb7, 0x3b,
+	0x78, 0x7d, 0x70, 0xd6, 0xc1, 0xeb, 0x8c, 0x43, 0xc8, 0x8d, 0x77, 0x3a, 0x84, 0x7c, 0x78, 0xce,
+	0x21, 0xe4, 0xc2, 0xe2, 0x7f, 0xc6, 0xd1, 0xe5, 0xa3, 0xe4, 0xa3, 0xcb, 0xf8, 0x19, 0xf0, 0x96,
+	0xe4, 0x0c, 0x18, 0x08, 0xeb, 0xd8, 0x46, 0xde, 0x8e, 0x08, 0x6b, 0x6c, 0x2f, 0x03, 0x61, 0x1d,
+	0x23, 0xdd, 0x89, 0x08, 0xab, 0x8c, 0x54, 0x93, 0x91, 0xee, 0x46, 0x84, 0x55, 0x42, 0xf2, 0x75,
+	0x3f, 0x9e, 0x39, 0x82, 0xee, 0x8b, 0xc9, 0x13, 0xea, 0x7e, 0x9c, 0x24, 0xe8, 0xbe, 0x84, 0x54,
+	0x93, 0x91, 0x04, 0xdd, 0x17, 0x49, 0x4c, 0xa5, 0xa4, 0xa9, 0x5a, 0x09, 0x54, 0xaa, 0x91, 0x90,
+	0xad, 0x09, 0xc4, 0xf5, 0x40, 0xa5, 0x1a, 0x89, 0x69, 0x2e, 0x25, 0x56, 0x83, 0x34, 0x97, 0x10,
+	0xc5, 0xa3, 0xf8, 0xfd, 0xd8, 0x51, 0xbc, 0xfc, 0xcf, 0x34, 0x14, 0xf6, 0x6d, 0xec, 0xe1, 0xe1,
+	0xe9, 0xe9, 0xe4, 0x39, 0x6d, 0xf2, 0x9c, 0x36, 0x79, 0x4e, 0x3b, 0xe3, 0x39, 0xed, 0xfd, 0x3d,
+	0xfc, 0x97, 0xff, 0x92, 0x86, 0xc2, 0xd6, 0x10, 0xdb, 0x27, 0x46, 0xcf, 0x9a, 0xd4, 0xf9, 0xfb,
+	0x5d, 0xe7, 0x93, 0xaa, 0xfd, 0x81, 0x54, 0xed, 0x93, 0xd9, 0x0c, 0x28, 0x59, 0x4d, 0xaa, 0xea,
+	0xe5, 0x7f, 0xa5, 0xa1, 0xd0, 0x1c, 0x18, 0x2e, 0x9e, 0xbc, 0x61, 0x9d, 0x74, 0xee, 0x89, 0x06,
+	0xfc, 0x1f, 0x6b, 0xc0, 0xa2, 0xb2, 0xf4, 0x64, 0x36, 0x73, 0x5b, 0xb9, 0x5f, 0xfe, 0xf7, 0x2c,
+	0x64, 0xfd, 0x5a, 0x7f, 0x6a, 0xb7, 0x8d, 0xbe, 0x7a, 0x19, 0xd2, 0x96, 0xdd, 0x41, 0xba, 0xd9,
+	0x61, 0x55, 0x3e, 0x4f, 0x2e, 0x0f, 0x3a, 0x6a, 0x09, 0xd2, 0xc8, 0x31, 0x3d, 0xbb, 0x83, 0x58,
+	0x21, 0xf3, 0x4b, 0xf5, 0x26, 0x64, 0xe8, 0xc7, 0xff, 0xb6, 0xdd, 0xa7, 0x85, 0x5a, 0xd8, 0x58,
+	0xa8, 0x34, 0xd8, 0x80, 0x16, 0x98, 0x48, 0x7e, 0x79, 0xd8, 0x70, 0xb1, 0x8e, 0xcd, 0xf6, 0x57,
+	0xb4, 0x60, 0xf2, 0xda, 0x02, 0x1d, 0x69, 0x99, 0xed, 0xaf, 0x88, 0xd9, 0xa5, 0x71, 0xe8, 0x1e,
+	0x7a, 0x41, 0x0b, 0x25, 0xaf, 0x2d, 0xf8, 0x23, 0x4d, 0xf4, 0x42, 0x7d, 0x00, 0x2b, 0x2f, 0x4d,
+	0xab, 0x63, 0xbf, 0x8c, 0xac, 0xb8, 0xbf, 0x53, 0x19, 0x0a, 0x5d, 0xf2, 0xad, 0xc1, 0x7a, 0xf3,
+	0x17, 0x0b, 0xe0, 0x9c, 0x9c, 0x62, 0xdd, 0xc3, 0x06, 0x46, 0x34, 0xf7, 0xb3, 0x1b, 0xd9, 0x4a,
+	0xf8, 0x03, 0x85, 0xfd, 0x29, 0x6d, 0x81, 0x00, 0x9a, 0xc4, 0x4e, 0xd0, 0x5e, 0x88, 0xce, 0x31,
+	0x74, 0x53, 0x40, 0x7b, 0x01, 0xfa, 0xa7, 0xa0, 0xe0, 0xe0, 0x7d, 0x18, 0xe3, 0xe4, 0x29, 0x67,
+	0xb1, 0x12, 0x7f, 0x51, 0xb6, 0x3f, 0xa5, 0x15, 0x43, 0xb0, 0xcf, 0xff, 0x0c, 0x0a, 0x3d, 0xf6,
+	0x98, 0xc4, 0xd8, 0x05, 0xca, 0x2e, 0x56, 0xc4, 0xa7, 0xa7, 0xfd, 0x29, 0x2d, 0xcf, 0x81, 0x01,
+	0xd3, 0x60, 0x07, 0x2f, 0xc6, 0x2c, 0x32, 0xa6, 0x78, 0x1e, 0x23, 0x4c, 0x0e, 0x0c, 0x98, 0x1e,
+	0x13, 0x78, 0xc6, 0x54, 0x18, 0x53, 0xd4, 0x7d, 0xc2, 0xe4, 0x40, 0x9f, 0xf9, 0x01, 0xcc, 0xbb,
+	0xe8, 0xa5, 0xe1, 0x76, 0xa8, 0xa4, 0x66, 0x37, 0xd2, 0x15, 0x8d, 0x5e, 0x6a, 0x6c, 0x58, 0xbd,
+	0x06, 0x0b, 0x9e, 0xd9, 0xb5, 0x0c, 0x3c, 0x74, 0x11, 0x55, 0xcf, 0x9c, 0x16, 0x0e, 0x6c, 0xa7,
+	0x61, 0x8e, 0xde, 0xef, 0xc9, 0x6c, 0x26, 0xab, 0xe4, 0xca, 0xbf, 0xe4, 0xbf, 0x12, 0xa1, 0xd4,
+	0x48, 0x6a, 0xa5, 0xc4, 0xd4, 0xfa, 0x88, 0xdc, 0x95, 0x04, 0x44, 0x73, 0x4e, 0xdc, 0x3b, 0x8d,
+	0x99, 0xd4, 0x75, 0xc8, 0x71, 0xe1, 0x1a, 0x7a, 0xa8, 0x43, 0x73, 0x30, 0xbb, 0x91, 0xa3, 0x50,
+	0xf6, 0x45, 0x41, 0xcb, 0x32, 0xc4, 0xb1, 0x87, 0x3a, 0xe4, 0xee, 0xcd, 0x77, 0xbb, 0x7b, 0xf3,
+	0xed, 0xef, 0xde, 0x4c, 0xba, 0xfb, 0xaf, 0x53, 0xe2, 0x8b, 0xd4, 0x73, 0x82, 0xb8, 0x13, 0x0b,
+	0x62, 0x3c, 0xb9, 0x82, 0x50, 0x6a, 0xd2, 0x50, 0xd4, 0x08, 0x41, 0x1a, 0xd0, 0xaf, 0x52, 0xd1,
+	0x07, 0xf6, 0x73, 0xc2, 0xf9, 0x51, 0x2c, 0x9c, 0x78, 0xb6, 0x06, 0xc1, 0x6c, 0x4a, 0x83, 0x51,
+	0x02, 0x78, 0x62, 0x28, 0x61, 0x0e, 0x5f, 0x38, 0x14, 0x31, 0xfd, 0xcf, 0x0d, 0x85, 0xc3, 0x13,
+	0x43, 0x09, 0x8b, 0xe2, 0xc2, 0xa1, 0x88, 0xf5, 0x74, 0x6e, 0x28, 0x1c, 0x2e, 0x0d, 0xe5, 0xf7,
+	0xd3, 0x30, 0xcf, 0x42, 0xf8, 0x10, 0x66, 0x89, 0x5e, 0xd1, 0xfb, 0x87, 0xe5, 0x40, 0x4c, 0xfb,
+	0x53, 0x1a, 0x35, 0x11, 0x08, 0x11, 0x29, 0xe6, 0x9a, 0xe7, 0x2c, 0x87, 0x10, 0x93, 0xba, 0x09,
+	0x10, 0xaa, 0x11, 0x2b, 0x68, 0x31, 0xaf, 0x18, 0x3c, 0x02, 0x53, 0xef, 0x41, 0x86, 0xcb, 0x10,
+	0xad, 0x6f, 0x71, 0xef, 0x19, 0x21, 0x80, 0x10, 0x38, 0xd7, 0x1e, 0x2a, 0xf6, 0xe2, 0xfe, 0x70,
+	0x38, 0x87, 0x10, 0x38, 0x17, 0x1c, 0x2a, 0xfe, 0xe2, 0x1a, 0x72, 0x38, 0x87, 0x10, 0x3d, 0x19,
+	0x19, 0xfd, 0x21, 0xd1, 0x93, 0x69, 0x65, 0xa6, 0x3c, 0xe2, 0x4d, 0x8c, 0x36, 0xb9, 0x33, 0x36,
+	0x2a, 0xda, 0xab, 0xa6, 0x93, 0x7b, 0xd5, 0x2d, 0x48, 0xfb, 0x1b, 0x46, 0x8e, 0x9e, 0x33, 0xb4,
+	0x9e, 0x23, 0x4d, 0x52, 0xe3, 0xc6, 0xf2, 0x97, 0x90, 0x8d, 0xa8, 0x8c, 0xba, 0x0d, 0xd7, 0x51,
+	0x1f, 0xd1, 0xb3, 0x70, 0xf8, 0x95, 0xd3, 0xec, 0xf7, 0x4d, 0x0f, 0xb5, 0x6d, 0xab, 0xc3, 0x0f,
+	0xce, 0x57, 0x39, 0x88, 0x7f, 0xef, 0x8c, 0x40, 0xca, 0x7f, 0x4c, 0x41, 0xb6, 0xf9, 0xfd, 0xfa,
+	0x54, 0x77, 0x60, 0x4d, 0xf2, 0xf9, 0x35, 0xea, 0xc4, 0x6f, 0xe9, 0x57, 0xe3, 0x1f, 0x62, 0x23,
+	0x90, 0x27, 0xb3, 0x99, 0x19, 0x65, 0x56, 0x5b, 0xf5, 0xcf, 0x16, 0x32, 0x27, 0xe5, 0xbf, 0xa7,
+	0x60, 0x71, 0x4c, 0x6b, 0xd4, 0x2f, 0xe0, 0x1a, 0x7f, 0x53, 0x7b, 0x46, 0xfc, 0xab, 0x0c, 0x23,
+	0x0b, 0x9f, 0x7a, 0xf0, 0x5f, 0xa6, 0x9e, 0x11, 0xfc, 0x2a, 0xc3, 0xc8, 0x3c, 0xec, 0xc2, 0x5a,
+	0xf8, 0x9e, 0x53, 0xea, 0x63, 0x86, 0xfa, 0xb8, 0x16, 0xa0, 0x64, 0x5b, 0x73, 0x04, 0xc5, 0x98,
+	0x7a, 0xa9, 0x3f, 0x81, 0x55, 0xee, 0xae, 0x83, 0xfa, 0xc6, 0x2b, 0xd9, 0xd4, 0x4a, 0x0c, 0xb1,
+	0x4b, 0x00, 0x82, 0xc3, 0xdf, 0xa6, 0xa0, 0x18, 0x13, 0xa1, 0xef, 0xe6, 0xd1, 0x2f, 0x07, 0xb6,
+	0x55, 0xa5, 0xb6, 0xe1, 0x4a, 0x27, 0xab, 0xad, 0x85, 0xdf, 0xd6, 0xa5, 0x1b, 0x79, 0x0c, 0xc5,
+	0x98, 0x20, 0x7d, 0x2f, 0xa9, 0xfd, 0xcd, 0x34, 0xa4, 0xb9, 0xbf, 0xb2, 0x20, 0x64, 0x42, 0xb3,
+	0x0e, 0x94, 0xac, 0x2c, 0x28, 0x99, 0xd0, 0x52, 0x03, 0x29, 0x7b, 0x20, 0x91, 0x32, 0x49, 0xc7,
+	0x8b, 0x69, 0x59, 0x65, 0x4c, 0xcb, 0xc6, 0x1a, 0x93, 0x20, 0x66, 0x95, 0x31, 0x31, 0x1b, 0xeb,
+	0x1e, 0x82, 0x9a, 0x55, 0xc6, 0xd4, 0x6c, 0x4c, 0xe2, 0xcf, 0x92, 0xb3, 0x2f, 0xa1, 0xc0, 0x1b,
+	0x01, 0x7a, 0x31, 0x44, 0x1e, 0xfe, 0xce, 0x8a, 0x56, 0xfe, 0xd3, 0x34, 0xe4, 0x99, 0x4f, 0x72,
+	0xa0, 0x1b, 0x7a, 0x67, 0xb8, 0xbc, 0x07, 0xf3, 0x1e, 0xc5, 0x30, 0x87, 0xcb, 0x15, 0x81, 0x59,
+	0xf1, 0xff, 0x68, 0x0c, 0xa4, 0x96, 0x21, 0xcd, 0x32, 0x82, 0xed, 0x54, 0x86, 0xe3, 0x35, 0x6e,
+	0x88, 0x1d, 0xfe, 0x67, 0xcf, 0x3e, 0xfc, 0xcf, 0xbd, 0xfd, 0xe1, 0x7f, 0x3e, 0xf9, 0xf0, 0x5f,
+	0x7e, 0x02, 0xf3, 0x6c, 0xaa, 0x2b, 0xa0, 0x36, 0x5b, 0x5b, 0xad, 0xe3, 0xa6, 0x7e, 0x7c, 0xd8,
+	0x6c, 0xec, 0xed, 0x1c, 0x3c, 0x3a, 0xd8, 0xdb, 0x55, 0xa6, 0x54, 0x05, 0x72, 0x87, 0x47, 0x2d,
+	0x5d, 0xdb, 0xdb, 0xd9, 0x3b, 0x78, 0xbe, 0xb7, 0xab, 0xa4, 0xd4, 0x2c, 0xa4, 0x1b, 0x7b, 0x87,
+	0xbb, 0x07, 0x87, 0x8f, 0x95, 0x69, 0x75, 0x01, 0xe6, 0xb4, 0xbd, 0xad, 0xdd, 0x9f, 0x29, 0x33,
+	0x77, 0xff, 0x90, 0x82, 0x0c, 0x5f, 0x55, 0xb5, 0x04, 0x4b, 0x0d, 0xed, 0xa8, 0x75, 0xb4, 0x73,
+	0xf4, 0x34, 0xe6, 0x70, 0x11, 0xf2, 0x81, 0xa5, 0xb1, 0xfd, 0xa8, 0xa5, 0xa4, 0x84, 0xa1, 0x26,
+	0x19, 0x9a, 0x51, 0x2f, 0xc3, 0xa5, 0x60, 0xa8, 0xb5, 0x77, 0xb8, 0xbb, 0xa7, 0x3d, 0x3b, 0x38,
+	0x6c, 0x29, 0xb3, 0xea, 0x32, 0x2c, 0x06, 0x86, 0xfd, 0xa3, 0x56, 0xb3, 0x75, 0xfc, 0xe8, 0x91,
+	0x32, 0x27, 0x0c, 0x6f, 0x1d, 0xb7, 0x8e, 0xb6, 0xb7, 0xf6, 0x0f, 0x95, 0x79, 0x61, 0xb8, 0xf9,
+	0x6c, 0x4b, 0x6b, 0x11, 0xef, 0xe9, 0x32, 0x49, 0xa1, 0xe9, 0x8d, 0x47, 0xb0, 0x10, 0x2c, 0x87,
+	0x5a, 0x87, 0xc5, 0xe6, 0xf0, 0x64, 0x60, 0xe2, 0x68, 0x93, 0xe4, 0x2d, 0x8d, 0x5e, 0xad, 0xae,
+	0x54, 0xfc, 0x9f, 0x75, 0x57, 0xf8, 0xcf, 0xba, 0x2b, 0x7b, 0x03, 0x07, 0xbf, 0xda, 0xf8, 0xdd,
+	0x34, 0xe4, 0x9f, 0x22, 0xc3, 0xb5, 0x4c, 0xab, 0xbb, 0xd5, 0x45, 0x16, 0x56, 0x37, 0x00, 0x9a,
+	0xc8, 0xea, 0xb0, 0x17, 0x44, 0x42, 0x63, 0x4c, 0xf2, 0xa2, 0xde, 0x03, 0x78, 0x8c, 0x02, 0x2d,
+	0x29, 0x56, 0xc4, 0xec, 0x5e, 0x2d, 0x88, 0x09, 0xa6, 0x6e, 0x42, 0xb6, 0xd9, 0x33, 0x5c, 0x74,
+	0xa1, 0x7b, 0x7c, 0x06, 0xca, 0x2e, 0xea, 0x9b, 0x23, 0xf2, 0xdc, 0xcc, 0x27, 0xfe, 0x56, 0x73,
+	0x54, 0x1f, 0xc2, 0x9c, 0x86, 0x3c, 0x84, 0xd5, 0x04, 0x40, 0x12, 0x71, 0xfb, 0x17, 0x7f, 0x7e,
+	0xbd, 0x96, 0xfa, 0xf6, 0xf5, 0x5a, 0xea, 0x1f, 0xaf, 0xd7, 0x52, 0xbf, 0x79, 0xb3, 0x36, 0xf5,
+	0xed, 0x9b, 0xb5, 0xa9, 0xbf, 0xbe, 0x59, 0x9b, 0xfa, 0xf9, 0x56, 0xd7, 0xc4, 0xbd, 0xe1, 0x49,
+	0xa5, 0x6d, 0x0f, 0xd6, 0xdb, 0xf6, 0x00, 0x91, 0x2a, 0x0f, 0xff, 0xa1, 0x6e, 0xd6, 0x63, 0x3f,
+	0xb2, 0xff, 0x31, 0xbf, 0xf6, 0x2f, 0x4f, 0xe6, 0x29, 0x6a, 0xf3, 0xbf, 0x01, 0x00, 0x00, 0xff,
+	0xff, 0x5b, 0xef, 0x9d, 0x84, 0x8d, 0x2f, 0x00, 0x00,
 }
 
 // Reference imports to suppress errors if they are not otherwise used.
@@ -3047,6 +3512,110 @@ func (m *PbftReport) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	_ = i
 	var l int
 	_ = l
+	if m.P95CommitLatencyMs != 0 {
+		i -= 4
+		encoding_binary.LittleEndian.PutUint32(dAtA[i:], uint32(math.Float32bits(float32(m.P95CommitLatencyMs))))
+		i--
+		dAtA[i] = 0x3
+		i--
+		dAtA[i] = 0x85
+	}
+	if m.P90CommitLatencyMs != 0 {
+		i -= 4
+		encoding_binary.LittleEndian.PutUint32(dAtA[i:], uint32(math.Float32bits(float32(m.P90CommitLatencyMs))))
+		i--
+		dAtA[i] = 0x2
+		i--
+		dAtA[i] = 0xfd
+	}
+	if m.P50CommitLatencyMs != 0 {
+		i -= 4
+		encoding_binary.LittleEndian.PutUint32(dAtA[i:], uint32(math.Float32bits(float32(m.P50CommitLatencyMs))))
+		i--
+		dAtA[i] = 0x2
+		i--
+		dAtA[i] = 0xf5
+	}
+	if m.P95PrepareLatencyMs != 0 {
+		i -= 4
+		encoding_binary.LittleEndian.PutUint32(dAtA[i:], uint32(math.Float32bits(float32(m.P95PrepareLatencyMs))))
+		i--
+		dAtA[i] = 0x2
+		i--
+		dAtA[i] = 0xed
+	}
+	if m.P90PrepareLatencyMs != 0 {
+		i -= 4
+		encoding_binary.LittleEndian.PutUint32(dAtA[i:], uint32(math.Float32bits(float32(m.P90PrepareLatencyMs))))
+		i--
+		dAtA[i] = 0x2
+		i--
+		dAtA[i] = 0xe5
+	}
+	if m.P50PrepareLatencyMs != 0 {
+		i -= 4
+		encoding_binary.LittleEndian.PutUint32(dAtA[i:], uint32(math.Float32bits(float32(m.P50PrepareLatencyMs))))
+		i--
+		dAtA[i] = 0x2
+		i--
+		dAtA[i] = 0xdd
+	}
+	if m.P95PrePrepareLatencyMs != 0 {
+		i -= 4
+		encoding_binary.LittleEndian.PutUint32(dAtA[i:], uint32(math.Float32bits(float32(m.P95PrePrepareLatencyMs))))
+		i--
+		dAtA[i] = 0x2
+		i--
+		dAtA[i] = 0xd5
+	}
+	if m.P90PrePrepareLatencyMs != 0 {
+		i -= 4
+		encoding_binary.LittleEndian.PutUint32(dAtA[i:], uint32(math.Float32bits(float32(m.P90PrePrepareLatencyMs))))
+		i--
+		dAtA[i] = 0x2
+		i--
+		dAtA[i] = 0xcd
+	}
+	if m.P50PrePrepareLatencyMs != 0 {
+		i -= 4
+		encoding_binary.LittleEndian.PutUint32(dAtA[i:], uint32(math.Float32bits(float32(m.P50PrePrepareLatencyMs))))
+		i--
+		dAtA[i] = 0x2
+		i--
+		dAtA[i] = 0xc5
+	}
+	if m.P90BatchSize != 0 {
+		i -= 4
+		encoding_binary.LittleEndian.PutUint32(dAtA[i:], uint32(math.Float32bits(float32(m.P90BatchSize))))
+		i--
+		dAtA[i] = 0x2
+		i--
+		dAtA[i] = 0xad
+	}
+	if m.P50BatchSize != 0 {
+		i -= 4
+		encoding_binary.LittleEndian.PutUint32(dAtA[i:], uint32(math.Float32bits(float32(m.P50BatchSize))))
+		i--
+		dAtA[i] = 0x2
+		i--
+		dAtA[i] = 0xa5
+	}
+	if m.P90InterCommitGapMs != 0 {
+		i -= 4
+		encoding_binary.LittleEndian.PutUint32(dAtA[i:], uint32(math.Float32bits(float32(m.P90InterCommitGapMs))))
+		i--
+		dAtA[i] = 0x2
+		i--
+		dAtA[i] = 0x95
+	}
+	if m.P90ConsensusLatencyMs != 0 {
+		i -= 4
+		encoding_binary.LittleEndian.PutUint32(dAtA[i:], uint32(math.Float32bits(float32(m.P90ConsensusLatencyMs))))
+		i--
+		dAtA[i] = 0x1
+		i--
+		dAtA[i] = 0xf5
+	}
 	if m.CommitLatencyMs != 0 {
 		i -= 4
 		encoding_binary.LittleEndian.PutUint32(dAtA[i:], uint32(math.Float32bits(float32(m.CommitLatencyMs))))
@@ -3185,6 +3754,110 @@ func (m *SbftReport) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	_ = i
 	var l int
 	_ = l
+	if m.P95CommitLatencyMs != 0 {
+		i -= 4
+		encoding_binary.LittleEndian.PutUint32(dAtA[i:], uint32(math.Float32bits(float32(m.P95CommitLatencyMs))))
+		i--
+		dAtA[i] = 0x3
+		i--
+		dAtA[i] = 0x85
+	}
+	if m.P90CommitLatencyMs != 0 {
+		i -= 4
+		encoding_binary.LittleEndian.PutUint32(dAtA[i:], uint32(math.Float32bits(float32(m.P90CommitLatencyMs))))
+		i--
+		dAtA[i] = 0x2
+		i--
+		dAtA[i] = 0xfd
+	}
+	if m.P50CommitLatencyMs != 0 {
+		i -= 4
+		encoding_binary.LittleEndian.PutUint32(dAtA[i:], uint32(math.Float32bits(float32(m.P50CommitLatencyMs))))
+		i--
+		dAtA[i] = 0x2
+		i--
+		dAtA[i] = 0xf5
+	}
+	if m.P95PrepareLatencyMs != 0 {
+		i -= 4
+		encoding_binary.LittleEndian.PutUint32(dAtA[i:], uint32(math.Float32bits(float32(m.P95PrepareLatencyMs))))
+		i--
+		dAtA[i] = 0x2
+		i--
+		dAtA[i] = 0xed
+	}
+	if m.P90PrepareLatencyMs != 0 {
+		i -= 4
+		encoding_binary.LittleEndian.PutUint32(dAtA[i:], uint32(math.Float32bits(float32(m.P90PrepareLatencyMs))))
+		i--
+		dAtA[i] = 0x2
+		i--
+		dAtA[i] = 0xe5
+	}
+	if m.P50PrepareLatencyMs != 0 {
+		i -= 4
+		encoding_binary.LittleEndian.PutUint32(dAtA[i:], uint32(math.Float32bits(float32(m.P50PrepareLatencyMs))))
+		i--
+		dAtA[i] = 0x2
+		i--
+		dAtA[i] = 0xdd
+	}
+	if m.P95PrePrepareLatencyMs != 0 {
+		i -= 4
+		encoding_binary.LittleEndian.PutUint32(dAtA[i:], uint32(math.Float32bits(float32(m.P95PrePrepareLatencyMs))))
+		i--
+		dAtA[i] = 0x2
+		i--
+		dAtA[i] = 0xd5
+	}
+	if m.P90PrePrepareLatencyMs != 0 {
+		i -= 4
+		encoding_binary.LittleEndian.PutUint32(dAtA[i:], uint32(math.Float32bits(float32(m.P90PrePrepareLatencyMs))))
+		i--
+		dAtA[i] = 0x2
+		i--
+		dAtA[i] = 0xcd
+	}
+	if m.P50PrePrepareLatencyMs != 0 {
+		i -= 4
+		encoding_binary.LittleEndian.PutUint32(dAtA[i:], uint32(math.Float32bits(float32(m.P50PrePrepareLatencyMs))))
+		i--
+		dAtA[i] = 0x2
+		i--
+		dAtA[i] = 0xc5
+	}
+	if m.P90BatchSize != 0 {
+		i -= 4
+		encoding_binary.LittleEndian.PutUint32(dAtA[i:], uint32(math.Float32bits(float32(m.P90BatchSize))))
+		i--
+		dAtA[i] = 0x2
+		i--
+		dAtA[i] = 0xad
+	}
+	if m.P50BatchSize != 0 {
+		i -= 4
+		encoding_binary.LittleEndian.PutUint32(dAtA[i:], uint32(math.Float32bits(float32(m.P50BatchSize))))
+		i--
+		dAtA[i] = 0x2
+		i--
+		dAtA[i] = 0xa5
+	}
+	if m.P90InterCommitGapMs != 0 {
+		i -= 4
+		encoding_binary.LittleEndian.PutUint32(dAtA[i:], uint32(math.Float32bits(float32(m.P90InterCommitGapMs))))
+		i--
+		dAtA[i] = 0x2
+		i--
+		dAtA[i] = 0x95
+	}
+	if m.P90ConsensusLatencyMs != 0 {
+		i -= 4
+		encoding_binary.LittleEndian.PutUint32(dAtA[i:], uint32(math.Float32bits(float32(m.P90ConsensusLatencyMs))))
+		i--
+		dAtA[i] = 0x1
+		i--
+		dAtA[i] = 0xf5
+	}
 	if m.NthPrepareUnseenCount != 0 {
 		i = encodeVarintAgent(dAtA, i, uint64(m.NthPrepareUnseenCount))
 		i--
@@ -3366,6 +4039,133 @@ func (m *TendermintReport) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	_ = i
 	var l int
 	_ = l
+	if m.TimeoutMs != 0 {
+		i = encodeVarintAgent(dAtA, i, uint64(m.TimeoutMs))
+		i--
+		dAtA[i] = 0x3
+		i--
+		dAtA[i] = 0x88
+	}
+	if m.P95PrecommitLatencyMs != 0 {
+		i -= 4
+		encoding_binary.LittleEndian.PutUint32(dAtA[i:], uint32(math.Float32bits(float32(m.P95PrecommitLatencyMs))))
+		i--
+		dAtA[i] = 0x3
+		i--
+		dAtA[i] = 0x85
+	}
+	if m.P90PrecommitLatencyMs != 0 {
+		i -= 4
+		encoding_binary.LittleEndian.PutUint32(dAtA[i:], uint32(math.Float32bits(float32(m.P90PrecommitLatencyMs))))
+		i--
+		dAtA[i] = 0x2
+		i--
+		dAtA[i] = 0xfd
+	}
+	if m.P50PrecommitLatencyMs != 0 {
+		i -= 4
+		encoding_binary.LittleEndian.PutUint32(dAtA[i:], uint32(math.Float32bits(float32(m.P50PrecommitLatencyMs))))
+		i--
+		dAtA[i] = 0x2
+		i--
+		dAtA[i] = 0xf5
+	}
+	if m.P95PrevoteLatencyMs != 0 {
+		i -= 4
+		encoding_binary.LittleEndian.PutUint32(dAtA[i:], uint32(math.Float32bits(float32(m.P95PrevoteLatencyMs))))
+		i--
+		dAtA[i] = 0x2
+		i--
+		dAtA[i] = 0xed
+	}
+	if m.P90PrevoteLatencyMs != 0 {
+		i -= 4
+		encoding_binary.LittleEndian.PutUint32(dAtA[i:], uint32(math.Float32bits(float32(m.P90PrevoteLatencyMs))))
+		i--
+		dAtA[i] = 0x2
+		i--
+		dAtA[i] = 0xe5
+	}
+	if m.P50PrevoteLatencyMs != 0 {
+		i -= 4
+		encoding_binary.LittleEndian.PutUint32(dAtA[i:], uint32(math.Float32bits(float32(m.P50PrevoteLatencyMs))))
+		i--
+		dAtA[i] = 0x2
+		i--
+		dAtA[i] = 0xdd
+	}
+	if m.P95ProposeLatencyMs != 0 {
+		i -= 4
+		encoding_binary.LittleEndian.PutUint32(dAtA[i:], uint32(math.Float32bits(float32(m.P95ProposeLatencyMs))))
+		i--
+		dAtA[i] = 0x2
+		i--
+		dAtA[i] = 0xd5
+	}
+	if m.P90ProposeLatencyMs != 0 {
+		i -= 4
+		encoding_binary.LittleEndian.PutUint32(dAtA[i:], uint32(math.Float32bits(float32(m.P90ProposeLatencyMs))))
+		i--
+		dAtA[i] = 0x2
+		i--
+		dAtA[i] = 0xcd
+	}
+	if m.P50ProposeLatencyMs != 0 {
+		i -= 4
+		encoding_binary.LittleEndian.PutUint32(dAtA[i:], uint32(math.Float32bits(float32(m.P50ProposeLatencyMs))))
+		i--
+		dAtA[i] = 0x2
+		i--
+		dAtA[i] = 0xc5
+	}
+	if m.P95BatchSize != 0 {
+		i -= 4
+		encoding_binary.LittleEndian.PutUint32(dAtA[i:], uint32(math.Float32bits(float32(m.P95BatchSize))))
+		i--
+		dAtA[i] = 0x2
+		i--
+		dAtA[i] = 0xb5
+	}
+	if m.P95InterCommitGapMs != 0 {
+		i -= 4
+		encoding_binary.LittleEndian.PutUint32(dAtA[i:], uint32(math.Float32bits(float32(m.P95InterCommitGapMs))))
+		i--
+		dAtA[i] = 0x2
+		i--
+		dAtA[i] = 0x9d
+	}
+	if m.P90InterCommitGapMs != 0 {
+		i -= 4
+		encoding_binary.LittleEndian.PutUint32(dAtA[i:], uint32(math.Float32bits(float32(m.P90InterCommitGapMs))))
+		i--
+		dAtA[i] = 0x2
+		i--
+		dAtA[i] = 0x95
+	}
+	if m.P50InterCommitGapMs != 0 {
+		i -= 4
+		encoding_binary.LittleEndian.PutUint32(dAtA[i:], uint32(math.Float32bits(float32(m.P50InterCommitGapMs))))
+		i--
+		dAtA[i] = 0x2
+		i--
+		dAtA[i] = 0x8d
+	}
+	if m.AvgInterCommitGapMs != 0 {
+		i -= 4
+		encoding_binary.LittleEndian.PutUint32(dAtA[i:], uint32(math.Float32bits(float32(m.AvgInterCommitGapMs))))
+		i--
+		dAtA[i] = 0x2
+		i--
+		dAtA[i] = 0x85
+	}
+	if m.P95ConsensusLatencyMs != 0 {
+		i -= 4
+		encoding_binary.LittleEndian.PutUint32(dAtA[i:], uint32(math.Float32bits(float32(m.P95ConsensusLatencyMs))))
+		i--
+		dAtA[i] = 0x1
+		i--
+		dAtA[i] = 0xfd
+	}
 	if m.P90BatchSize != 0 {
 		i -= 4
 		encoding_binary.LittleEndian.PutUint32(dAtA[i:], uint32(math.Float32bits(float32(m.P90BatchSize))))
@@ -3475,6 +4275,38 @@ func (m *HotstuffReport) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	_ = i
 	var l int
 	_ = l
+	if m.P90BatchSize != 0 {
+		i -= 4
+		encoding_binary.LittleEndian.PutUint32(dAtA[i:], uint32(math.Float32bits(float32(m.P90BatchSize))))
+		i--
+		dAtA[i] = 0x2
+		i--
+		dAtA[i] = 0xad
+	}
+	if m.P50BatchSize != 0 {
+		i -= 4
+		encoding_binary.LittleEndian.PutUint32(dAtA[i:], uint32(math.Float32bits(float32(m.P50BatchSize))))
+		i--
+		dAtA[i] = 0x2
+		i--
+		dAtA[i] = 0xa5
+	}
+	if m.P90InterCommitGapMs != 0 {
+		i -= 4
+		encoding_binary.LittleEndian.PutUint32(dAtA[i:], uint32(math.Float32bits(float32(m.P90InterCommitGapMs))))
+		i--
+		dAtA[i] = 0x2
+		i--
+		dAtA[i] = 0x95
+	}
+	if m.P90ConsensusLatencyMs != 0 {
+		i -= 4
+		encoding_binary.LittleEndian.PutUint32(dAtA[i:], uint32(math.Float32bits(float32(m.P90ConsensusLatencyMs))))
+		i--
+		dAtA[i] = 0x1
+		i--
+		dAtA[i] = 0xf5
+	}
 	if m.NoProgressViewChangeCount != 0 {
 		i = encodeVarintAgent(dAtA, i, uint64(m.NoProgressViewChangeCount))
 		i--
@@ -3589,6 +4421,38 @@ func (m *AutobahnReport) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	_ = i
 	var l int
 	_ = l
+	if m.P90BatchSize != 0 {
+		i -= 4
+		encoding_binary.LittleEndian.PutUint32(dAtA[i:], uint32(math.Float32bits(float32(m.P90BatchSize))))
+		i--
+		dAtA[i] = 0x2
+		i--
+		dAtA[i] = 0xad
+	}
+	if m.P50BatchSize != 0 {
+		i -= 4
+		encoding_binary.LittleEndian.PutUint32(dAtA[i:], uint32(math.Float32bits(float32(m.P50BatchSize))))
+		i--
+		dAtA[i] = 0x2
+		i--
+		dAtA[i] = 0xa5
+	}
+	if m.P90InterCommitGapMs != 0 {
+		i -= 4
+		encoding_binary.LittleEndian.PutUint32(dAtA[i:], uint32(math.Float32bits(float32(m.P90InterCommitGapMs))))
+		i--
+		dAtA[i] = 0x2
+		i--
+		dAtA[i] = 0x95
+	}
+	if m.P90ConsensusLatencyMs != 0 {
+		i -= 4
+		encoding_binary.LittleEndian.PutUint32(dAtA[i:], uint32(math.Float32bits(float32(m.P90ConsensusLatencyMs))))
+		i--
+		dAtA[i] = 0x1
+		i--
+		dAtA[i] = 0xf5
+	}
 	if m.NoProgressViewChangeCount != 0 {
 		i = encodeVarintAgent(dAtA, i, uint64(m.NoProgressViewChangeCount))
 		i--
@@ -3698,6 +4562,38 @@ func (m *SmartbftReport) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	_ = i
 	var l int
 	_ = l
+	if m.P90BatchSize != 0 {
+		i -= 4
+		encoding_binary.LittleEndian.PutUint32(dAtA[i:], uint32(math.Float32bits(float32(m.P90BatchSize))))
+		i--
+		dAtA[i] = 0x2
+		i--
+		dAtA[i] = 0xad
+	}
+	if m.P50BatchSize != 0 {
+		i -= 4
+		encoding_binary.LittleEndian.PutUint32(dAtA[i:], uint32(math.Float32bits(float32(m.P50BatchSize))))
+		i--
+		dAtA[i] = 0x2
+		i--
+		dAtA[i] = 0xa5
+	}
+	if m.P90InterCommitGapMs != 0 {
+		i -= 4
+		encoding_binary.LittleEndian.PutUint32(dAtA[i:], uint32(math.Float32bits(float32(m.P90InterCommitGapMs))))
+		i--
+		dAtA[i] = 0x2
+		i--
+		dAtA[i] = 0x95
+	}
+	if m.P90ConsensusLatencyMs != 0 {
+		i -= 4
+		encoding_binary.LittleEndian.PutUint32(dAtA[i:], uint32(math.Float32bits(float32(m.P90ConsensusLatencyMs))))
+		i--
+		dAtA[i] = 0x1
+		i--
+		dAtA[i] = 0xf5
+	}
 	if m.NoProgressViewChangeCount != 0 {
 		i = encodeVarintAgent(dAtA, i, uint64(m.NoProgressViewChangeCount))
 		i--
@@ -5026,6 +5922,45 @@ func (m *PbftReport) Size() (n int) {
 	if m.CommitLatencyMs != 0 {
 		n += 6
 	}
+	if m.P90ConsensusLatencyMs != 0 {
+		n += 6
+	}
+	if m.P90InterCommitGapMs != 0 {
+		n += 6
+	}
+	if m.P50BatchSize != 0 {
+		n += 6
+	}
+	if m.P90BatchSize != 0 {
+		n += 6
+	}
+	if m.P50PrePrepareLatencyMs != 0 {
+		n += 6
+	}
+	if m.P90PrePrepareLatencyMs != 0 {
+		n += 6
+	}
+	if m.P95PrePrepareLatencyMs != 0 {
+		n += 6
+	}
+	if m.P50PrepareLatencyMs != 0 {
+		n += 6
+	}
+	if m.P90PrepareLatencyMs != 0 {
+		n += 6
+	}
+	if m.P95PrepareLatencyMs != 0 {
+		n += 6
+	}
+	if m.P50CommitLatencyMs != 0 {
+		n += 6
+	}
+	if m.P90CommitLatencyMs != 0 {
+		n += 6
+	}
+	if m.P95CommitLatencyMs != 0 {
+		n += 6
+	}
 	return n
 }
 
@@ -5110,6 +6045,45 @@ func (m *SbftReport) Size() (n int) {
 	if m.NthPrepareUnseenCount != 0 {
 		n += 2 + sovAgent(uint64(m.NthPrepareUnseenCount))
 	}
+	if m.P90ConsensusLatencyMs != 0 {
+		n += 6
+	}
+	if m.P90InterCommitGapMs != 0 {
+		n += 6
+	}
+	if m.P50BatchSize != 0 {
+		n += 6
+	}
+	if m.P90BatchSize != 0 {
+		n += 6
+	}
+	if m.P50PrePrepareLatencyMs != 0 {
+		n += 6
+	}
+	if m.P90PrePrepareLatencyMs != 0 {
+		n += 6
+	}
+	if m.P95PrePrepareLatencyMs != 0 {
+		n += 6
+	}
+	if m.P50PrepareLatencyMs != 0 {
+		n += 6
+	}
+	if m.P90PrepareLatencyMs != 0 {
+		n += 6
+	}
+	if m.P95PrepareLatencyMs != 0 {
+		n += 6
+	}
+	if m.P50CommitLatencyMs != 0 {
+		n += 6
+	}
+	if m.P90CommitLatencyMs != 0 {
+		n += 6
+	}
+	if m.P95CommitLatencyMs != 0 {
+		n += 6
+	}
 	return n
 }
 
@@ -5163,6 +6137,54 @@ func (m *TendermintReport) Size() (n int) {
 	}
 	if m.P90BatchSize != 0 {
 		n += 5
+	}
+	if m.P95ConsensusLatencyMs != 0 {
+		n += 6
+	}
+	if m.AvgInterCommitGapMs != 0 {
+		n += 6
+	}
+	if m.P50InterCommitGapMs != 0 {
+		n += 6
+	}
+	if m.P90InterCommitGapMs != 0 {
+		n += 6
+	}
+	if m.P95InterCommitGapMs != 0 {
+		n += 6
+	}
+	if m.P95BatchSize != 0 {
+		n += 6
+	}
+	if m.P50ProposeLatencyMs != 0 {
+		n += 6
+	}
+	if m.P90ProposeLatencyMs != 0 {
+		n += 6
+	}
+	if m.P95ProposeLatencyMs != 0 {
+		n += 6
+	}
+	if m.P50PrevoteLatencyMs != 0 {
+		n += 6
+	}
+	if m.P90PrevoteLatencyMs != 0 {
+		n += 6
+	}
+	if m.P95PrevoteLatencyMs != 0 {
+		n += 6
+	}
+	if m.P50PrecommitLatencyMs != 0 {
+		n += 6
+	}
+	if m.P90PrecommitLatencyMs != 0 {
+		n += 6
+	}
+	if m.P95PrecommitLatencyMs != 0 {
+		n += 6
+	}
+	if m.TimeoutMs != 0 {
+		n += 2 + sovAgent(uint64(m.TimeoutMs))
 	}
 	return n
 }
@@ -5221,6 +6243,18 @@ func (m *HotstuffReport) Size() (n int) {
 	if m.NoProgressViewChangeCount != 0 {
 		n += 2 + sovAgent(uint64(m.NoProgressViewChangeCount))
 	}
+	if m.P90ConsensusLatencyMs != 0 {
+		n += 6
+	}
+	if m.P90InterCommitGapMs != 0 {
+		n += 6
+	}
+	if m.P50BatchSize != 0 {
+		n += 6
+	}
+	if m.P90BatchSize != 0 {
+		n += 6
+	}
 	return n
 }
 
@@ -5274,6 +6308,18 @@ func (m *AutobahnReport) Size() (n int) {
 	}
 	if m.NoProgressViewChangeCount != 0 {
 		n += 2 + sovAgent(uint64(m.NoProgressViewChangeCount))
+	}
+	if m.P90ConsensusLatencyMs != 0 {
+		n += 6
+	}
+	if m.P90InterCommitGapMs != 0 {
+		n += 6
+	}
+	if m.P50BatchSize != 0 {
+		n += 6
+	}
+	if m.P90BatchSize != 0 {
+		n += 6
 	}
 	return n
 }
@@ -5331,6 +6377,18 @@ func (m *SmartbftReport) Size() (n int) {
 	}
 	if m.NoProgressViewChangeCount != 0 {
 		n += 2 + sovAgent(uint64(m.NoProgressViewChangeCount))
+	}
+	if m.P90ConsensusLatencyMs != 0 {
+		n += 6
+	}
+	if m.P90InterCommitGapMs != 0 {
+		n += 6
+	}
+	if m.P50BatchSize != 0 {
+		n += 6
+	}
+	if m.P90BatchSize != 0 {
+		n += 6
 	}
 	return n
 }
@@ -6178,6 +7236,149 @@ func (m *PbftReport) Unmarshal(dAtA []byte) error {
 			v = uint32(encoding_binary.LittleEndian.Uint32(dAtA[iNdEx:]))
 			iNdEx += 4
 			m.CommitLatencyMs = float32(math.Float32frombits(v))
+		case 30:
+			if wireType != 5 {
+				return fmt.Errorf("proto: wrong wireType = %d for field P90ConsensusLatencyMs", wireType)
+			}
+			var v uint32
+			if (iNdEx + 4) > l {
+				return io.ErrUnexpectedEOF
+			}
+			v = uint32(encoding_binary.LittleEndian.Uint32(dAtA[iNdEx:]))
+			iNdEx += 4
+			m.P90ConsensusLatencyMs = float32(math.Float32frombits(v))
+		case 34:
+			if wireType != 5 {
+				return fmt.Errorf("proto: wrong wireType = %d for field P90InterCommitGapMs", wireType)
+			}
+			var v uint32
+			if (iNdEx + 4) > l {
+				return io.ErrUnexpectedEOF
+			}
+			v = uint32(encoding_binary.LittleEndian.Uint32(dAtA[iNdEx:]))
+			iNdEx += 4
+			m.P90InterCommitGapMs = float32(math.Float32frombits(v))
+		case 36:
+			if wireType != 5 {
+				return fmt.Errorf("proto: wrong wireType = %d for field P50BatchSize", wireType)
+			}
+			var v uint32
+			if (iNdEx + 4) > l {
+				return io.ErrUnexpectedEOF
+			}
+			v = uint32(encoding_binary.LittleEndian.Uint32(dAtA[iNdEx:]))
+			iNdEx += 4
+			m.P50BatchSize = float32(math.Float32frombits(v))
+		case 37:
+			if wireType != 5 {
+				return fmt.Errorf("proto: wrong wireType = %d for field P90BatchSize", wireType)
+			}
+			var v uint32
+			if (iNdEx + 4) > l {
+				return io.ErrUnexpectedEOF
+			}
+			v = uint32(encoding_binary.LittleEndian.Uint32(dAtA[iNdEx:]))
+			iNdEx += 4
+			m.P90BatchSize = float32(math.Float32frombits(v))
+		case 40:
+			if wireType != 5 {
+				return fmt.Errorf("proto: wrong wireType = %d for field P50PrePrepareLatencyMs", wireType)
+			}
+			var v uint32
+			if (iNdEx + 4) > l {
+				return io.ErrUnexpectedEOF
+			}
+			v = uint32(encoding_binary.LittleEndian.Uint32(dAtA[iNdEx:]))
+			iNdEx += 4
+			m.P50PrePrepareLatencyMs = float32(math.Float32frombits(v))
+		case 41:
+			if wireType != 5 {
+				return fmt.Errorf("proto: wrong wireType = %d for field P90PrePrepareLatencyMs", wireType)
+			}
+			var v uint32
+			if (iNdEx + 4) > l {
+				return io.ErrUnexpectedEOF
+			}
+			v = uint32(encoding_binary.LittleEndian.Uint32(dAtA[iNdEx:]))
+			iNdEx += 4
+			m.P90PrePrepareLatencyMs = float32(math.Float32frombits(v))
+		case 42:
+			if wireType != 5 {
+				return fmt.Errorf("proto: wrong wireType = %d for field P95PrePrepareLatencyMs", wireType)
+			}
+			var v uint32
+			if (iNdEx + 4) > l {
+				return io.ErrUnexpectedEOF
+			}
+			v = uint32(encoding_binary.LittleEndian.Uint32(dAtA[iNdEx:]))
+			iNdEx += 4
+			m.P95PrePrepareLatencyMs = float32(math.Float32frombits(v))
+		case 43:
+			if wireType != 5 {
+				return fmt.Errorf("proto: wrong wireType = %d for field P50PrepareLatencyMs", wireType)
+			}
+			var v uint32
+			if (iNdEx + 4) > l {
+				return io.ErrUnexpectedEOF
+			}
+			v = uint32(encoding_binary.LittleEndian.Uint32(dAtA[iNdEx:]))
+			iNdEx += 4
+			m.P50PrepareLatencyMs = float32(math.Float32frombits(v))
+		case 44:
+			if wireType != 5 {
+				return fmt.Errorf("proto: wrong wireType = %d for field P90PrepareLatencyMs", wireType)
+			}
+			var v uint32
+			if (iNdEx + 4) > l {
+				return io.ErrUnexpectedEOF
+			}
+			v = uint32(encoding_binary.LittleEndian.Uint32(dAtA[iNdEx:]))
+			iNdEx += 4
+			m.P90PrepareLatencyMs = float32(math.Float32frombits(v))
+		case 45:
+			if wireType != 5 {
+				return fmt.Errorf("proto: wrong wireType = %d for field P95PrepareLatencyMs", wireType)
+			}
+			var v uint32
+			if (iNdEx + 4) > l {
+				return io.ErrUnexpectedEOF
+			}
+			v = uint32(encoding_binary.LittleEndian.Uint32(dAtA[iNdEx:]))
+			iNdEx += 4
+			m.P95PrepareLatencyMs = float32(math.Float32frombits(v))
+		case 46:
+			if wireType != 5 {
+				return fmt.Errorf("proto: wrong wireType = %d for field P50CommitLatencyMs", wireType)
+			}
+			var v uint32
+			if (iNdEx + 4) > l {
+				return io.ErrUnexpectedEOF
+			}
+			v = uint32(encoding_binary.LittleEndian.Uint32(dAtA[iNdEx:]))
+			iNdEx += 4
+			m.P50CommitLatencyMs = float32(math.Float32frombits(v))
+		case 47:
+			if wireType != 5 {
+				return fmt.Errorf("proto: wrong wireType = %d for field P90CommitLatencyMs", wireType)
+			}
+			var v uint32
+			if (iNdEx + 4) > l {
+				return io.ErrUnexpectedEOF
+			}
+			v = uint32(encoding_binary.LittleEndian.Uint32(dAtA[iNdEx:]))
+			iNdEx += 4
+			m.P90CommitLatencyMs = float32(math.Float32frombits(v))
+		case 48:
+			if wireType != 5 {
+				return fmt.Errorf("proto: wrong wireType = %d for field P95CommitLatencyMs", wireType)
+			}
+			var v uint32
+			if (iNdEx + 4) > l {
+				return io.ErrUnexpectedEOF
+			}
+			v = uint32(encoding_binary.LittleEndian.Uint32(dAtA[iNdEx:]))
+			iNdEx += 4
+			m.P95CommitLatencyMs = float32(math.Float32frombits(v))
 		default:
 			iNdEx = preIndex
 			skippy, err := skipAgent(dAtA[iNdEx:])
@@ -6599,6 +7800,149 @@ func (m *SbftReport) Unmarshal(dAtA []byte) error {
 					break
 				}
 			}
+		case 30:
+			if wireType != 5 {
+				return fmt.Errorf("proto: wrong wireType = %d for field P90ConsensusLatencyMs", wireType)
+			}
+			var v uint32
+			if (iNdEx + 4) > l {
+				return io.ErrUnexpectedEOF
+			}
+			v = uint32(encoding_binary.LittleEndian.Uint32(dAtA[iNdEx:]))
+			iNdEx += 4
+			m.P90ConsensusLatencyMs = float32(math.Float32frombits(v))
+		case 34:
+			if wireType != 5 {
+				return fmt.Errorf("proto: wrong wireType = %d for field P90InterCommitGapMs", wireType)
+			}
+			var v uint32
+			if (iNdEx + 4) > l {
+				return io.ErrUnexpectedEOF
+			}
+			v = uint32(encoding_binary.LittleEndian.Uint32(dAtA[iNdEx:]))
+			iNdEx += 4
+			m.P90InterCommitGapMs = float32(math.Float32frombits(v))
+		case 36:
+			if wireType != 5 {
+				return fmt.Errorf("proto: wrong wireType = %d for field P50BatchSize", wireType)
+			}
+			var v uint32
+			if (iNdEx + 4) > l {
+				return io.ErrUnexpectedEOF
+			}
+			v = uint32(encoding_binary.LittleEndian.Uint32(dAtA[iNdEx:]))
+			iNdEx += 4
+			m.P50BatchSize = float32(math.Float32frombits(v))
+		case 37:
+			if wireType != 5 {
+				return fmt.Errorf("proto: wrong wireType = %d for field P90BatchSize", wireType)
+			}
+			var v uint32
+			if (iNdEx + 4) > l {
+				return io.ErrUnexpectedEOF
+			}
+			v = uint32(encoding_binary.LittleEndian.Uint32(dAtA[iNdEx:]))
+			iNdEx += 4
+			m.P90BatchSize = float32(math.Float32frombits(v))
+		case 40:
+			if wireType != 5 {
+				return fmt.Errorf("proto: wrong wireType = %d for field P50PrePrepareLatencyMs", wireType)
+			}
+			var v uint32
+			if (iNdEx + 4) > l {
+				return io.ErrUnexpectedEOF
+			}
+			v = uint32(encoding_binary.LittleEndian.Uint32(dAtA[iNdEx:]))
+			iNdEx += 4
+			m.P50PrePrepareLatencyMs = float32(math.Float32frombits(v))
+		case 41:
+			if wireType != 5 {
+				return fmt.Errorf("proto: wrong wireType = %d for field P90PrePrepareLatencyMs", wireType)
+			}
+			var v uint32
+			if (iNdEx + 4) > l {
+				return io.ErrUnexpectedEOF
+			}
+			v = uint32(encoding_binary.LittleEndian.Uint32(dAtA[iNdEx:]))
+			iNdEx += 4
+			m.P90PrePrepareLatencyMs = float32(math.Float32frombits(v))
+		case 42:
+			if wireType != 5 {
+				return fmt.Errorf("proto: wrong wireType = %d for field P95PrePrepareLatencyMs", wireType)
+			}
+			var v uint32
+			if (iNdEx + 4) > l {
+				return io.ErrUnexpectedEOF
+			}
+			v = uint32(encoding_binary.LittleEndian.Uint32(dAtA[iNdEx:]))
+			iNdEx += 4
+			m.P95PrePrepareLatencyMs = float32(math.Float32frombits(v))
+		case 43:
+			if wireType != 5 {
+				return fmt.Errorf("proto: wrong wireType = %d for field P50PrepareLatencyMs", wireType)
+			}
+			var v uint32
+			if (iNdEx + 4) > l {
+				return io.ErrUnexpectedEOF
+			}
+			v = uint32(encoding_binary.LittleEndian.Uint32(dAtA[iNdEx:]))
+			iNdEx += 4
+			m.P50PrepareLatencyMs = float32(math.Float32frombits(v))
+		case 44:
+			if wireType != 5 {
+				return fmt.Errorf("proto: wrong wireType = %d for field P90PrepareLatencyMs", wireType)
+			}
+			var v uint32
+			if (iNdEx + 4) > l {
+				return io.ErrUnexpectedEOF
+			}
+			v = uint32(encoding_binary.LittleEndian.Uint32(dAtA[iNdEx:]))
+			iNdEx += 4
+			m.P90PrepareLatencyMs = float32(math.Float32frombits(v))
+		case 45:
+			if wireType != 5 {
+				return fmt.Errorf("proto: wrong wireType = %d for field P95PrepareLatencyMs", wireType)
+			}
+			var v uint32
+			if (iNdEx + 4) > l {
+				return io.ErrUnexpectedEOF
+			}
+			v = uint32(encoding_binary.LittleEndian.Uint32(dAtA[iNdEx:]))
+			iNdEx += 4
+			m.P95PrepareLatencyMs = float32(math.Float32frombits(v))
+		case 46:
+			if wireType != 5 {
+				return fmt.Errorf("proto: wrong wireType = %d for field P50CommitLatencyMs", wireType)
+			}
+			var v uint32
+			if (iNdEx + 4) > l {
+				return io.ErrUnexpectedEOF
+			}
+			v = uint32(encoding_binary.LittleEndian.Uint32(dAtA[iNdEx:]))
+			iNdEx += 4
+			m.P50CommitLatencyMs = float32(math.Float32frombits(v))
+		case 47:
+			if wireType != 5 {
+				return fmt.Errorf("proto: wrong wireType = %d for field P90CommitLatencyMs", wireType)
+			}
+			var v uint32
+			if (iNdEx + 4) > l {
+				return io.ErrUnexpectedEOF
+			}
+			v = uint32(encoding_binary.LittleEndian.Uint32(dAtA[iNdEx:]))
+			iNdEx += 4
+			m.P90CommitLatencyMs = float32(math.Float32frombits(v))
+		case 48:
+			if wireType != 5 {
+				return fmt.Errorf("proto: wrong wireType = %d for field P95CommitLatencyMs", wireType)
+			}
+			var v uint32
+			if (iNdEx + 4) > l {
+				return io.ErrUnexpectedEOF
+			}
+			v = uint32(encoding_binary.LittleEndian.Uint32(dAtA[iNdEx:]))
+			iNdEx += 4
+			m.P95CommitLatencyMs = float32(math.Float32frombits(v))
 		default:
 			iNdEx = preIndex
 			skippy, err := skipAgent(dAtA[iNdEx:])
@@ -6846,6 +8190,190 @@ func (m *TendermintReport) Unmarshal(dAtA []byte) error {
 			v = uint32(encoding_binary.LittleEndian.Uint32(dAtA[iNdEx:]))
 			iNdEx += 4
 			m.P90BatchSize = float32(math.Float32frombits(v))
+		case 31:
+			if wireType != 5 {
+				return fmt.Errorf("proto: wrong wireType = %d for field P95ConsensusLatencyMs", wireType)
+			}
+			var v uint32
+			if (iNdEx + 4) > l {
+				return io.ErrUnexpectedEOF
+			}
+			v = uint32(encoding_binary.LittleEndian.Uint32(dAtA[iNdEx:]))
+			iNdEx += 4
+			m.P95ConsensusLatencyMs = float32(math.Float32frombits(v))
+		case 32:
+			if wireType != 5 {
+				return fmt.Errorf("proto: wrong wireType = %d for field AvgInterCommitGapMs", wireType)
+			}
+			var v uint32
+			if (iNdEx + 4) > l {
+				return io.ErrUnexpectedEOF
+			}
+			v = uint32(encoding_binary.LittleEndian.Uint32(dAtA[iNdEx:]))
+			iNdEx += 4
+			m.AvgInterCommitGapMs = float32(math.Float32frombits(v))
+		case 33:
+			if wireType != 5 {
+				return fmt.Errorf("proto: wrong wireType = %d for field P50InterCommitGapMs", wireType)
+			}
+			var v uint32
+			if (iNdEx + 4) > l {
+				return io.ErrUnexpectedEOF
+			}
+			v = uint32(encoding_binary.LittleEndian.Uint32(dAtA[iNdEx:]))
+			iNdEx += 4
+			m.P50InterCommitGapMs = float32(math.Float32frombits(v))
+		case 34:
+			if wireType != 5 {
+				return fmt.Errorf("proto: wrong wireType = %d for field P90InterCommitGapMs", wireType)
+			}
+			var v uint32
+			if (iNdEx + 4) > l {
+				return io.ErrUnexpectedEOF
+			}
+			v = uint32(encoding_binary.LittleEndian.Uint32(dAtA[iNdEx:]))
+			iNdEx += 4
+			m.P90InterCommitGapMs = float32(math.Float32frombits(v))
+		case 35:
+			if wireType != 5 {
+				return fmt.Errorf("proto: wrong wireType = %d for field P95InterCommitGapMs", wireType)
+			}
+			var v uint32
+			if (iNdEx + 4) > l {
+				return io.ErrUnexpectedEOF
+			}
+			v = uint32(encoding_binary.LittleEndian.Uint32(dAtA[iNdEx:]))
+			iNdEx += 4
+			m.P95InterCommitGapMs = float32(math.Float32frombits(v))
+		case 38:
+			if wireType != 5 {
+				return fmt.Errorf("proto: wrong wireType = %d for field P95BatchSize", wireType)
+			}
+			var v uint32
+			if (iNdEx + 4) > l {
+				return io.ErrUnexpectedEOF
+			}
+			v = uint32(encoding_binary.LittleEndian.Uint32(dAtA[iNdEx:]))
+			iNdEx += 4
+			m.P95BatchSize = float32(math.Float32frombits(v))
+		case 40:
+			if wireType != 5 {
+				return fmt.Errorf("proto: wrong wireType = %d for field P50ProposeLatencyMs", wireType)
+			}
+			var v uint32
+			if (iNdEx + 4) > l {
+				return io.ErrUnexpectedEOF
+			}
+			v = uint32(encoding_binary.LittleEndian.Uint32(dAtA[iNdEx:]))
+			iNdEx += 4
+			m.P50ProposeLatencyMs = float32(math.Float32frombits(v))
+		case 41:
+			if wireType != 5 {
+				return fmt.Errorf("proto: wrong wireType = %d for field P90ProposeLatencyMs", wireType)
+			}
+			var v uint32
+			if (iNdEx + 4) > l {
+				return io.ErrUnexpectedEOF
+			}
+			v = uint32(encoding_binary.LittleEndian.Uint32(dAtA[iNdEx:]))
+			iNdEx += 4
+			m.P90ProposeLatencyMs = float32(math.Float32frombits(v))
+		case 42:
+			if wireType != 5 {
+				return fmt.Errorf("proto: wrong wireType = %d for field P95ProposeLatencyMs", wireType)
+			}
+			var v uint32
+			if (iNdEx + 4) > l {
+				return io.ErrUnexpectedEOF
+			}
+			v = uint32(encoding_binary.LittleEndian.Uint32(dAtA[iNdEx:]))
+			iNdEx += 4
+			m.P95ProposeLatencyMs = float32(math.Float32frombits(v))
+		case 43:
+			if wireType != 5 {
+				return fmt.Errorf("proto: wrong wireType = %d for field P50PrevoteLatencyMs", wireType)
+			}
+			var v uint32
+			if (iNdEx + 4) > l {
+				return io.ErrUnexpectedEOF
+			}
+			v = uint32(encoding_binary.LittleEndian.Uint32(dAtA[iNdEx:]))
+			iNdEx += 4
+			m.P50PrevoteLatencyMs = float32(math.Float32frombits(v))
+		case 44:
+			if wireType != 5 {
+				return fmt.Errorf("proto: wrong wireType = %d for field P90PrevoteLatencyMs", wireType)
+			}
+			var v uint32
+			if (iNdEx + 4) > l {
+				return io.ErrUnexpectedEOF
+			}
+			v = uint32(encoding_binary.LittleEndian.Uint32(dAtA[iNdEx:]))
+			iNdEx += 4
+			m.P90PrevoteLatencyMs = float32(math.Float32frombits(v))
+		case 45:
+			if wireType != 5 {
+				return fmt.Errorf("proto: wrong wireType = %d for field P95PrevoteLatencyMs", wireType)
+			}
+			var v uint32
+			if (iNdEx + 4) > l {
+				return io.ErrUnexpectedEOF
+			}
+			v = uint32(encoding_binary.LittleEndian.Uint32(dAtA[iNdEx:]))
+			iNdEx += 4
+			m.P95PrevoteLatencyMs = float32(math.Float32frombits(v))
+		case 46:
+			if wireType != 5 {
+				return fmt.Errorf("proto: wrong wireType = %d for field P50PrecommitLatencyMs", wireType)
+			}
+			var v uint32
+			if (iNdEx + 4) > l {
+				return io.ErrUnexpectedEOF
+			}
+			v = uint32(encoding_binary.LittleEndian.Uint32(dAtA[iNdEx:]))
+			iNdEx += 4
+			m.P50PrecommitLatencyMs = float32(math.Float32frombits(v))
+		case 47:
+			if wireType != 5 {
+				return fmt.Errorf("proto: wrong wireType = %d for field P90PrecommitLatencyMs", wireType)
+			}
+			var v uint32
+			if (iNdEx + 4) > l {
+				return io.ErrUnexpectedEOF
+			}
+			v = uint32(encoding_binary.LittleEndian.Uint32(dAtA[iNdEx:]))
+			iNdEx += 4
+			m.P90PrecommitLatencyMs = float32(math.Float32frombits(v))
+		case 48:
+			if wireType != 5 {
+				return fmt.Errorf("proto: wrong wireType = %d for field P95PrecommitLatencyMs", wireType)
+			}
+			var v uint32
+			if (iNdEx + 4) > l {
+				return io.ErrUnexpectedEOF
+			}
+			v = uint32(encoding_binary.LittleEndian.Uint32(dAtA[iNdEx:]))
+			iNdEx += 4
+			m.P95PrecommitLatencyMs = float32(math.Float32frombits(v))
+		case 49:
+			if wireType != 0 {
+				return fmt.Errorf("proto: wrong wireType = %d for field TimeoutMs", wireType)
+			}
+			m.TimeoutMs = 0
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowAgent
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				m.TimeoutMs |= uint32(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
 		default:
 			iNdEx = preIndex
 			skippy, err := skipAgent(dAtA[iNdEx:])
@@ -7128,6 +8656,50 @@ func (m *HotstuffReport) Unmarshal(dAtA []byte) error {
 					break
 				}
 			}
+		case 30:
+			if wireType != 5 {
+				return fmt.Errorf("proto: wrong wireType = %d for field P90ConsensusLatencyMs", wireType)
+			}
+			var v uint32
+			if (iNdEx + 4) > l {
+				return io.ErrUnexpectedEOF
+			}
+			v = uint32(encoding_binary.LittleEndian.Uint32(dAtA[iNdEx:]))
+			iNdEx += 4
+			m.P90ConsensusLatencyMs = float32(math.Float32frombits(v))
+		case 34:
+			if wireType != 5 {
+				return fmt.Errorf("proto: wrong wireType = %d for field P90InterCommitGapMs", wireType)
+			}
+			var v uint32
+			if (iNdEx + 4) > l {
+				return io.ErrUnexpectedEOF
+			}
+			v = uint32(encoding_binary.LittleEndian.Uint32(dAtA[iNdEx:]))
+			iNdEx += 4
+			m.P90InterCommitGapMs = float32(math.Float32frombits(v))
+		case 36:
+			if wireType != 5 {
+				return fmt.Errorf("proto: wrong wireType = %d for field P50BatchSize", wireType)
+			}
+			var v uint32
+			if (iNdEx + 4) > l {
+				return io.ErrUnexpectedEOF
+			}
+			v = uint32(encoding_binary.LittleEndian.Uint32(dAtA[iNdEx:]))
+			iNdEx += 4
+			m.P50BatchSize = float32(math.Float32frombits(v))
+		case 37:
+			if wireType != 5 {
+				return fmt.Errorf("proto: wrong wireType = %d for field P90BatchSize", wireType)
+			}
+			var v uint32
+			if (iNdEx + 4) > l {
+				return io.ErrUnexpectedEOF
+			}
+			v = uint32(encoding_binary.LittleEndian.Uint32(dAtA[iNdEx:]))
+			iNdEx += 4
+			m.P90BatchSize = float32(math.Float32frombits(v))
 		default:
 			iNdEx = preIndex
 			skippy, err := skipAgent(dAtA[iNdEx:])
@@ -7391,6 +8963,50 @@ func (m *AutobahnReport) Unmarshal(dAtA []byte) error {
 					break
 				}
 			}
+		case 30:
+			if wireType != 5 {
+				return fmt.Errorf("proto: wrong wireType = %d for field P90ConsensusLatencyMs", wireType)
+			}
+			var v uint32
+			if (iNdEx + 4) > l {
+				return io.ErrUnexpectedEOF
+			}
+			v = uint32(encoding_binary.LittleEndian.Uint32(dAtA[iNdEx:]))
+			iNdEx += 4
+			m.P90ConsensusLatencyMs = float32(math.Float32frombits(v))
+		case 34:
+			if wireType != 5 {
+				return fmt.Errorf("proto: wrong wireType = %d for field P90InterCommitGapMs", wireType)
+			}
+			var v uint32
+			if (iNdEx + 4) > l {
+				return io.ErrUnexpectedEOF
+			}
+			v = uint32(encoding_binary.LittleEndian.Uint32(dAtA[iNdEx:]))
+			iNdEx += 4
+			m.P90InterCommitGapMs = float32(math.Float32frombits(v))
+		case 36:
+			if wireType != 5 {
+				return fmt.Errorf("proto: wrong wireType = %d for field P50BatchSize", wireType)
+			}
+			var v uint32
+			if (iNdEx + 4) > l {
+				return io.ErrUnexpectedEOF
+			}
+			v = uint32(encoding_binary.LittleEndian.Uint32(dAtA[iNdEx:]))
+			iNdEx += 4
+			m.P50BatchSize = float32(math.Float32frombits(v))
+		case 37:
+			if wireType != 5 {
+				return fmt.Errorf("proto: wrong wireType = %d for field P90BatchSize", wireType)
+			}
+			var v uint32
+			if (iNdEx + 4) > l {
+				return io.ErrUnexpectedEOF
+			}
+			v = uint32(encoding_binary.LittleEndian.Uint32(dAtA[iNdEx:]))
+			iNdEx += 4
+			m.P90BatchSize = float32(math.Float32frombits(v))
 		default:
 			iNdEx = preIndex
 			skippy, err := skipAgent(dAtA[iNdEx:])
@@ -7673,6 +9289,50 @@ func (m *SmartbftReport) Unmarshal(dAtA []byte) error {
 					break
 				}
 			}
+		case 30:
+			if wireType != 5 {
+				return fmt.Errorf("proto: wrong wireType = %d for field P90ConsensusLatencyMs", wireType)
+			}
+			var v uint32
+			if (iNdEx + 4) > l {
+				return io.ErrUnexpectedEOF
+			}
+			v = uint32(encoding_binary.LittleEndian.Uint32(dAtA[iNdEx:]))
+			iNdEx += 4
+			m.P90ConsensusLatencyMs = float32(math.Float32frombits(v))
+		case 34:
+			if wireType != 5 {
+				return fmt.Errorf("proto: wrong wireType = %d for field P90InterCommitGapMs", wireType)
+			}
+			var v uint32
+			if (iNdEx + 4) > l {
+				return io.ErrUnexpectedEOF
+			}
+			v = uint32(encoding_binary.LittleEndian.Uint32(dAtA[iNdEx:]))
+			iNdEx += 4
+			m.P90InterCommitGapMs = float32(math.Float32frombits(v))
+		case 36:
+			if wireType != 5 {
+				return fmt.Errorf("proto: wrong wireType = %d for field P50BatchSize", wireType)
+			}
+			var v uint32
+			if (iNdEx + 4) > l {
+				return io.ErrUnexpectedEOF
+			}
+			v = uint32(encoding_binary.LittleEndian.Uint32(dAtA[iNdEx:]))
+			iNdEx += 4
+			m.P50BatchSize = float32(math.Float32frombits(v))
+		case 37:
+			if wireType != 5 {
+				return fmt.Errorf("proto: wrong wireType = %d for field P90BatchSize", wireType)
+			}
+			var v uint32
+			if (iNdEx + 4) > l {
+				return io.ErrUnexpectedEOF
+			}
+			v = uint32(encoding_binary.LittleEndian.Uint32(dAtA[iNdEx:]))
+			iNdEx += 4
+			m.P90BatchSize = float32(math.Float32frombits(v))
 		default:
 			iNdEx = preIndex
 			skippy, err := skipAgent(dAtA[iNdEx:])

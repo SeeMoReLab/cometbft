@@ -4,7 +4,10 @@ import (
 	"context"
 	"fmt"
 	"math"
+	"os"
 	"sort"
+	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -16,6 +19,16 @@ import (
 	types "github.com/gogo/protobuf/types"
 )
 
+// envLearningAnchorUnixMS is the apply instant of episode 1 in unix ms (benchmark
+// start plus the failure-spec warm-up). The harness sets it on every replica, and
+// learning refuses to start without it.
+const envLearningAnchorUnixMS = "COMETBFT_LEARNING_ANCHOR_UNIX_MS"
+
+// wallClockJoinSlack is how late a driver joining from idle may open its feature
+// window. Commits before the window opens are dropped while the report still
+// divides by the full window length, so a later join skips to the next episode.
+const wallClockJoinSlack = 100 * time.Millisecond
+
 // windowData accumulates per-block statistics for one learning window.
 type windowData struct {
 	startHeight          int64
@@ -26,6 +39,8 @@ type windowData struct {
 	proposeLatenciesMs   []float64 // enterPropose(round=0) → enterPrevote(round=0)
 	prevoteLatenciesMs   []float64 // enterPrevote(round=0) → enterPrecommit(round=0)
 	precommitLatenciesMs []float64 // enterPrecommit(round=0) → finalizeCommit
+	interCommitGapsMs    []float64 // between consecutive commits in this window: n commits give n-1 gaps
+	lastCommitAt         time.Time // commit instant of the window's latest height
 	batchSizes           []float64 // txs per committed block
 	roundsGt0            uint32    // heights where commitRound > 0: the height's leader was replaced
 	roundChanges         uint32    // sum of commitRound: every round change installs a new proposer
@@ -33,13 +48,19 @@ type windowData struct {
 }
 
 // heightSample is one committed height's contribution to a learning window.
+// Phase latencies are float ms and count only when their has* flag is set, so a
+// sub-millisecond phase is kept as a sample rather than dropped as missing.
 type heightSample struct {
 	height             int64
+	committedAt        time.Time
 	txCount            float64
 	latencyMs          float64
 	proposeLatencyMs   float64
 	prevoteLatencyMs   float64
 	precommitLatencyMs float64
+	hasPropose         bool
+	hasPrevote         bool
+	hasPrecommit       bool
 	commitRound        int32
 }
 
@@ -53,9 +74,8 @@ type pendingReward struct {
 type wallClockStage uint8
 
 const (
-	// wallClockIdle is the state before the first block commits. The episode clock
-	// only starts once the node is actually making progress, so that an idle
-	// startup period is not measured as if it were a feature window.
+	// wallClockIdle is the state before the episode the driver joined has started
+	// (at startup, or after skipping overrun episodes). Commits are dropped.
 	wallClockIdle wallClockStage = iota
 	wallClockFeature
 	wallClockReplyWait
@@ -98,6 +118,12 @@ type EpochTracker struct {
 	warmupDuration  time.Duration
 	rewardDuration  time.Duration
 
+	// anchor is the apply instant of episode 1, read once from the wall clock and
+	// carried on the monotonic clock. Episode e applies at anchor + (e-1)*period and
+	// starts feature + replyWait before that, on every replica.
+	anchor       time.Time
+	anchorUnixMS int64
+
 	mu        sync.Mutex
 	episode   uint32
 	resetOnce bool // Reset has been called
@@ -123,6 +149,9 @@ type EpochTracker struct {
 
 	pendingReward  *pendingReward
 	currentTimeout *adaptivetimers.TendermintTimeout
+	// proposeInForceMs is the propose timeout last written to the live config,
+	// reported as timeout_ms. It lags currentTimeout until the next round 0.
+	proposeInForceMs uint32
 	// appliedLogged is set once the initial "applied timeouts:" line is logged.
 	appliedLogged bool
 
@@ -154,11 +183,23 @@ func NewEpochTracker(config *cfg.ConsensusConfig, logger log.Logger) (*EpochTrac
 			PrevoteTimeoutMilliseconds:   uint32(config.TimeoutPrevote.Milliseconds()),
 			PrecommitTimeoutMilliseconds: uint32(config.TimeoutPrecommit.Milliseconds()),
 		},
+		proposeInForceMs: uint32(config.TimeoutPropose.Milliseconds()),
 	}
 
 	if config.AdaptiveTimerAddr == "" {
 		return et, nil
 	}
+
+	anchorText := strings.TrimSpace(os.Getenv(envLearningAnchorUnixMS))
+	if anchorText == "" {
+		return nil, fmt.Errorf("adaptive_timer: learning is enabled but %s is not set", envLearningAnchorUnixMS)
+	}
+	anchorUnixMS, err := strconv.ParseInt(anchorText, 10, 64)
+	if err != nil || anchorUnixMS <= 0 {
+		return nil, fmt.Errorf("adaptive_timer: invalid %s=%q", envLearningAnchorUnixMS, anchorText)
+	}
+	et.anchorUnixMS = anchorUnixMS
+	et.anchor = now.Add(time.UnixMilli(anchorUnixMS).Sub(now))
 
 	//nolint:staticcheck
 	conn, err := grpc.Dial(config.AdaptiveTimerAddr, grpc.WithInsecure())
@@ -173,7 +214,8 @@ func NewEpochTracker(config *cfg.ConsensusConfig, logger log.Logger) (*EpochTrac
 
 // SetLogger updates the logger used by the tracker.
 // On the first call, it also resets the remote agent so each node starts
-// from a clean episode-0 state with a visible log line.
+// from a clean episode-0 state with a visible log line, and then joins the
+// episode grid.
 func (et *EpochTracker) SetLogger(l log.Logger) {
 	et.mu.Lock()
 	et.logger = l
@@ -188,9 +230,13 @@ func (et *EpochTracker) SetLogger(l log.Logger) {
 	defer cancel()
 	if _, err := et.client.Reset(ctx, &types.Empty{}); err != nil {
 		l.Error("adaptive_timer: Reset failed", "err", err)
-		return
+	} else {
+		l.Info("adaptive_timer: agent reset ok")
 	}
-	l.Info("adaptive_timer: agent reset ok")
+
+	et.mu.Lock()
+	defer et.mu.Unlock()
+	et.startWallClockLocked(time.Now())
 }
 
 func (et *EpochTracker) Close() {
@@ -264,6 +310,7 @@ func (et *EpochTracker) OnBlockCommitted(height int64, txCount int, commitRound 
 func (et *EpochTracker) buildHeightSampleLocked(now time.Time, height int64, txCount int, commitRound int32) heightSample {
 	sample := heightSample{
 		height:      height,
+		committedAt: now,
 		txCount:     float64(txCount),
 		commitRound: commitRound,
 	}
@@ -276,13 +323,16 @@ func (et *EpochTracker) buildHeightSampleLocked(now time.Time, height int64, txC
 		delete(et.proposeTime, height)
 	}
 	if hasProposeT && hasPrevoteT {
-		sample.proposeLatencyMs = float64(prevoteT.Sub(proposeT).Milliseconds())
+		sample.proposeLatencyMs = durationMs(prevoteT.Sub(proposeT))
+		sample.hasPropose = true
 	}
 	if hasPrevoteT && hasPrecommitT {
-		sample.prevoteLatencyMs = float64(precommitT.Sub(prevoteT).Milliseconds())
+		sample.prevoteLatencyMs = durationMs(precommitT.Sub(prevoteT))
+		sample.hasPrevote = true
 	}
 	if hasPrecommitT {
-		sample.precommitLatencyMs = float64(now.Sub(precommitT).Milliseconds())
+		sample.precommitLatencyMs = durationMs(now.Sub(precommitT))
+		sample.hasPrecommit = true
 	}
 	if hasPrevoteT {
 		delete(et.prevoteTime, height)
@@ -293,15 +343,11 @@ func (et *EpochTracker) buildHeightSampleLocked(now time.Time, height int64, txC
 	return sample
 }
 
-// accumulateConsensusLocked advances the episode by counting committed heights.
 // accumulateWallClockLocked files a committed height into whichever wall-clock
-// window is currently open. Heights committed during reply-wait or warm-up are
-// deliberately dropped: they belong to neither the feature nor the reward window.
+// window is currently open. Heights committed while idle, during reply-wait or
+// during warm-up are deliberately dropped: they belong to neither the feature nor
+// the reward window.
 func (et *EpochTracker) accumulateWallClockLocked(now time.Time, sample heightSample) {
-	if et.stage == wallClockIdle {
-		et.startWallClockLocked(now)
-	}
-
 	// A stage is sealed at an exact instant. A commit that lands after that instant
 	// but acquires the lock before the driver does belongs to the next stage.
 	if !et.stageDeadline.IsZero() && now.After(et.stageDeadline) {
@@ -317,50 +363,118 @@ func (et *EpochTracker) accumulateWallClockLocked(now time.Time, sample heightSa
 	}
 }
 
-// startWallClockLocked anchors the episode clock at the first committed height
-// and launches the driver goroutine.
-func (et *EpochTracker) startWallClockLocked(start time.Time) {
-	et.windowA = windowData{windowStart: start}
-	et.windowB = windowData{windowStart: start}
-	et.stage = wallClockFeature
-	et.stageDeadline = start.Add(et.featureDuration)
+// period is the length of one episode.
+func (et *EpochTracker) period() time.Duration {
+	return et.featureDuration + et.replyWait + et.warmupDuration + et.rewardDuration
+}
+
+// applyOffset is the time from an episode's start to its apply instant.
+func (et *EpochTracker) applyOffset() time.Duration {
+	return et.featureDuration + et.replyWait
+}
+
+// gridApplyAt is the apply instant of episode e (e >= 1) on the anchored grid.
+func (et *EpochTracker) gridApplyAt(episode uint32) time.Time {
+	return et.anchor.Add(time.Duration(int64(episode)-1) * et.period())
+}
+
+// gridEpisodeStart is the start of episode e's feature window on the anchored grid.
+func (et *EpochTracker) gridEpisodeStart(episode uint32) time.Time {
+	return et.gridApplyAt(episode).Add(-et.applyOffset())
+}
+
+// firstEpisodeFrom is the smallest episode e >= 1 that starts at or after now.
+func (et *EpochTracker) firstEpisodeFrom(now time.Time) uint32 {
+	late := now.Sub(et.gridEpisodeStart(1))
+	if late <= 0 {
+		return 1
+	}
+	period := et.period()
+	return uint32(1 + (late+period-1)/period)
+}
+
+// startWallClockLocked joins the anchored episode grid at the first episode that
+// has not started yet and launches the driver goroutine.
+func (et *EpochTracker) startWallClockLocked(now time.Time) {
+	first := et.firstEpisodeFrom(now)
+	et.episode = first
+	et.stage = wallClockIdle
+	et.stageDeadline = time.Time{}
 
 	ctx, cancel := context.WithCancel(context.Background())
 	et.wallClockCancel = cancel
 
 	et.logger.Info("adaptive_timer: wall-clock learning started",
-		"episode", et.episode,
+		"anchor_unix_ms", et.anchorUnixMS,
+		"period_ms", et.period().Milliseconds(),
+		"apply_offset_ms", et.applyOffset().Milliseconds(),
+		"first_episode", first,
+		"first_episode_start_in_ms", et.gridEpisodeStart(first).Sub(now).Milliseconds(),
 		"feature_duration", et.featureDuration,
 		"reply_wait", et.replyWait,
 		"warmup_duration", et.warmupDuration,
 		"reward_duration", et.rewardDuration,
 	)
 
-	go et.runWallClockEpisodes(ctx, et.episode, start, false)
+	go et.runWallClockEpisodes(ctx, first, wallClockIdle)
 }
 
-// runWallClockEpisodes drives episode boundaries off the clock. Each handler
-// returns false once the tracker has moved on from the stage it was waiting for,
-// which is how the goroutine retires.
+// runWallClockEpisodes drives episode boundaries off the anchored grid: every
+// deadline of episode e is derived from e, never from when the previous one ran.
+// Each handler returns false once the tracker has moved on from the stage it was
+// waiting for, which is how the goroutine retires.
 //
-// With fromWarmup set the loop resumes mid-episode at the warm-up stage, which is
-// how a fast-forwarded node rejoins after applying a recommendation out of band.
-func (et *EpochTracker) runWallClockEpisodes(ctx context.Context, episode uint32, episodeStart time.Time, fromWarmup bool) {
+// resume is the stage the tracker was left in for episode: idle starts the episode
+// from its feature window, while reply_wait and warmup resume mid-episode, which is
+// how a fast-forwarded node rejoins the target's grid slot.
+func (et *EpochTracker) runWallClockEpisodes(ctx context.Context, episode uint32, resume wallClockStage) {
+	// joining is set while the driver itself has to open the next feature window,
+	// rather than the previous reward deadline having opened it on time.
+	joining := resume == wallClockIdle
 	for {
-		applyAt := episodeStart
-		if fromWarmup {
-			fromWarmup = false
-		} else {
-			featureEnd := episodeStart.Add(et.featureDuration)
+		episodeStart := et.gridEpisodeStart(episode)
+		featureEnd := episodeStart.Add(et.featureDuration)
+		applyAt := featureEnd.Add(et.replyWait)
+		switch resume {
+		case wallClockWarmup:
+		case wallClockReplyWait:
+			if !waitUntil(ctx, applyAt) || !et.onWallClockApplyDeadline(episode, applyAt) {
+				return
+			}
+		default:
+			if !waitUntil(ctx, episodeStart) {
+				return
+			}
+			// An episode is overrun once its start has passed by more than the join
+			// slack, or, if it was opened on time, once its feature window is over.
+			// Either way it cannot be reported in full: skip to the next one ahead.
+			lateLimit := et.featureDuration
+			if joining {
+				lateLimit = wallClockJoinSlack
+			}
+			if now := time.Now(); now.Sub(episodeStart) > lateLimit {
+				next := et.firstEpisodeFrom(now)
+				if !et.skipOverrunEpisodes(episode, next, now) {
+					return
+				}
+				episode = next
+				joining = true
+				continue
+			}
+			if !et.onWallClockEpisodeStart(episode, episodeStart) {
+				return
+			}
+			joining = false
+
 			if !waitUntil(ctx, featureEnd) || !et.onWallClockFeatureDeadline(episode, featureEnd) {
 				return
 			}
 
-			applyAt = featureEnd.Add(et.replyWait)
 			if !waitUntil(ctx, applyAt) || !et.onWallClockApplyDeadline(episode, applyAt) {
 				return
 			}
 		}
+		resume = wallClockIdle
 
 		rewardStart := applyAt.Add(et.warmupDuration)
 		if !waitUntil(ctx, rewardStart) || !et.onWallClockRewardStart(episode, rewardStart) {
@@ -373,7 +487,6 @@ func (et *EpochTracker) runWallClockEpisodes(ctx context.Context, episode uint32
 		}
 
 		episode++
-		episodeStart = rewardEnd
 	}
 }
 
@@ -400,6 +513,44 @@ func waitUntil(ctx context.Context, deadline time.Time) bool {
 
 func (et *EpochTracker) atWallClockStageLocked(episode uint32, stage wallClockStage) bool {
 	return et.episode == episode && et.stage == stage
+}
+
+// onWallClockEpisodeStart opens the feature window of an episode the driver joined
+// from idle. A consecutive episode is already open, since the previous reward
+// deadline hands over to the next feature window at the same instant.
+func (et *EpochTracker) onWallClockEpisodeStart(episode uint32, start time.Time) bool {
+	et.mu.Lock()
+	defer et.mu.Unlock()
+	if et.episode != episode {
+		return false
+	}
+	if et.stage == wallClockIdle {
+		et.windowA = windowData{windowStart: start}
+		et.windowB = windowData{windowStart: start}
+		et.stage = wallClockFeature
+		et.stageDeadline = start.Add(et.featureDuration)
+	}
+	return et.stage == wallClockFeature
+}
+
+// skipOverrunEpisodes moves the driver from an overrun episode to next, idling
+// until next starts.
+func (et *EpochTracker) skipOverrunEpisodes(episode, next uint32, now time.Time) bool {
+	et.mu.Lock()
+	defer et.mu.Unlock()
+	if et.episode != episode {
+		return false
+	}
+	et.logger.Error("adaptive_timer: episode overrun, skipping ahead on the grid",
+		"episode", episode,
+		"next_episode", next,
+		"late_ms", now.Sub(et.gridEpisodeStart(episode)).Milliseconds(),
+	)
+	et.episode = next
+	et.stage = wallClockIdle
+	et.stageDeadline = time.Time{}
+	et.drainTimeoutResultLocked()
+	return true
 }
 
 func (et *EpochTracker) onWallClockFeatureDeadline(episode uint32, deadline time.Time) bool {
@@ -503,6 +654,7 @@ func (et *EpochTracker) ApplyPendingTimeout(config *cfg.ConsensusConfig) {
 	config.TimeoutPropose = propose
 	config.TimeoutPrevote = prevote
 	config.TimeoutPrecommit = precommit
+	et.proposeInForceMs = et.currentTimeout.ProposeTimeoutMilliseconds
 }
 
 // sendReportAndStartPollingLocked seals the feature window at reportEnd, ships it
@@ -511,7 +663,7 @@ func (et *EpochTracker) sendReportAndStartPollingLocked(reportEnd time.Time) {
 	if et.client == nil {
 		return
 	}
-	report := buildReport(&et.windowA, reportEnd)
+	report := buildReport(&et.windowA, reportEnd, et.proposeInForceMs)
 
 	et.logger.Info("adaptive_timer: sending report",
 		"episode", et.episode,
@@ -668,6 +820,9 @@ func (et *EpochTracker) stopPollingAndApplyLocked() {
 		et.pollingCancel = nil
 	}
 
+	gridApplyUnixMS := et.anchorUnixMS + (int64(et.episode)-1)*et.period().Milliseconds()
+	lagMS := time.Since(et.gridApplyAt(et.episode)).Milliseconds()
+
 	// Non-blocking, apply if a timeout recommendation arrived.
 	select {
 	case tm := <-et.timeoutResultCh:
@@ -677,10 +832,14 @@ func (et *EpochTracker) stopPollingAndApplyLocked() {
 			"propose_ms", tm.ProposeTimeoutMilliseconds,
 			"prevote_ms", tm.PrevoteTimeoutMilliseconds,
 			"precommit_ms", tm.PrecommitTimeoutMilliseconds,
+			"grid_apply_unix_ms", gridApplyUnixMS,
+			"lag_ms", lagMS,
 		)
 	default:
 		et.logger.Info("adaptive_timer: reply deadline reached without a recommendation, keeping previous",
 			"episode", et.episode,
+			"grid_apply_unix_ms", gridApplyUnixMS,
+			"lag_ms", lagMS,
 		)
 	}
 }
@@ -690,9 +849,12 @@ func (et *EpochTracker) stopPollingAndApplyLocked() {
 // missed at least one episode outright, which happens only if the node was down,
 // since episodes advance on the clock and so keep pace regardless of commit rate.
 //
-// The recommendation is applied immediately rather than at the usual apply point,
-// since that point has passed, and the remainder of the episode keeps its normal
-// shape so the resulting reward is still measured over a full-length window.
+// The node resumes on the target's grid slot. Before the target's apply instant it
+// waits in reply-wait and applies the recommendation on the grid, as if it had
+// polled it itself. Past that instant the recommendation is applied immediately,
+// and the node resumes in the target's warm-up if its reward window has not
+// started yet, so the resulting reward is still measured over a full-length
+// window, and otherwise idles until the next episode that has not started.
 func (et *EpochTracker) fastForward(target, polled uint32, tm *adaptivetimers.TendermintTimeout) {
 	et.mu.Lock()
 	defer et.mu.Unlock()
@@ -704,8 +866,6 @@ func (et *EpochTracker) fastForward(target, polled uint32, tm *adaptivetimers.Te
 
 	now := time.Now()
 	previous := et.episode
-	et.episode = target
-	et.currentTimeout = tm
 
 	if et.pollingCancel != nil {
 		et.pollingCancel()
@@ -715,33 +875,68 @@ func (et *EpochTracker) fastForward(target, polled uint32, tm *adaptivetimers.Te
 
 	// The abandoned episode's in-flight windows are discarded rather than
 	// re-attributed: they were measured against an episode that no longer applies.
-	// pendingReward is deliberately left alone, matching SmartBFT. It cannot leak
-	// into the new episode's report, because the driver resumes past the report
-	// point, so it is overwritten at the next reward deadline.
+	// pendingReward is kept, as on an overrun skip: the agent files a reward under
+	// the episode it carries, whichever report it rides on.
 	et.windowA = windowData{windowStart: now}
 	et.windowB = windowData{windowStart: now}
 
 	if et.wallClockCancel != nil {
 		et.wallClockCancel()
 	}
-	et.stage = wallClockWarmup
-	et.stageDeadline = now.Add(et.warmupDuration)
+	applyAt := et.gridApplyAt(target)
+	rewardStart := applyAt.Add(et.warmupDuration)
+	gridFields := []interface{}{
+		"grid_apply_unix_ms", et.anchorUnixMS + (int64(target)-1)*et.period().Milliseconds(),
+	}
+	switch {
+	case now.Before(applyAt):
+		et.episode = target
+		et.stage = wallClockReplyWait
+		et.stageDeadline = applyAt
+		// A cancelled polling goroutine may still slip a stale result in, without
+		// the lock, so make room until this one is queued instead of blocking.
+	queue:
+		for {
+			select {
+			case et.timeoutResultCh <- tm:
+				break queue
+			default:
+				et.drainTimeoutResultLocked()
+			}
+		}
+	case !now.After(rewardStart):
+		et.currentTimeout = tm
+		et.episode = target
+		et.stage = wallClockWarmup
+		et.stageDeadline = rewardStart
+		gridFields = append(gridFields, "lag_ms", now.Sub(applyAt).Milliseconds())
+	default:
+		et.currentTimeout = tm
+		et.episode = et.firstEpisodeFrom(now)
+		et.stage = wallClockIdle
+		et.stageDeadline = time.Time{}
+		gridFields = append(gridFields, "lag_ms", now.Sub(applyAt).Milliseconds())
+	}
 
 	ctx, cancel := context.WithCancel(context.Background())
 	et.wallClockCancel = cancel
 	// The driver is bound to a single episode number and its handlers bail as
 	// soon as the episode changes, so it has to be restarted here or learning
 	// stops for the rest of the run.
-	go et.runWallClockEpisodes(ctx, target, now, true)
+	go et.runWallClockEpisodes(ctx, et.episode, et.stage)
 
-	et.logger.Info("adaptive_timer: fast-forward",
+	// Without lag_ms the recommendation is queued, and the apply-deadline line
+	// carries the lag once it is applied on the grid.
+	et.logger.Info("adaptive_timer: fast-forward", append([]interface{}{
 		"from_episode", previous,
 		"to_episode", target,
+		"resumed_episode", et.episode,
+		"resumed_stage", et.stage,
 		"polled_episode", polled,
 		"propose_ms", tm.ProposeTimeoutMilliseconds,
 		"prevote_ms", tm.PrevoteTimeoutMilliseconds,
 		"precommit_ms", tm.PrecommitTimeoutMilliseconds,
-	)
+	}, gridFields...)...)
 }
 
 // startRewardWindowLocked opens the reward window at start, discarding whatever
@@ -761,7 +956,7 @@ func (et *EpochTracker) startRewardWindowLocked(start time.Time) {
 func (et *EpochTracker) snapshotBLocked(end time.Time) {
 	et.pendingReward = &pendingReward{
 		episode:     et.episode,
-		report:      buildReport(&et.windowB, end),
+		report:      buildReport(&et.windowB, end, et.proposeInForceMs),
 		timeoutUsed: et.currentTimeout,
 	}
 }
@@ -778,20 +973,23 @@ func (et *EpochTracker) drainTimeoutResultLocked() {
 func accumulateHeight(w *windowData, s heightSample) {
 	if w.heightCount == 0 {
 		w.startHeight = s.height
+	} else {
+		w.interCommitGapsMs = append(w.interCommitGapsMs, durationMs(s.committedAt.Sub(w.lastCommitAt)))
 	}
+	w.lastCommitAt = s.committedAt
 	w.endHeight = s.height
 	w.totalTxs += uint32(s.txCount)
 	w.heightCount++
 	if s.latencyMs > 0 {
 		w.latenciesMs = append(w.latenciesMs, s.latencyMs)
 	}
-	if s.proposeLatencyMs > 0 {
+	if s.hasPropose && s.proposeLatencyMs >= 0 {
 		w.proposeLatenciesMs = append(w.proposeLatenciesMs, s.proposeLatencyMs)
 	}
-	if s.prevoteLatencyMs > 0 {
+	if s.hasPrevote && s.prevoteLatencyMs >= 0 {
 		w.prevoteLatenciesMs = append(w.prevoteLatenciesMs, s.prevoteLatencyMs)
 	}
-	if s.precommitLatencyMs > 0 {
+	if s.hasPrecommit && s.precommitLatencyMs >= 0 {
 		w.precommitLatenciesMs = append(w.precommitLatenciesMs, s.precommitLatencyMs)
 	}
 	if s.txCount > 0 {
@@ -805,8 +1003,9 @@ func accumulateHeight(w *windowData, s heightSample) {
 
 // buildReport summarises a window that closed at end. Passing the closing instant
 // explicitly matters because throughput must be divided by the nominal window
-// length rather than by however long it took to get here.
-func buildReport(w *windowData, end time.Time) *adaptivetimers.TendermintReport {
+// length rather than by however long it took to get here. proposeTimeoutMs is the
+// propose timeout in force, reported as timeout_ms.
+func buildReport(w *windowData, end time.Time, proposeTimeoutMs uint32) *adaptivetimers.TendermintReport {
 	elapsed := end.Sub(w.windowStart).Seconds()
 	var tps float64
 	if elapsed > 0 {
@@ -824,20 +1023,41 @@ func buildReport(w *windowData, end time.Time) *adaptivetimers.TendermintReport 
 		AvgConsensusLatencyMs:   windowAvg(w.latenciesMs),
 		P50ConsensusLatencyMs:   windowPercentile(w.latenciesMs, 50),
 		P90ConsensusLatencyMs:   windowPercentile(w.latenciesMs, 90),
+		P95ConsensusLatencyMs:   windowPercentile(w.latenciesMs, 95),
 		ThroughputTps:           float32(tps),
 		TimeoutViolationRate:    float32(violationRate),
+		AvgInterCommitGapMs:     windowAvg(w.interCommitGapsMs),
+		P50InterCommitGapMs:     windowPercentile(w.interCommitGapsMs, 50),
+		P90InterCommitGapMs:     windowPercentile(w.interCommitGapsMs, 90),
+		P95InterCommitGapMs:     windowPercentile(w.interCommitGapsMs, 95),
 		AvgBatchSize:            windowAvg(w.batchSizes),
 		P50BatchSize:            windowPercentile(w.batchSizes, 50),
 		P90BatchSize:            windowPercentile(w.batchSizes, 90),
+		P95BatchSize:            windowPercentile(w.batchSizes, 95),
 		// Tendermint rotates the proposer every height, so a "leader change" is a
 		// height whose round-0 proposer was replaced, and a "regency change" is
 		// each round change, the analogue of a view change.
-		LeaderChangeCount:  w.roundsGt0,
-		RegencyChangeCount: w.roundChanges,
-		ProposeLatencyMs:   windowAvg(w.proposeLatenciesMs),
-		PrevoteLatencyMs:   windowAvg(w.prevoteLatenciesMs),
-		PrecommitLatencyMs: windowAvg(w.precommitLatenciesMs),
+		LeaderChangeCount:     w.roundsGt0,
+		RegencyChangeCount:    w.roundChanges,
+		ProposeLatencyMs:      windowAvg(w.proposeLatenciesMs),
+		P50ProposeLatencyMs:   windowPercentile(w.proposeLatenciesMs, 50),
+		P90ProposeLatencyMs:   windowPercentile(w.proposeLatenciesMs, 90),
+		P95ProposeLatencyMs:   windowPercentile(w.proposeLatenciesMs, 95),
+		PrevoteLatencyMs:      windowAvg(w.prevoteLatenciesMs),
+		P50PrevoteLatencyMs:   windowPercentile(w.prevoteLatenciesMs, 50),
+		P90PrevoteLatencyMs:   windowPercentile(w.prevoteLatenciesMs, 90),
+		P95PrevoteLatencyMs:   windowPercentile(w.prevoteLatenciesMs, 95),
+		PrecommitLatencyMs:    windowAvg(w.precommitLatenciesMs),
+		P50PrecommitLatencyMs: windowPercentile(w.precommitLatenciesMs, 50),
+		P90PrecommitLatencyMs: windowPercentile(w.precommitLatenciesMs, 90),
+		P95PrecommitLatencyMs: windowPercentile(w.precommitLatenciesMs, 95),
+		TimeoutMs:             proposeTimeoutMs,
 	}
+}
+
+// durationMs converts d to float milliseconds without truncating to whole ms.
+func durationMs(d time.Duration) float64 {
+	return float64(d) / float64(time.Millisecond)
 }
 
 func windowAvg(vals []float64) float32 {

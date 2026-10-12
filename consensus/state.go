@@ -176,7 +176,8 @@ func NewState(
 
 	// Initialize the adaptive timer epoch tracker (no-op if AdaptiveTimerAddr is
 	// empty). Its configuration was validated with the rest of the config, so an
-	// error here is a dial failure and must not silently disable learning.
+	// error here is a dial failure or a missing episode-grid anchor, and must not
+	// silently disable learning.
 	et, err := NewEpochTracker(config, log.NewNopLogger())
 	if err != nil {
 		panic(fmt.Sprintf("consensus: creating adaptive timer epoch tracker: %v", err))
